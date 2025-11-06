@@ -1,0 +1,7 @@
+{
+  "name": "coparent",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
+}
