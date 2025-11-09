@@ -40,3 +40,4 @@ Ionic + Angular application for managing shared parenting logistics.
 | `npm run build`| Build the production bundle  |
 | `npm run test` | Execute unit tests           |
 # coparent
+# coparent
