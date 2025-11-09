@@ -1,0 +1,301 @@
+// Calendar Page - Classic, Clean & Innovative Design
+
+// Month Navigation - Refined Header
+.month-navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-6) var(--space-4);
+  background: var(--app-surface);
+  border-bottom: 1px solid var(--app-border);
+  
+  h2 {
+    margin: 0;
+    font-size: var(--text-2xl);
+    font-weight: var(--font-semibold);
+    flex: 1;
+    text-align: center;
+    color: var(--app-text-primary);
+    letter-spacing: -0.02em;
+  }
+  
+  ion-button {
+    --color: var(--app-text-primary);
+    --background: transparent;
+    --border-radius: var(--radius-full);
+    --padding-start: 0;
+    --padding-end: 0;
+    width: 40px;
+    height: 40px;
+    margin: 0;
+    transition: var(--transition-base);
+    
+    &:hover {
+      --background: var(--app-background-secondary);
+    }
+    
+    ion-icon {
+      font-size: 20px;
+    }
+  }
+}
+
+// Calendar Header - Day Names
+.calendar-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: var(--app-background-secondary);
+  border-bottom: 1px solid var(--app-border);
+  
+  .weekday {
+    padding: var(--space-3) var(--space-2);
+    text-align: center;
+    font-weight: var(--font-semibold);
+    color: var(--app-text-tertiary);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+}
+
+// Calendar Grid
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: var(--app-background);
+  min-height: 500px;
+}
+
+// Calendar Day Cell - Minimal & Clean
+.calendar-day {
+  background: var(--app-surface);
+  padding: var(--space-3) var(--space-2);
+  min-height: 90px;
+  position: relative;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  display: flex;
+  flex-direction: column;
+  
+  &:hover {
+    background: var(--app-background-secondary);
+    z-index: 2;
+  }
+  
+  .day-number {
+    font-size: var(--text-base);
+    font-weight: var(--font-medium);
+    text-align: center;
+    margin-bottom: var(--space-2);
+    color: var(--app-text-primary);
+    letter-spacing: -0.011em;
+  }
+  
+  .day-events {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    justify-content: center;
+    flex: 1;
+    align-items: flex-start;
+    padding: var(--space-1);
+    
+    .event-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: var(--radius-full);
+      background: var(--ion-color-primary);
+    }
+    
+    .more-events {
+      font-size: var(--text-xs);
+      color: var(--app-text-tertiary);
+      width: 100%;
+      text-align: center;
+      margin-top: var(--space-1);
+      font-weight: var(--font-medium);
+    }
+  }
+  
+  // Other Month Days
+  &.other-month {
+    background: var(--app-background);
+    
+    .day-number {
+      color: var(--app-text-tertiary);
+      opacity: 0.4;
+    }
+  }
+  
+  // Today
+  &.today {
+    .day-number {
+      background: var(--ion-color-primary);
+      color: white;
+      border-radius: var(--radius-full);
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto var(--space-2);
+      font-weight: var(--font-semibold);
+    }
+  }
+  
+  // Parent 1 Day - Subtle Green
+  &.parent1-day {
+    background: linear-gradient(to bottom, rgba(5, 150, 105, 0.04) 0%, var(--app-surface) 100%);
+  }
+  
+  // Parent 2 Day - Subtle Blue
+  &.parent2-day {
+    background: linear-gradient(to bottom, rgba(30, 58, 138, 0.04) 0%, var(--app-surface) 100%);
+  }
+  
+  // Has Events
+  &.has-events {
+    .day-number {
+      font-weight: var(--font-semibold);
+    }
+  }
+}
+
+// Legend - Clean & Informative
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-6);
+  padding: var(--space-5);
+  background: var(--app-surface);
+  border-top: 1px solid var(--app-border);
+  
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    color: var(--app-text-secondary);
+    font-weight: var(--font-medium);
+    
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: var(--radius-sm);
+      
+      &.parent1 {
+        background: #059669;
+      }
+      
+      &.parent2 {
+        background: #1e3a8a;
+      }
+      
+      &.both {
+        background: linear-gradient(135deg, #059669 50%, #1e3a8a 50%);
+      }
+    }
+  }
+}
+
+// Event Modal - Clean Presentation
+.no-events {
+  text-align: center;
+  padding: var(--space-10);
+  
+  ion-icon {
+    color: var(--app-text-tertiary);
+    opacity: 0.5;
+    margin-bottom: var(--space-4);
+  }
+  
+  p {
+    color: var(--app-text-secondary);
+    margin-bottom: var(--space-6);
+    font-size: var(--text-base);
+  }
+}
+
+ion-modal {
+  ion-list {
+    ion-item {
+      ion-label {
+        h2 {
+          font-weight: var(--font-medium);
+          color: var(--app-text-primary);
+          margin-bottom: var(--space-1);
+          font-size: var(--text-base);
+        }
+        
+        p {
+          font-size: var(--text-sm);
+          color: var(--app-text-secondary);
+          margin: var(--space-1) 0;
+          line-height: var(--leading-snug);
+          
+          ion-icon {
+            font-size: 14px;
+            vertical-align: middle;
+            margin-left: var(--space-1);
+          }
+        }
+      }
+    }
+  }
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+  .month-navigation {
+    padding: var(--space-4);
+    
+    h2 {
+      font-size: var(--text-xl);
+    }
+  }
+  
+  .calendar-day {
+    min-height: 75px;
+    padding: var(--space-2);
+    
+    .day-number {
+      font-size: var(--text-sm);
+      margin-bottom: var(--space-1);
+    }
+    
+    &.today .day-number {
+      width: 28px;
+      height: 28px;
+    }
+    
+    .day-events {
+      .event-dot {
+        width: 4px;
+        height: 4px;
+      }
+    }
+  }
+  
+  .legend {
+    font-size: var(--text-xs);
+    gap: var(--space-4);
+    padding: var(--space-4);
+    
+    .legend-item {
+      .legend-color {
+        width: 14px;
+        height: 14px;
+      }
+    }
+  }
+}
+
+// RTL Support
+:host-context([dir="rtl"]) {
+  // No borders needed in RTL
+}
+
+// Subtle Animation on Load
+.calendar-day {
+  animation: fadeIn var(--transition-base);
+}

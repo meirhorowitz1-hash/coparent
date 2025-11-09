@@ -1,0 +1,202 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>{{ isEditMode ? 'עריכת אירוע' : 'אירוע חדש' }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="cancel()">
+        <ion-icon name="close" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <form [formGroup]="eventForm">
+    
+    <!-- סוג אירוע -->
+    <div class="form-section">
+      <ion-label class="section-label">סוג אירוע</ion-label>
+      <div class="event-type-grid">
+        <ion-chip 
+          *ngFor="let type of eventTypes"
+          [outline]="eventForm.get('type')?.value !== type.value"
+          [color]="eventForm.get('type')?.value === type.value ? type.color : 'medium'"
+          (click)="eventForm.patchValue({ type: type.value })">
+          <ion-icon [name]="type.icon"></ion-icon>
+          <ion-label>{{ type.label }}</ion-label>
+        </ion-chip>
+      </div>
+    </div>
+
+    <!-- כותרת -->
+    <ion-item [class.ion-invalid]="isFieldInvalid('title')">
+      <ion-label position="floating">כותרת *</ion-label>
+      <ion-input 
+        formControlName="title" 
+        type="text"
+        placeholder="לדוגמה: פגישה עם רופא שיניים">
+      </ion-input>
+      <ion-note slot="error" *ngIf="isFieldInvalid('title')">
+        {{ getErrorMessage('title') }}
+      </ion-note>
+    </ion-item>
+
+    <!-- תיאור -->
+    <ion-item>
+      <ion-label position="floating">תיאור</ion-label>
+      <ion-textarea 
+        formControlName="description"
+        rows="3"
+        placeholder="פרטים נוספים על האירוע...">
+      </ion-textarea>
+    </ion-item>
+
+    <!-- הורה אחראי -->
+    <div class="form-section">
+      <ion-label class="section-label">מי אחראי?</ion-label>
+      <ion-segment formControlName="parentId">
+        <ion-segment-button 
+          *ngFor="let parent of parentOptions" 
+          [value]="parent.value">
+          <ion-label>{{ parent.label }}</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+    </div>
+
+    <!-- יום שלם -->
+    <ion-item>
+      <ion-label>אירוע של יום שלם</ion-label>
+      <ion-toggle formControlName="isAllDay" slot="end"></ion-toggle>
+    </ion-item>
+
+    <!-- תאריך התחלה -->
+    <ion-item>
+      <ion-label position="stacked">תאריך התחלה *</ion-label>
+      <ion-datetime 
+        formControlName="startDate"
+        presentation="date"
+        [preferWheel]="true">
+      </ion-datetime>
+    </ion-item>
+
+    <!-- שעת התחלה -->
+    <ion-item *ngIf="!eventForm.get('isAllDay')?.value">
+      <ion-label position="stacked">שעת התחלה</ion-label>
+      <ion-datetime 
+        formControlName="startTime"
+        presentation="time"
+        [preferWheel]="true">
+      </ion-datetime>
+    </ion-item>
+
+    <!-- תאריך סיום -->
+    <ion-item>
+      <ion-label position="stacked">תאריך סיום</ion-label>
+      <ion-datetime 
+        formControlName="endDate"
+        presentation="date"
+        [preferWheel]="true">
+      </ion-datetime>
+    </ion-item>
+
+    <!-- שעת סיום -->
+    <ion-item *ngIf="!eventForm.get('isAllDay')?.value">
+      <ion-label position="stacked">שעת סיום</ion-label>
+      <ion-datetime 
+        formControlName="endTime"
+        presentation="time"
+        [preferWheel]="true">
+      </ion-datetime>
+    </ion-item>
+
+    <!-- מיקום -->
+    <ion-item>
+      <ion-label position="floating">מיקום</ion-label>
+      <ion-input 
+        formControlName="location"
+        type="text"
+        placeholder="לדוגמה: רחוב הרצל 10, תל אביב">
+        <ion-icon name="location-outline" slot="start"></ion-icon>
+      </ion-input>
+    </ion-item>
+
+    <!-- תזכורת -->
+    <ion-item>
+      <ion-label>תזכורת</ion-label>
+      <ion-select formControlName="reminderMinutes" interface="action-sheet">
+        <ion-select-option 
+          *ngFor="let reminder of reminderOptions" 
+          [value]="reminder.value">
+          {{ reminder.label }}
+        </ion-select-option>
+      </ion-select>
+    </ion-item>
+
+    <!-- צבע -->
+    <ion-item>
+      <ion-label>צבע</ion-label>
+      <input 
+        type="color" 
+        formControlName="color" 
+        class="color-picker">
+    </ion-item>
+
+    <!-- תצוגה מקדימה -->
+    <ion-card class="summary-card" *ngIf="eventForm.get('title')?.value">
+      <ion-card-header>
+        <ion-card-subtitle>תצוגה מקדימה</ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="event-preview" [style.--preview-color]="eventForm.get('color')?.value">
+          <h3>{{ eventForm.get('title')?.value }}</h3>
+          <p *ngIf="eventForm.get('description')?.value">
+            {{ eventForm.get('description')?.value }}
+          </p>
+          <div class="preview-details">
+            <span>
+              <ion-icon name="calendar"></ion-icon>
+              {{ eventForm.get('startDate')?.value | date:'dd/MM/yyyy' }}
+            </span>
+            <span *ngIf="!eventForm.get('isAllDay')?.value">
+              <ion-icon name="time"></ion-icon>
+              {{ eventForm.get('startTime')?.value }}
+            </span>
+            <span *ngIf="eventForm.get('location')?.value">
+              <ion-icon name="location"></ion-icon>
+              {{ eventForm.get('location')?.value }}
+            </span>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+  </form>
+</ion-content>
+
+<ion-footer>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button 
+        color="danger" 
+        fill="clear"
+        *ngIf="isEditMode"
+        (click)="deleteEvent()">
+        <ion-icon name="trash" slot="start"></ion-icon>
+        מחק
+      </ion-button>
+    </ion-buttons>
+    
+    <ion-buttons slot="end">
+      <ion-button fill="clear" (click)="cancel()">
+        ביטול
+      </ion-button>
+      <ion-button 
+        fill="solid" 
+        color="primary"
+        [disabled]="eventForm.invalid"
+        (click)="save()">
+        <ion-icon name="checkmark" slot="start"></ion-icon>
+        {{ isEditMode ? 'עדכן' : 'שמור' }}
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-footer>

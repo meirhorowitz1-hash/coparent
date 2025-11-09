@@ -1,37 +1,497 @@
 /*
- * App Global CSS
- * ----------------------------------------------------------------------------
- * Put style rules here that you want to apply globally. These styles are for
- * the entire app and not just one component. Additionally, this file can be
- * used as an entry point to import other CSS/Sass files to be included in the
- * output CSS.
- * For more information on global stylesheets, visit the documentation:
- * https://ionicframework.com/docs/layout/global-stylesheets
+ * App Global CSS - Classic, Clean & Innovative Design
+ * Following Apple, Notion, Linear design principles
  */
 
-/* Core CSS required for Ionic components to work properly */
+/* Core CSS */
 @import "@ionic/angular/css/core.css";
-
-/* Basic CSS for apps built with Ionic */
 @import "@ionic/angular/css/normalize.css";
 @import "@ionic/angular/css/structure.css";
 @import "@ionic/angular/css/typography.css";
 @import "@ionic/angular/css/display.css";
-
-/* Optional CSS utils that can be commented out */
 @import "@ionic/angular/css/padding.css";
 @import "@ionic/angular/css/float-elements.css";
 @import "@ionic/angular/css/text-alignment.css";
 @import "@ionic/angular/css/text-transformation.css";
 @import "@ionic/angular/css/flex-utils.css";
-
-/**
- * Ionic Dark Mode
- * -----------------------------------------------------
- * For more info, please see:
- * https://ionicframework.com/docs/theming/dark-mode
- */
-
-/* @import "@ionic/angular/css/palettes/dark.always.css"; */
-/* @import "@ionic/angular/css/palettes/dark.class.css"; */
 @import "@ionic/angular/css/palettes/dark.system.css";
+
+/* ============================================
+   Typography - Clean & Professional
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+* {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: var(--app-background);
+  color: var(--app-text-primary);
+  line-height: var(--leading-normal);
+  letter-spacing: -0.011em;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: var(--font-semibold);
+  line-height: var(--leading-tight);
+  letter-spacing: -0.02em;
+  color: var(--app-text-primary);
+}
+
+h1 { font-size: var(--text-4xl); }
+h2 { font-size: var(--text-3xl); }
+h3 { font-size: var(--text-2xl); }
+h4 { font-size: var(--text-xl); }
+h5 { font-size: var(--text-lg); }
+h6 { font-size: var(--text-base); }
+
+p {
+  margin: 0 0 var(--space-4);
+  color: var(--app-text-secondary);
+  line-height: var(--leading-relaxed);
+}
+
+/* ============================================
+   Headers - Clean & Refined
+   ============================================ */
+
+ion-header {
+  ion-toolbar {
+    --background: var(--app-surface);
+    --color: var(--app-text-primary);
+    --border-width: 0;
+    --min-height: 56px;
+    border-bottom: 1px solid var(--app-border);
+    
+    ion-title {
+      font-weight: var(--font-semibold);
+      font-size: var(--text-lg);
+      letter-spacing: -0.02em;
+      padding: 0 var(--space-4);
+    }
+    
+    ion-button {
+      --color: var(--app-text-primary);
+      --border-radius: var(--radius-md);
+      --padding-start: var(--space-3);
+      --padding-end: var(--space-3);
+      font-weight: var(--font-medium);
+      
+      &:hover {
+        --background: var(--app-background-secondary);
+      }
+    }
+  }
+}
+
+/* ============================================
+   Content
+   ============================================ */
+
+ion-content {
+  --background: var(--app-background);
+  --padding-start: 0;
+  --padding-end: 0;
+}
+
+/* ============================================
+   Cards - Elegant & Minimal
+   ============================================ */
+
+ion-card {
+  background: var(--app-surface);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--app-border);
+  box-shadow: var(--shadow-sm);
+  margin: var(--space-4);
+  transition: var(--transition-base);
+  
+  &:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+    border-color: var(--app-divider);
+  }
+  
+  ion-card-header {
+    padding: var(--space-6);
+    border-bottom: 1px solid var(--app-border-light);
+    
+    ion-card-title {
+      font-size: var(--text-xl);
+      font-weight: var(--font-semibold);
+      color: var(--app-text-primary);
+      letter-spacing: -0.02em;
+      margin: 0 0 var(--space-2);
+    }
+    
+    ion-card-subtitle {
+      font-size: var(--text-sm);
+      font-weight: var(--font-medium);
+      color: var(--app-text-secondary);
+      margin: 0;
+    }
+  }
+  
+  ion-card-content {
+    padding: var(--space-6);
+    color: var(--app-text-secondary);
+    line-height: var(--leading-relaxed);
+  }
+}
+
+/* ============================================
+   Lists - Clean & Spacious
+   ============================================ */
+
+ion-list {
+  background: transparent;
+  padding: var(--space-2) 0;
+  
+  ion-list-header {
+    font-size: var(--text-xs);
+    font-weight: var(--font-semibold);
+    color: var(--app-text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: var(--space-4) var(--space-4) var(--space-2);
+  }
+  
+  ion-item {
+    --background: var(--app-surface);
+    --border-radius: var(--radius-lg);
+    --padding-start: var(--space-4);
+    --inner-padding-end: var(--space-4);
+    --min-height: 56px;
+    margin: 0 var(--space-4) var(--space-2);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--app-border);
+    transition: var(--transition-base);
+    
+    &:hover {
+      --background: var(--app-background-secondary);
+      border-color: var(--app-divider);
+      transform: translateX(-2px);
+    }
+    
+    &::part(native) {
+      padding-top: var(--space-3);
+      padding-bottom: var(--space-3);
+    }
+    
+    ion-label {
+      margin: 0;
+      
+      h2 {
+        font-weight: var(--font-medium);
+        color: var(--app-text-primary);
+        font-size: var(--text-base);
+        margin: 0 0 var(--space-1);
+        letter-spacing: -0.011em;
+      }
+      
+      p {
+        font-size: var(--text-sm);
+        color: var(--app-text-secondary);
+        margin: 0;
+        line-height: var(--leading-snug);
+      }
+    }
+    
+    ion-icon {
+      color: var(--app-text-tertiary);
+      font-size: 20px;
+    }
+  }
+}
+
+/* ============================================
+   Buttons - Refined & Elegant
+   ============================================ */
+
+ion-button {
+  --border-radius: var(--radius-md);
+  font-weight: var(--font-medium);
+  font-size: var(--text-base);
+  letter-spacing: -0.011em;
+  text-transform: none;
+  height: 44px;
+  transition: var(--transition-base);
+  
+  &[size="small"] {
+    height: 36px;
+    font-size: var(--text-sm);
+    --padding-start: var(--space-3);
+    --padding-end: var(--space-3);
+  }
+  
+  &[size="large"] {
+    height: 52px;
+    font-size: var(--text-lg);
+    --padding-start: var(--space-6);
+    --padding-end: var(--space-6);
+  }
+  
+  &[fill="solid"] {
+    --box-shadow: var(--shadow-sm);
+    
+    &:hover {
+      --box-shadow: var(--shadow-md);
+      transform: translateY(-1px);
+    }
+    
+    &:active {
+      transform: translateY(0);
+    }
+  }
+  
+  &[fill="outline"] {
+    --border-width: 1.5px;
+    
+    &:hover {
+      --background: rgba(var(--ion-color-primary-rgb), 0.04);
+    }
+  }
+  
+  &[fill="clear"] {
+    &:hover {
+      --background: var(--app-background-secondary);
+    }
+  }
+}
+
+/* ============================================
+   Form Elements - Clean & Functional
+   ============================================ */
+
+ion-input,
+ion-textarea,
+ion-select,
+ion-datetime {
+  --background: var(--app-surface);
+  --color: var(--app-text-primary);
+  --placeholder-color: var(--app-text-tertiary);
+  --placeholder-opacity: 1;
+  font-size: var(--text-base);
+  font-weight: var(--font-normal);
+}
+
+ion-item {
+  &.ion-focused {
+    --border-color: var(--ion-color-primary);
+    --highlight-background: var(--ion-color-primary);
+  }
+  
+  &.ion-invalid {
+    --border-color: var(--ion-color-danger);
+    --highlight-background: var(--ion-color-danger);
+  }
+}
+
+ion-toggle {
+  --background: var(--app-border);
+  --background-checked: var(--ion-color-primary);
+  --handle-background: #ffffff;
+  --handle-background-checked: #ffffff;
+  --handle-box-shadow: var(--shadow-sm);
+  --handle-width: 20px;
+  --handle-height: 20px;
+}
+
+ion-checkbox {
+  --size: 20px;
+  --border-width: 1.5px;
+  --border-radius: var(--radius-sm);
+  --border-color: var(--app-border);
+  --border-color-checked: var(--ion-color-primary);
+  --background-checked: var(--ion-color-primary);
+  --checkmark-color: #ffffff;
+}
+
+/* ============================================
+   Chips - Subtle & Clean
+   ============================================ */
+
+ion-chip {
+  border-radius: var(--radius-md);
+  font-weight: var(--font-medium);
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3);
+  height: 32px;
+  border: 1px solid var(--app-border);
+  transition: var(--transition-base);
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-xs);
+  }
+}
+
+/* ============================================
+   Modals - Elegant Presentation
+   ============================================ */
+
+ion-modal {
+  --border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+  --box-shadow: var(--shadow-xl);
+  
+  &::part(backdrop) {
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(4px);
+  }
+}
+
+/* ============================================
+   Tabs - Clean Navigation
+   ============================================ */
+
+ion-tab-bar {
+  --background: var(--app-surface);
+  border-top: 1px solid var(--app-border);
+  padding: var(--space-2) 0;
+  height: 64px;
+  
+  ion-tab-button {
+    --color: var(--app-text-tertiary);
+    --color-selected: var(--ion-color-primary);
+    
+    ion-icon {
+      font-size: 24px;
+      margin-bottom: var(--space-1);
+    }
+    
+    ion-label {
+      font-size: var(--text-xs);
+      font-weight: var(--font-medium);
+      letter-spacing: 0.01em;
+    }
+  }
+}
+
+/* ============================================
+   Segment - Refined Selector
+   ============================================ */
+
+ion-segment {
+  background: var(--app-background-secondary);
+  border-radius: var(--radius-lg);
+  padding: 3px;
+  
+  ion-segment-button {
+    --indicator-color: transparent;
+    --color: var(--app-text-secondary);
+    --color-checked: var(--app-text-primary);
+    border-radius: var(--radius-md);
+    font-weight: var(--font-medium);
+    font-size: var(--text-sm);
+    min-height: 36px;
+    transition: var(--transition-base);
+    
+    &.segment-button-checked {
+      background: var(--app-surface);
+      box-shadow: var(--shadow-xs);
+    }
+  }
+}
+
+/* ============================================
+   Animations - Subtle & Smooth
+   ============================================ */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.fade-in {
+  animation: fadeIn var(--transition-slow);
+}
+
+.slide-up {
+  animation: slideUp var(--transition-slow);
+}
+
+.scale-in {
+  animation: scaleIn var(--transition-slow);
+}
+
+/* ============================================
+   Utilities
+   ============================================ */
+
+.text-primary { color: var(--app-text-primary); }
+.text-secondary { color: var(--app-text-secondary); }
+.text-tertiary { color: var(--app-text-tertiary); }
+
+.surface { background: var(--app-surface); }
+.surface-elevated { background: var(--app-surface-elevated); }
+
+/* ============================================
+   Scrollbar - Minimal
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--app-border);
+  border-radius: var(--radius-full);
+  
+  &:hover {
+    background: var(--app-divider);
+  }
+}
+
+/* ============================================
+   Dark Mode Refinements
+   ============================================ */
+
+@media (prefers-color-scheme: dark) {
+  ion-header ion-toolbar ion-button:hover {
+    --background: rgba(255, 255, 255, 0.05);
+  }
+  
+  ion-button[fill="clear"]:hover,
+  ion-button[fill="outline"]:hover {
+    --background: rgba(255, 255, 255, 0.05);
+  }
+  
+  ion-list ion-item:hover {
+    --background: rgba(255, 255, 255, 0.03);
+  }
+}

@@ -1,0 +1,196 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>הגדרת משמרות קבועות</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="cancel()">
+        <ion-icon name="close" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+  
+  <!-- Progress bar -->
+  <div class="progress-steps">
+    <div class="step" [class.active]="step === 'template'" [class.completed]="step !== 'template'">
+      <div class="step-circle">1</div>
+      <div class="step-label">תבנית</div>
+    </div>
+    <div class="step-line" [class.active]="step !== 'template'"></div>
+    <div class="step" [class.active]="step === 'customize'" [class.completed]="step === 'confirm'">
+      <div class="step-circle">2</div>
+      <div class="step-label">התאמה</div>
+    </div>
+    <div class="step-line" [class.active]="step === 'confirm'"></div>
+    <div class="step" [class.active]="step === 'confirm'">
+      <div class="step-circle">3</div>
+      <div class="step-label">אישור</div>
+    </div>
+  </div>
+</ion-header>
+
+<ion-content class="ion-padding">
+  
+  <!-- Step 1: Template Selection -->
+  <div *ngIf="step === 'template'" class="step-content">
+    <h2>בחר תבנית משמרות</h2>
+    <p class="subtitle">בחר תבנית קיימת או צור התאמה אישית</p>
+    
+    <div class="templates-grid">
+      <ion-card 
+        *ngFor="let template of templates" 
+        button="true"
+        (click)="selectTemplate(template)"
+        [class.selected]="selectedTemplate?.id === template.id">
+        <ion-card-header>
+          <ion-card-title>{{ template.nameHebrew }}</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <p>{{ template.description }}</p>
+          <ion-icon 
+            *ngIf="selectedTemplate?.id === template.id" 
+            name="checkmark-circle" 
+            color="primary">
+          </ion-icon>
+        </ion-card-content>
+      </ion-card>
+    </div>
+  </div>
+
+  <!-- Step 2: Customize Days -->
+  <div *ngIf="step === 'customize'" class="step-content">
+    <h2>התאם את ימי המשמרת</h2>
+    <p class="subtitle">בחר באילו ימים כל הורה יהיה עם הילדים</p>
+    
+    <div class="parent-section">
+      <h3 class="parent1-header">
+        <ion-icon name="person"></ion-icon>
+        הורה 1
+      </h3>
+      <div class="days-selector">
+        <ion-button 
+          *ngFor="let day of weekDays"
+          [fill]="isDaySelected('parent1', day.value) ? 'solid' : 'outline'"
+          [color]="isDaySelected('parent1', day.value) ? 'success' : 'medium'"
+          (click)="toggleDay('parent1', day.value)"
+          class="day-button">
+          {{ day.short }}
+        </ion-button>
+      </div>
+    </div>
+
+    <div class="parent-section">
+      <h3 class="parent2-header">
+        <ion-icon name="person"></ion-icon>
+        הורה 2
+      </h3>
+      <div class="days-selector">
+        <ion-button 
+          *ngFor="let day of weekDays"
+          [fill]="isDaySelected('parent2', day.value) ? 'solid' : 'outline'"
+          [color]="isDaySelected('parent2', day.value) ? 'primary' : 'medium'"
+          (click)="toggleDay('parent2', day.value)"
+          class="day-button">
+          {{ day.short }}
+        </ion-button>
+      </div>
+    </div>
+
+    <ion-item>
+      <ion-label>תבנית חזרה</ion-label>
+      <ion-select [(ngModel)]="custodySchedule.pattern" interface="action-sheet">
+        <ion-select-option [value]="'weekly'">כל שבוע</ion-select-option>
+        <ion-select-option [value]="'biweekly'">כל שבועיים</ion-select-option>
+        <ion-select-option [value]="'week_on_week_off'">שבוע אצל כל אחד</ion-select-option>
+      </ion-select>
+    </ion-item>
+
+    <ion-item>
+      <ion-label position="stacked">תאריך התחלה</ion-label>
+      <ion-datetime 
+        [(ngModel)]="custodySchedule.startDate" 
+        presentation="date"
+        [preferWheel]="true">
+      </ion-datetime>
+    </ion-item>
+
+    <ion-button 
+      expand="block" 
+      (click)="goToConfirm()"
+      [disabled]="custodySchedule.parent1Days.length === 0 && custodySchedule.parent2Days.length === 0">
+      המשך
+      <ion-icon name="arrow-back" slot="end"></ion-icon>
+    </ion-button>
+  </div>
+
+  <!-- Step 3: Confirm -->
+  <div *ngIf="step === 'confirm'" class="step-content">
+    <h2>אישור הגדרות</h2>
+    <p class="subtitle">בדוק שהכל נכון לפני השמירה</p>
+
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>סיכום המשמרות</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="summary-item">
+          <strong>תבנית:</strong>
+          <span>{{ selectedTemplate?.nameHebrew || 'מותאם אישית' }}</span>
+        </div>
+        
+        <div class="summary-item">
+          <strong>תאריך התחלה:</strong>
+          <span>{{ custodySchedule.startDate | date:'dd/MM/yyyy' }}</span>
+        </div>
+
+        <div class="summary-section">
+          <h4 class="parent1-color">הורה 1</h4>
+          <div class="days-display">
+            <span *ngFor="let dayValue of custodySchedule.parent1Days" class="day-chip parent1">
+              {{ weekDays[dayValue].label }}
+            </span>
+            <span *ngIf="custodySchedule.parent1Days.length === 0" class="empty-state">
+              לא נבחרו ימים
+            </span>
+          </div>
+        </div>
+
+        <div class="summary-section">
+          <h4 class="parent2-color">הורה 2</h4>
+          <div class="days-display">
+            <span *ngFor="let dayValue of custodySchedule.parent2Days" class="day-chip parent2">
+              {{ weekDays[dayValue].label }}
+            </span>
+            <span *ngIf="custodySchedule.parent2Days.length === 0" class="empty-state">
+              לא נבחרו ימים
+            </span>
+          </div>
+        </div>
+
+        <ion-note class="info-note">
+          <ion-icon name="information-circle"></ion-icon>
+          המשמרות ייווצרו אוטומטית בלוח השנה לשנה הקרובה
+        </ion-note>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-button expand="block" color="primary" (click)="save()">
+      <ion-icon name="checkmark" slot="start"></ion-icon>
+      שמור משמרות
+    </ion-button>
+
+    <ion-button expand="block" fill="outline" (click)="goToCustomize()">
+      <ion-icon name="create" slot="start"></ion-icon>
+      ערוך
+    </ion-button>
+
+    <ion-button 
+      expand="block" 
+      fill="clear" 
+      color="danger" 
+      (click)="deleteSchedule()"
+      *ngIf="custodySchedule.id">
+      <ion-icon name="trash" slot="start"></ion-icon>
+      מחק משמרות
+    </ion-button>
+  </div>
+
+</ion-content>

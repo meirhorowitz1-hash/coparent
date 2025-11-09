@@ -1,0 +1,30 @@
+<ion-tabs>
+  <router-outlet></router-outlet>
+
+  <ion-tab-bar slot="bottom">
+    <ion-tab-button tab="home" [routerLink]="['/tabs/home']">
+      <ion-icon name="home-outline"></ion-icon>
+      <ion-label>בית</ion-label>
+    </ion-tab-button>
+
+    <ion-tab-button tab="calendar" [routerLink]="['/tabs/calendar']">
+      <ion-icon name="calendar-outline"></ion-icon>
+      <ion-label>לוח שנה</ion-label>
+    </ion-tab-button>
+
+    <ion-tab-button tab="expenses" [routerLink]="['/tabs/expenses']">
+      <ion-icon name="cash-outline"></ion-icon>
+      <ion-label>הוצאות</ion-label>
+    </ion-tab-button>
+
+    <ion-tab-button tab="tasks" [routerLink]="['/tabs/tasks']">
+      <ion-icon name="list-outline"></ion-icon>
+      <ion-label>משימות</ion-label>
+    </ion-tab-button>
+
+    <ion-tab-button tab="profile" [routerLink]="['/tabs/profile']">
+      <ion-icon name="person-outline"></ion-icon>
+      <ion-label>פרופיל</ion-label>
+    </ion-tab-button>
+  </ion-tab-bar>
+</ion-tabs>

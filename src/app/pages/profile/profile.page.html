@@ -1,0 +1,199 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>פרופיל</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ng-container *ngIf="profile$ | async as profile; else loadingState">
+    <div class="profile-layout">
+      <section class="profile-card">
+        <h1>{{ profile?.fullName || 'משתמש חדש' }}</h1>
+        <p class="email">{{ profile?.email }}</p>
+        <p class="phone" *ngIf="profile?.phone">טלפון: {{ profile.phone }}</p>
+        <p class="hint">עדכן את הפרטים שלך בקרוב. בינתיים ניתן להזמין שותף/ה לחשבון.</p>
+      </section>
+
+      <section class="family-card">
+        <header>
+          <div>
+            <h2>שותפות הורות</h2>
+            <p>שתפו בן/בת זוג כדי לנהל יחד לוח שנה, משימות והוצאות.</p>
+          </div>
+        </header>
+
+        <div class="family-status" *ngIf="family$ | async as family">
+          <div class="status-row" [class.connected]="(family?.members?.length ?? 0) > 1">
+            <ion-icon [name]="(family?.members?.length ?? 0) > 1 ? 'people-outline' : 'person-add-outline'"></ion-icon>
+            <div>
+              <strong *ngIf="(family?.members?.length ?? 0) > 1">
+                {{ family?.members?.length }} הורים מחוברים לחשבון הזה
+              </strong>
+              <strong *ngIf="(family?.members?.length ?? 0) <= 1">
+                עדיין אין שותף לחשבון
+              </strong>
+              <p>
+                {{
+                  (family?.members?.length ?? 0) > 1
+                    ? 'כל הנתונים מסתנכרנים בין כל בני המשפחה.'
+                    : 'שלחו הזמנה כדי לשתף את בן/בת הזוג בכל מה שקורה.'
+                }}
+              </p>
+            </div>
+          </div>
+
+          <div class="pending" *ngIf="family?.pendingInvites?.length">
+            <h3>הזמנות ממתינות</h3>
+            <ul>
+              <li *ngFor="let invite of family.pendingInvites; trackBy: trackInvite">
+                <div>
+                  <span>{{ invite.displayEmail }}</span>
+                  <small>נשלחה בתאריך {{ invite.createdAt | date: 'dd/MM/yy HH:mm' }}</small>
+                </div>
+                <span class="badge">ממתין להצטרפות</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="share-code">
+          <label>קוד שיתוף</label>
+          <ng-container *ngIf="shareCode; else createShareCode">
+            <div class="code-wrapper">
+              <span class="code">{{ shareCode }}</span>
+              <div class="code-actions">
+                <button type="button" (click)="copyShareCode()">
+                  <ion-icon name="copy-outline"></ion-icon>
+                  <span>העתק</span>
+                </button>
+                <button
+                  type="button"
+                  class="ghost"
+                  (click)="regenerateShareCode()"
+                  [disabled]="isGeneratingShareCode"
+                >
+                  <ion-icon name="refresh-outline"></ion-icon>
+                  <span>קוד חדש</span>
+                </button>
+              </div>
+            </div>
+            <p class="helper">
+              שלחו את הקוד להורה נוסף. ברגע שיכניס אותו בפרופיל שלו, הוא יצטרף למידע שלכם.
+            </p>
+            <p class="link-feedback success" *ngIf="shareCodeCopied">הקוד הועתק ללוח</p>
+            <p class="link-feedback error" *ngIf="shareCodeError">{{ shareCodeError }}</p>
+          </ng-container>
+          <ng-template #createShareCode>
+            <button type="button" class="primary" (click)="createFamilySpace()" [disabled]="isGeneratingShareCode">
+              <ion-spinner *ngIf="isGeneratingShareCode" name="crescent"></ion-spinner>
+              <span *ngIf="!isGeneratingShareCode">יצירת קוד שיתוף</span>
+            </button>
+            <p class="helper">
+              ניצור עבורך קבוצה משותפת וקוד להצטרפות ההורה השני.
+            </p>
+            <p class="link-feedback error" *ngIf="shareCodeError">{{ shareCodeError }}</p>
+          </ng-template>
+        </div>
+
+        <form class="invite-form" [formGroup]="inviteForm" (ngSubmit)="sendInvite()">
+          <label for="inviteEmail">הוספת שותף/ה לחשבון</label>
+          <div class="input-wrapper" [class.invalid]="inviteForm.get('email')?.invalid && inviteForm.get('email')?.touched">
+            <ion-icon name="mail-outline"></ion-icon>
+            <input
+              id="inviteEmail"
+              type="email"
+              formControlName="email"
+              placeholder="example@email.com"
+              autocomplete="email"
+            />
+            <button type="submit" [disabled]="isInviting">
+              <ion-spinner *ngIf="isInviting" name="crescent"></ion-spinner>
+              <span *ngIf="!isInviting">שליחה</span>
+            </button>
+          </div>
+          <p class="error" *ngIf="inviteForm.get('email')?.invalid && inviteForm.get('email')?.touched">
+            הזינו כתובת אימייל תקינה
+          </p>
+        </form>
+
+        <form class="join-code-form" [formGroup]="familyCodeForm" (ngSubmit)="joinByCode()">
+          <label for="familyCode">יש קוד שיתוף? הזינו אותו כאן</label>
+          <div class="input-wrapper" [class.invalid]="familyCodeForm.get('code')?.invalid && familyCodeForm.get('code')?.touched">
+            <ion-icon name="key-outline"></ion-icon>
+            <input
+              id="familyCode"
+              type="text"
+              formControlName="code"
+              placeholder="123456"
+              autocomplete="off"
+              inputmode="numeric"
+            />
+            <button type="submit" [disabled]="isJoiningByCode">
+              <ion-spinner *ngIf="isJoiningByCode" name="crescent"></ion-spinner>
+              <span *ngIf="!isJoiningByCode">הצטרף</span>
+            </button>
+          </div>
+          <p class="error" *ngIf="familyCodeForm.get('code')?.invalid && familyCodeForm.get('code')?.touched">
+            הזינו קוד בן 6 ספרות
+          </p>
+        </form>
+
+        <div
+          class="join-message"
+          *ngIf="joinCodeMessage"
+          [class.success]="joinCodeMessage.type === 'success'"
+          [class.error]="joinCodeMessage.type === 'error'"
+        >
+          <ion-icon [name]="joinCodeMessage.type === 'success' ? 'checkmark-circle-outline' : 'alert-circle-outline'"></ion-icon>
+          <span>{{ joinCodeMessage.text }}</span>
+        </div>
+
+        <div class="family-list" *ngIf="familiesList.length > 1">
+          <h3>משפחות מחוברות</h3>
+          <ul>
+            <li *ngFor="let familyId of familiesList">
+              <div>
+                <span>{{ familyId }}</span>
+                <small *ngIf="profile?.activeFamilyId === familyId">משפחה פעילה</small>
+              </div>
+              <button
+                type="button"
+                class="ghost"
+                (click)="setActiveFamily(familyId)"
+                [disabled]="familyId === profile?.activeFamilyId || switchingFamilyId === familyId"
+              >
+                <ion-spinner *ngIf="switchingFamilyId === familyId" name="crescent"></ion-spinner>
+                <span *ngIf="switchingFamilyId !== familyId">הפוך לפעילה</span>
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <div
+          class="invite-message"
+          *ngIf="inviteMessage"
+          [class.success]="inviteMessage.type === 'success'"
+          [class.error]="inviteMessage.type === 'error'"
+        >
+          <ion-icon [name]="inviteMessage.type === 'success' ? 'checkmark-circle-outline' : 'alert-circle-outline'"></ion-icon>
+          <span>{{ inviteMessage.text }}</span>
+        </div>
+
+        <div class="signout-block">
+          <button type="button" class="danger" (click)="signOut()" [disabled]="isSigningOut">
+            <ion-icon name="log-out-outline" *ngIf="!isSigningOut"></ion-icon>
+            <ion-spinner *ngIf="isSigningOut" name="crescent"></ion-spinner>
+            <span>{{ isSigningOut ? 'מתנתק...' : 'יציאה מהחשבון' }}</span>
+          </button>
+          <p class="signout-error" *ngIf="signOutError">{{ signOutError }}</p>
+        </div>
+      </section>
+    </div>
+  </ng-container>
+
+  <ng-template #loadingState>
+    <div class="loading-state">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  </ng-template>
+</ion-content>

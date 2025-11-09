@@ -1,0 +1,259 @@
+// Progress Steps
+.progress-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: white;
+  border-bottom: 1px solid var(--ion-color-light);
+  
+  .step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    
+    .step-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--ion-color-light);
+      color: var(--ion-color-medium);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+    
+    .step-label {
+      font-size: 12px;
+      color: var(--ion-color-medium);
+    }
+    
+    &.active {
+      .step-circle {
+        background: var(--ion-color-primary);
+        color: white;
+      }
+      .step-label {
+        color: var(--ion-color-primary);
+        font-weight: 600;
+      }
+    }
+    
+    &.completed {
+      .step-circle {
+        background: var(--ion-color-success);
+        color: white;
+      }
+    }
+  }
+  
+  .step-line {
+    width: 60px;
+    height: 2px;
+    background: var(--ion-color-light);
+    margin: 0 8px;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+    
+    &.active {
+      background: var(--ion-color-primary);
+    }
+  }
+}
+
+// Step Content
+.step-content {
+  h2 {
+    margin-top: 0;
+    color: var(--ion-color-dark);
+  }
+  
+  .subtitle {
+    color: var(--ion-color-medium);
+    margin-bottom: 24px;
+  }
+}
+
+// Templates Grid
+.templates-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+  
+  ion-card {
+    margin: 0;
+    position: relative;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    &.selected {
+      border: 2px solid var(--ion-color-primary);
+      box-shadow: 0 4px 12px rgba(var(--ion-color-primary-rgb), 0.3);
+    }
+    
+    ion-card-header {
+      padding-bottom: 8px;
+    }
+    
+    ion-card-title {
+      font-size: 18px;
+    }
+    
+    ion-card-content {
+      p {
+        margin: 0;
+        color: var(--ion-color-medium);
+        font-size: 14px;
+      }
+      
+      ion-icon {
+        position: absolute;
+        top: 16px;
+        left: 16px;
+        font-size: 24px;
+      }
+    }
+  }
+}
+
+// Parent Sections
+.parent-section {
+  margin-bottom: 32px;
+  
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    
+    ion-icon {
+      font-size: 24px;
+    }
+    
+    &.parent1-header {
+      color: #4CAF50;
+    }
+    
+    &.parent2-header {
+      color: #2196F3;
+    }
+  }
+}
+
+// Days Selector
+.days-selector {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  
+  .day-button {
+    flex: 1;
+    min-width: 50px;
+    margin: 0;
+    font-weight: 600;
+  }
+}
+
+// Summary
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--ion-color-light);
+  
+  strong {
+    color: var(--ion-color-dark);
+  }
+  
+  span {
+    color: var(--ion-color-medium);
+  }
+}
+
+.summary-section {
+  margin-top: 24px;
+  
+  h4 {
+    margin: 8px 0;
+    
+    &.parent1-color {
+      color: #4CAF50;
+    }
+    
+    &.parent2-color {
+      color: #2196F3;
+    }
+  }
+}
+
+.days-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  
+  .day-chip {
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 13px;
+    font-weight: 500;
+    
+    &.parent1 {
+      background: #E8F5E9;
+      color: #2E7D32;
+    }
+    
+    &.parent2 {
+      background: #E3F2FD;
+      color: #1565C0;
+    }
+  }
+  
+  .empty-state {
+    color: var(--ion-color-medium);
+    font-style: italic;
+    font-size: 14px;
+  }
+}
+
+.info-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: var(--ion-color-light);
+  border-radius: 8px;
+  margin-top: 16px;
+  
+  ion-icon {
+    font-size: 20px;
+    color: var(--ion-color-primary);
+  }
+}
+
+// Buttons
+ion-button {
+  margin-top: 8px;
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .templates-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .progress-steps {
+    .step-line {
+      width: 40px;
+    }
+  }
+}
