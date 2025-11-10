@@ -1,0 +1,100 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>בקשת החלפה</ion-title>
+    <ion-buttons slot="start">
+      <ion-button (click)="dismiss()">
+        <ion-icon slot="icon-only" name="close"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <div class="modal-content">
+    
+    <div class="info-box">
+      <ion-icon name="information-circle" color="primary"></ion-icon>
+      <p>בקש מההורה השני להחליף יום משמורת</p>
+    </div>
+
+    <form>
+      <!-- Original Date -->
+      <ion-item>
+        <ion-label position="stacked">
+          <ion-icon name="calendar-outline"></ion-icon>
+          התאריך המקורי שלך
+        </ion-label>
+        <ion-datetime
+          presentation="date"
+          [(ngModel)]="originalDate"
+          name="originalDate"
+          [min]="minDate"
+          displayFormat="DD/MM/YYYY"
+          cancelText="ביטול"
+          doneText="אישור">
+        </ion-datetime>
+      </ion-item>
+
+      <!-- Proposed Date -->
+      <ion-item>
+        <ion-label position="stacked">
+          <ion-icon name="swap-horizontal"></ion-icon>
+          תאריך מוצע להחלפה
+        </ion-label>
+        <ion-datetime
+          presentation="date"
+          [(ngModel)]="proposedDate"
+          name="proposedDate"
+          [min]="minDate"
+          displayFormat="DD/MM/YYYY"
+          cancelText="ביטול"
+          doneText="אישור">
+        </ion-datetime>
+      </ion-item>
+
+      <!-- Reason -->
+      <ion-item>
+        <ion-label position="stacked">
+          <ion-icon name="create-outline"></ion-icon>
+          סיבה (אופציונלי)
+        </ion-label>
+        <ion-textarea
+          [(ngModel)]="reason"
+          name="reason"
+          placeholder="למה אתה מבקש החלפה?"
+          rows="4"
+          maxlength="500">
+        </ion-textarea>
+      </ion-item>
+
+      <div class="character-count" *ngIf="reason">
+        {{ reason.length }}/500
+      </div>
+    </form>
+
+    <div class="swap-preview" *ngIf="originalDate && proposedDate">
+      <h4>תצוגה מקדימה:</h4>
+      <div class="preview-item">
+        <ion-icon name="arrow-back" color="danger"></ion-icon>
+        <span>{{ originalDate | date:'dd/MM/yyyy':'':'he-IL' }} → תתן להורה השני</span>
+      </div>
+      <div class="preview-item">
+        <ion-icon name="arrow-forward" color="success"></ion-icon>
+        <span>{{ proposedDate | date:'dd/MM/yyyy':'':'he-IL' }} → תקבל במקום</span>
+      </div>
+    </div>
+
+  </div>
+</ion-content>
+
+<ion-footer>
+  <ion-toolbar>
+    <ion-button 
+      expand="block" 
+      (click)="submit()"
+      [disabled]="!isFormValid()">
+      <ion-icon slot="start" name="checkmark"></ion-icon>
+      שלח בקשה
+    </ion-button>
+  </ion-toolbar>
+</ion-footer>

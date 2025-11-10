@@ -1,7 +1,8 @@
 // Login Page - Classic, Clean & Innovative Design
 
 ion-content {
-  --background: var(--app-background);
+  --background: transparent;
+  backdrop-filter: blur(12px);
 }
 
 .login-container {
@@ -12,6 +13,8 @@ ion-content {
   padding: var(--space-6) var(--space-4);
   max-width: 440px;
   margin: 0 auto;
+  position: relative;
+  z-index: 1;
 }
 
 // Welcome Section
@@ -50,6 +53,12 @@ ion-content {
   animation: slideUp var(--transition-slow);
   animation-delay: 100ms;
   animation-fill-mode: backwards;
+  background: var(--app-card-gradient);
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--app-border);
+  padding: var(--space-6);
+  box-shadow: 0 35px 65px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(18px);
 }
 
 // Form Groups
@@ -69,9 +78,9 @@ ion-content {
     position: relative;
     display: flex;
     align-items: center;
-    background: var(--app-surface);
-    border: 1.5px solid var(--app-border);
-    border-radius: var(--radius-lg);
+    background: rgba(255, 255, 255, 0.85);
+    border: 1.5px solid rgba(103, 85, 245, 0.15);
+    border-radius: var(--radius-xl);
     padding: 0 var(--space-4);
     transition: var(--transition-base);
     
@@ -118,7 +127,7 @@ ion-content {
       border-radius: var(--radius-md);
       
       &:hover {
-        background: var(--app-background-secondary);
+        background: rgba(103, 85, 245, 0.08);
       }
       
       ion-icon {
@@ -167,7 +176,7 @@ ion-content {
     .checkbox-custom {
       width: 20px;
       height: 20px;
-      border: 1.5px solid var(--app-border);
+      border: 1.5px solid rgba(103, 85, 245, 0.2);
       border-radius: var(--radius-sm);
       margin-left: var(--space-2);
       position: relative;
@@ -218,23 +227,22 @@ ion-content {
 .login-button {
   width: 100%;
   height: 52px;
-  background: var(--ion-color-primary);
-  color: white;
+  background: linear-gradient(120deg, #6755f5, #0fc5c5);
+  color: #ffffff;
   border: none;
-  border-radius: var(--radius-lg);
+  border-radius: 999px;
   font-size: var(--text-base);
   font-weight: var(--font-semibold);
   cursor: pointer;
   transition: var(--transition-base);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 25px 45px rgba(103, 85, 245, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   
   &:hover:not(:disabled) {
-    background: var(--ion-color-primary-shade);
-    box-shadow: var(--shadow-md);
-    transform: translateY(-1px);
+    box-shadow: 0 30px 55px rgba(103, 85, 245, 0.35);
+    transform: translateY(-2px);
   }
   
   &:active:not(:disabled) {
@@ -259,7 +267,7 @@ ion-content {
   margin-top: var(--space-4);
   padding: var(--space-3);
   border-radius: var(--radius-md);
-  background: rgba(239, 68, 68, 0.08);
+  background: rgba(242, 87, 103, 0.12);
   color: var(--ion-color-danger);
   display: flex;
   align-items: center;
@@ -300,9 +308,9 @@ ion-content {
   .social-button {
     width: 100%;
     height: 48px;
-    background: var(--app-surface);
-    border: 1.5px solid var(--app-border);
-    border-radius: var(--radius-lg);
+    background: rgba(255, 255, 255, 0.85);
+    border: 1.5px solid rgba(103, 85, 245, 0.12);
+    border-radius: var(--radius-xl);
     font-size: var(--text-base);
     font-weight: var(--font-medium);
     cursor: pointer;
@@ -312,12 +320,13 @@ ion-content {
     justify-content: center;
     gap: var(--space-3);
     color: var(--app-text-primary);
+    backdrop-filter: blur(12px);
     
     &:hover {
-      background: var(--app-background-secondary);
-      border-color: var(--app-divider);
-      transform: translateY(-1px);
-      box-shadow: var(--shadow-sm);
+      background: rgba(255, 255, 255, 0.95);
+      border-color: rgba(103, 85, 245, 0.22);
+      transform: translateY(-2px);
+      box-shadow: 0 15px 30px rgba(15, 23, 42, 0.12);
     }
     
     ion-icon {

@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Firestore, doc, docData, serverTimestamp, setDoc, updateDoc, arrayUnion } from '@angular/fire/firestore';
+import { Firestore, doc, docData, serverTimestamp, setDoc, updateDoc, arrayUnion, arrayRemove } from '@angular/fire/firestore';
 import { Observable, from, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { UserProfile } from '../models/user-profile.model';
@@ -65,5 +65,29 @@ export class UserProfileService {
         updatedAt: serverTimestamp()
       })
     );
+  }
+
+  async addPushToken(uid: string, token: string): Promise<void> {
+    if (!token) {
+      return;
+    }
+
+    const ref = doc(this.firestore, 'users', uid);
+    await updateDoc(ref, {
+      pushTokens: arrayUnion(token),
+      updatedAt: serverTimestamp()
+    });
+  }
+
+  async removePushTokens(uid: string, tokens: string[]): Promise<void> {
+    if (!tokens.length) {
+      return;
+    }
+
+    const ref = doc(this.firestore, 'users', uid);
+    await updateDoc(ref, {
+      pushTokens: arrayRemove(...tokens),
+      updatedAt: serverTimestamp()
+    });
   }
 }

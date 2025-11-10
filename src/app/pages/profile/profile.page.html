@@ -1,10 +1,11 @@
-<ion-header>
-  <ion-toolbar>
-    <ion-title>פרופיל</ion-title>
-  </ion-toolbar>
-</ion-header>
+<ion-page>
+  <ion-header>
+    <ion-toolbar>
+      <ion-title>פרופיל</ion-title>
+    </ion-toolbar>
+  </ion-header>
 
-<ion-content [fullscreen]="true">
+  <ion-content [fullscreen]="true">
   <ng-container *ngIf="profile$ | async as profile; else loadingState">
     <div class="profile-layout">
       <section class="profile-card">
@@ -95,26 +96,7 @@
           </ng-template>
         </div>
 
-        <form class="invite-form" [formGroup]="inviteForm" (ngSubmit)="sendInvite()">
-          <label for="inviteEmail">הוספת שותף/ה לחשבון</label>
-          <div class="input-wrapper" [class.invalid]="inviteForm.get('email')?.invalid && inviteForm.get('email')?.touched">
-            <ion-icon name="mail-outline"></ion-icon>
-            <input
-              id="inviteEmail"
-              type="email"
-              formControlName="email"
-              placeholder="example@email.com"
-              autocomplete="email"
-            />
-            <button type="submit" [disabled]="isInviting">
-              <ion-spinner *ngIf="isInviting" name="crescent"></ion-spinner>
-              <span *ngIf="!isInviting">שליחה</span>
-            </button>
-          </div>
-          <p class="error" *ngIf="inviteForm.get('email')?.invalid && inviteForm.get('email')?.touched">
-            הזינו כתובת אימייל תקינה
-          </p>
-        </form>
+
 
         <form class="join-code-form" [formGroup]="familyCodeForm" (ngSubmit)="joinByCode()">
           <label for="familyCode">יש קוד שיתוף? הזינו אותו כאן</label>
@@ -197,3 +179,4 @@
     </div>
   </ng-template>
 </ion-content>
+</ion-page>

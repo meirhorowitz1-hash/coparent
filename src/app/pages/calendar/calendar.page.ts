@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { IonicModule, ModalController } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -13,7 +13,8 @@ import { EventFormComponent } from './event-form.component';
   selector: 'app-calendar',
   templateUrl: './calendar.page.html',
   styleUrls: ['./calendar.page.scss'],
-  imports: [IonicModule, CommonModule, FormsModule]
+  imports: [IonicModule, CommonModule, FormsModule],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
 export class CalendarPage implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
@@ -36,6 +37,7 @@ export class CalendarPage implements OnInit, OnDestroy {
     this.calendarService.currentMonth$
       .pipe(takeUntil(this.destroy$))
       .subscribe(date => {
+        console.log('[CalendarPage] currentMonth$ emitted', date);
         this.currentMonth = date;
         this.updateCalendar();
       });
@@ -43,7 +45,16 @@ export class CalendarPage implements OnInit, OnDestroy {
     // האזן לשינויים באירועים
     this.calendarService.events$
       .pipe(takeUntil(this.destroy$))
-      .subscribe(() => {
+      .subscribe(events => {
+        console.log('[CalendarPage] events$ received', events, 'events');
+        this.updateCalendar();
+      });
+
+    // האזן לשינויים במשמורת (כדי לרענן צבעי ימים)
+    this.calendarService.custodySchedule$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(schedule => {
+        console.log('[CalendarPage] custodySchedule$ updated', schedule);
         this.updateCalendar();
       });
   }
@@ -57,11 +68,9 @@ export class CalendarPage implements OnInit, OnDestroy {
     const year = this.currentMonth.getFullYear();
     const month = this.currentMonth.getMonth();
     
-    console.log('Updating calendar for:', year, month, this.getHebrewMonthName(month));
     this.calendarDays = this.calendarService.generateCalendarDays(year, month);
     this.monthName = this.getHebrewMonthName(month);
     this.yearNumber = year;
-    console.log('Calendar days generated:', this.calendarDays.length);
   }
 
   getHebrewMonthName(month: number): string {
@@ -138,6 +147,15 @@ export class CalendarPage implements OnInit, OnDestroy {
     });
   }
 
+  showTemplateParent(day: CalendarDay): 'parent1' | 'parent2' | null {
+    if (!day.primaryParent) {
+      return null;
+    }
+
+    const hasCustodyEvent = day.events.some(event => event.type === EventType.CUSTODY);
+    return hasCustodyEvent ? null : day.primaryParent;
+  }
+
   addNewEvent() {
     this.openEventForm();
   }
@@ -176,13 +194,11 @@ export class CalendarPage implements OnInit, OnDestroy {
     }
   }
 
-  clearAllData() {
-    // פונקציה זמנית לניקוי נתונים
-    localStorage.clear();
-    window.location.reload();
-  }
-
-  deleteEvent(eventId: string) {
-    this.calendarService.deleteEvent(eventId);
+  async deleteEvent(eventId: string) {
+    try {
+      await this.calendarService.deleteEvent(eventId);
+    } catch (error) {
+      console.error('Failed to delete event', error);
+    }
   }
 }

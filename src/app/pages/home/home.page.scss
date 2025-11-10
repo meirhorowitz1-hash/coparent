@@ -1,0 +1,550 @@
+// Loading & Error States
+.loading-container,
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  gap: 1rem;
+  text-align: center;
+
+  ion-spinner {
+    width: 48px;
+    height: 48px;
+  }
+
+  ion-icon {
+    font-size: 64px;
+  }
+
+  p, h3 {
+    margin: 0;
+    color: var(--ion-color-medium);
+  }
+}
+
+// Date Header
+.date-header {
+  margin: 1rem 0;
+  text-align: center;
+
+  h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--ion-color-dark);
+    margin: 0;
+  }
+}
+
+// Section Titles
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 1.5rem 0 1rem 0;
+  color: var(--ion-color-dark);
+
+  ion-badge {
+    font-size: 0.75rem;
+  }
+}
+
+// Custody Card
+.custody-card {
+  margin-bottom: 1rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  ion-card-header {
+    padding-bottom: 0.5rem;
+  }
+
+  ion-card-subtitle {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--ion-color-medium);
+  }
+
+  .custody-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    .current-parent,
+    .next-transition {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+
+      ion-icon {
+        font-size: 2rem;
+        flex-shrink: 0;
+      }
+
+      .parent-details,
+      .transition-details {
+        flex: 1;
+
+        h3 {
+          margin: 0 0 0.25rem 0;
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: var(--ion-color-dark);
+        }
+
+        p {
+          margin: 0;
+          font-size: 0.9rem;
+          color: var(--ion-color-medium);
+
+          &.transition-time {
+            font-size: 0.85rem;
+          }
+        }
+      }
+    }
+
+    .next-transition {
+      padding-top: 1rem;
+      border-top: 1px solid var(--ion-color-light);
+    }
+  }
+
+  .request-cancel-button {
+    margin-top: 0.5rem;
+  }
+}
+
+// Quick Actions
+.quick-actions-section {
+  margin-bottom: 1.5rem;
+
+  .quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+
+    .quick-action-card {
+      margin: 0;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      position: relative;
+      cursor: pointer;
+
+      &:active {
+        transform: scale(0.98);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      ion-card-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 1.25rem;
+        text-align: center;
+        position: relative;
+
+        .action-badge {
+          position: absolute;
+          top: 0.5rem;
+          right: 0.5rem;
+          background: var(--ion-color-danger);
+          color: white;
+          border-radius: 50%;
+          width: 24px;
+          height: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 0.75rem;
+          font-weight: 600;
+        }
+
+        ion-icon {
+          font-size: 2rem;
+        }
+
+        p {
+          margin: 0;
+          font-size: 0.9rem;
+          font-weight: 500;
+          color: var(--ion-color-dark);
+        }
+      }
+    }
+  }
+}
+
+.requests-section {
+  margin-bottom: 1.5rem;
+
+  .requests-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+
+    .section-title {
+      margin-bottom: 0;
+    }
+
+    .requests-toggle {
+      --padding-start: 0.35rem;
+      --padding-end: 0.35rem;
+      font-weight: 600;
+      color: var(--ion-color-medium);
+
+      ion-icon {
+        font-size: 1rem;
+      }
+    }
+  }
+
+  .requests-body {
+    margin-top: 0.75rem;
+  }
+
+  .requests-segment {
+    flex: 1;
+    min-width: 260px;
+    --indicator-color: var(--ion-color-primary);
+
+    ion-segment-button {
+      --color: var(--ion-color-medium);
+      --color-checked: var(--ion-color-primary);
+      --indicator-color: transparent;
+
+      ion-label {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-weight: 600;
+      }
+
+      ion-badge {
+        margin: 0;
+      }
+    }
+  }
+
+  .request-card {
+    margin: 0.75rem 0;
+    border-radius: 14px;
+
+    ion-card-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .request-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+
+      .request-parties {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.95rem;
+
+        ion-icon {
+          font-size: 1.2rem;
+          color: var(--ion-color-medium);
+        }
+      }
+    }
+
+    .request-dates {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 0.5rem;
+      text-align: center;
+      padding: 0.75rem;
+      background: var(--ion-color-light-tint);
+      border-radius: 10px;
+
+      .label {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--ion-color-medium);
+        margin-bottom: 0.25rem;
+      }
+
+      strong {
+        display: block;
+        font-size: 0.95rem;
+      }
+
+      ion-icon {
+        font-size: 1.2rem;
+        color: var(--ion-color-medium);
+      }
+    }
+
+    .request-reason {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--ion-color-dark);
+    }
+
+    .request-meta {
+      font-size: 0.8rem;
+      color: var(--ion-color-medium);
+      margin: 0;
+    }
+
+    .response-note {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem;
+      border-radius: 10px;
+      background: rgba(var(--ion-color-success-rgb, 72, 209, 102), 0.1);
+      color: var(--ion-color-success-shade, var(--ion-color-success));
+      font-size: 0.9rem;
+
+      ion-icon {
+        color: var(--ion-color-success);
+        font-size: 1.2rem;
+      }
+    }
+
+    .request-note-input {
+      border: 1px solid var(--ion-color-light);
+      border-radius: 10px;
+      --padding-start: 0.75rem;
+      --padding-end: 0.75rem;
+      --padding-top: 0.5rem;
+      --padding-bottom: 0.5rem;
+      font-size: 0.9rem;
+    }
+
+    .request-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.75rem;
+      margin-top: 0.25rem;
+    }
+  }
+
+  .empty-state-card.compact {
+    margin-top: 1rem;
+
+    ion-card-content {
+      padding: 1.5rem;
+    }
+  }
+}
+
+// Events Section
+.events-section,
+.tasks-section,
+.expenses-section {
+  margin-bottom: 1.5rem;
+
+  ion-card {
+    margin: 0.5rem 0;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    cursor: pointer;
+    transition: transform 0.2s ease;
+
+    &:active {
+      transform: scale(0.99);
+    }
+
+    ion-card-content {
+      padding: 1rem;
+    }
+
+    .event-item,
+    .task-item,
+    .expense-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+
+      .event-time {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+        min-width: 60px;
+
+        ion-icon {
+          font-size: 1.5rem;
+        }
+
+        span {
+          font-size: 0.85rem;
+          font-weight: 500;
+          color: var(--ion-color-dark);
+        }
+      }
+
+      .event-details,
+      .task-details,
+      .expense-details {
+        flex: 1;
+
+        h4 {
+          margin: 0 0 0.25rem 0;
+          font-size: 1rem;
+          font-weight: 600;
+          color: var(--ion-color-dark);
+        }
+
+        p {
+          margin: 0;
+          font-size: 0.85rem;
+          color: var(--ion-color-medium);
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+        }
+
+        .task-meta,
+        .expense-meta {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-top: 0.25rem;
+
+          .task-date {
+            font-size: 0.8rem;
+          }
+
+          ion-badge {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+          }
+        }
+      }
+
+      ion-checkbox {
+        --size: 24px;
+        --border-radius: 6px;
+      }
+
+      ion-icon[name="chevron-forward-outline"] {
+        color: var(--ion-color-medium);
+        font-size: 1.25rem;
+      }
+
+      .expense-amount {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.25rem;
+
+        strong {
+          font-size: 1rem;
+          color: var(--ion-color-dark);
+        }
+
+        ion-badge {
+          font-size: 0.7rem;
+        }
+      }
+    }
+  }
+
+  // Summary Card
+  .summary-card {
+    margin-bottom: 0.75rem;
+    background: linear-gradient(135deg, var(--ion-color-success-tint), var(--ion-color-success));
+
+    ion-card-content {
+      color: white;
+    }
+
+    .expense-summary {
+      .summary-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        span {
+          font-size: 0.9rem;
+        }
+
+        strong {
+          font-size: 1.1rem;
+        }
+      }
+    }
+  }
+}
+
+// Empty State Cards
+.empty-state-card {
+  margin: 1rem 0;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+  ion-card-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    text-align: center;
+
+    ion-icon {
+      font-size: 3rem;
+      margin-bottom: 0.75rem;
+      opacity: 0.5;
+    }
+
+    p {
+      margin: 0;
+      font-size: 0.95rem;
+      color: var(--ion-color-medium);
+    }
+  }
+}
+
+// RTL Support
+[dir="rtl"] {
+  .quick-actions-grid {
+    .quick-action-card {
+      ion-card-content {
+        .action-badge {
+          right: auto;
+          left: 0.5rem;
+        }
+      }
+    }
+  }
+
+  .event-item,
+  .task-item,
+  .expense-item {
+    ion-icon[name="chevron-forward-outline"] {
+      transform: rotate(180deg);
+    }
+  }
+}
+
+// Responsive Design
+@media (min-width: 768px) {
+  .quick-actions-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  ion-content {
+    --padding-start: 2rem;
+    --padding-end: 2rem;
+  }
+}

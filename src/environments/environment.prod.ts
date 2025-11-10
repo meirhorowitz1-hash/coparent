@@ -7,6 +7,7 @@ export const environment = {
     storageBucket: "coparent-393e0.firebasestorage.app",
     messagingSenderId: "43802271173",
     appId: "1:43802271173:web:bedfe1e447a1d94ff67fac",
-    measurementId: "G-YB8EHVMVYK"
+    measurementId: "G-YB8EHVMVYK",
+    vapidKey: 'BFgl1lYzp7U_mpYKh1NREpJZvGgFBsnAF4yV59Uk1aifN1iOg5tdKZwVA1QWEVX51JmKNxVjwNYpKUCKjgXUbJk'
   }
 };

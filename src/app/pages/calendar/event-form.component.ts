@@ -185,13 +185,17 @@ export class EventFormComponent implements OnInit {
       color: formValue.color
     };
 
-    if (this.isEditMode && this.event) {
-      this.calendarService.updateEvent(this.event.id, eventData);
-    } else {
-      this.calendarService.addEvent(eventData);
-    }
+    try {
+      if (this.isEditMode && this.event) {
+        await this.calendarService.updateEvent(this.event.id, eventData);
+      } else {
+        await this.calendarService.addEvent(eventData);
+      }
 
-    await this.modalController.dismiss({ saved: true });
+      await this.modalController.dismiss({ saved: true });
+    } catch (error) {
+      console.error('Failed to save calendar event', error);
+    }
   }
 
   combineDateTime(dateStr: string, timeStr: string, isAllDay: boolean): Date {
@@ -214,8 +218,12 @@ export class EventFormComponent implements OnInit {
   async deleteEvent() {
     if (!this.event) return;
     
-    this.calendarService.deleteEvent(this.event.id);
-    await this.modalController.dismiss({ deleted: true });
+    try {
+      await this.calendarService.deleteEvent(this.event.id);
+      await this.modalController.dismiss({ deleted: true });
+    } catch (error) {
+      console.error('Failed to delete calendar event', error);
+    }
   }
 
   isFieldInvalid(fieldName: string): boolean {

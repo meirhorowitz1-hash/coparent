@@ -5,6 +5,7 @@ export interface UserProfile {
   phone?: string | null;
   families?: string[];
   activeFamilyId?: string | null;
+  pushTokens?: string[];
   createdAt?: unknown;
   updatedAt?: unknown;
 }

@@ -11,6 +11,7 @@ export interface CalendarEvent {
   reminderMinutes?: number;
   isAllDay?: boolean;
   recurring?: RecurringPattern;
+  swapRequestId?: string;
 }
 
 export enum EventType {

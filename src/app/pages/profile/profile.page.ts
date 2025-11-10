@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { IonicModule } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -16,7 +16,8 @@ import { Router } from '@angular/router';
   selector: 'app-profile',
   templateUrl: './profile.page.html',
   styleUrls: ['./profile.page.scss'],
-  imports: [IonicModule, CommonModule, ReactiveFormsModule]
+  imports: [IonicModule, CommonModule, ReactiveFormsModule],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
 export class ProfilePage implements OnInit, OnDestroy {
   inviteForm: FormGroup;
@@ -138,58 +139,7 @@ export class ProfilePage implements OnInit, OnDestroy {
     this.shareCode = family?.shareCode ?? null;
   }
 
-  async sendInvite() {
-    if (this.inviteForm.invalid) {
-      this.inviteForm.markAllAsTouched();
-      return;
-    }
 
-    const profile = this.profileSubject.value;
-
-    if (!profile) {
-      return;
-    }
-
-    this.isInviting = true;
-    this.inviteMessage = null;
-
-    const email = (this.inviteForm.value.email as string).trim();
-
-    try {
-      const familyId = await this.familyService.ensureFamilyForUser(profile);
-      const updatedProfile: UserProfile = {
-        ...profile,
-        activeFamilyId: familyId,
-        families: Array.from(new Set([...(profile.families ?? []), familyId]))
-      };
-      this.profileSubject.next(updatedProfile);
-
-      await this.familyService.inviteCoParent(familyId, email, updatedProfile);
-      this.inviteForm.reset();
-
-      this.inviteMessage = {
-        type: 'success',
-        text: 'ההזמנה נשלחה בהצלחה'
-      };
-    } catch (error: any) {
-      let message = 'אירעה שגיאה בשליחת ההזמנה';
-
-      if (error?.message === 'existing-invite') {
-        message = 'האימייל הזה כבר הוזמן לחשבון';
-      } else if (error?.message === 'self-invite') {
-        message = 'לא ניתן להזמין את עצמך';
-      } else if (error?.message === 'missing-email') {
-        message = 'נא להזין כתובת אימייל תקינה';
-      }
-
-      this.inviteMessage = {
-        type: 'error',
-        text: message
-      };
-    } finally {
-      this.isInviting = false;
-    }
-  }
 
   trackInvite(_: number, invite: FamilyInvite) {
     return invite.email;

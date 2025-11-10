@@ -1,9 +1,10 @@
-import { Component, OnInit } from '@angular/core';
-import { IonicModule, ModalController } from '@ionic/angular';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { IonicModule, ModalController, LoadingController } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CalendarService } from '../../core/services/calendar.service';
 import { CustodySchedule, CustodyPattern, CustodyTemplate, CUSTODY_TEMPLATES } from '../../core/models/custody-schedule.model';
+import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   standalone: true,
@@ -12,7 +13,7 @@ import { CustodySchedule, CustodyPattern, CustodyTemplate, CUSTODY_TEMPLATES } f
   styleUrls: ['./custody-setup.component.scss'],
   imports: [IonicModule, CommonModule, FormsModule]
 })
-export class CustodySetupComponent implements OnInit {
+export class CustodySetupComponent implements OnInit, OnDestroy {
   templates = CUSTODY_TEMPLATES;
   selectedTemplate: CustodyTemplate | null = null;
   
@@ -37,19 +38,35 @@ export class CustodySetupComponent implements OnInit {
   ];
 
   step: 'template' | 'customize' | 'confirm' = 'template';
+  private destroy$ = new Subject<void>();
+  private isProcessing = false;
 
   constructor(
     private modalController: ModalController,
-    private calendarService: CalendarService
+    private calendarService: CalendarService,
+    private loadingController: LoadingController
   ) {}
 
   ngOnInit() {
-    // טען משמרת קיימת אם יש
-    const existing = this.calendarService.loadCustodySchedule();
-    if (existing) {
-      this.custodySchedule = existing;
-      this.step = 'customize';
-    }
+    this.calendarService.custodySchedule$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(schedule => {
+ 
+        if (schedule) {
+         
+          this.custodySchedule = {
+            ...schedule,
+            parent1Days: [...schedule.parent1Days],
+            parent2Days: [...schedule.parent2Days]
+          };
+          this.step = 'customize';
+        }
+      });
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   selectTemplate(template: CustodyTemplate) {
@@ -101,9 +118,24 @@ export class CustodySetupComponent implements OnInit {
   }
 
   async save() {
-    this.custodySchedule.id = `schedule_${Date.now()}`;
-    this.calendarService.saveCustodySchedule(this.custodySchedule);
+    if (this.isProcessing) {
+      return;
+    }
+
+    this.custodySchedule.id = this.custodySchedule.id || `schedule_${Date.now()}`;
+
+    this.isProcessing = true;
+    const loader = await this.presentProgressLoader('מעדכן את המשמרות...');
+
+    const savePromise = this.calendarService.saveCustodySchedule(this.custodySchedule)
+      .catch(error => console.error('Failed to save custody schedule', error))
+      .finally(() => {
+        loader.dismiss();
+        this.isProcessing = false;
+      });
+
     await this.modalController.dismiss({ saved: true });
+    savePromise.finally(() => void 0);
   }
 
   async cancel() {
@@ -111,7 +143,33 @@ export class CustodySetupComponent implements OnInit {
   }
 
   async deleteSchedule() {
-    this.calendarService.deleteCustodySchedule();
+    if (this.isProcessing) {
+      return;
+    }
+
+    this.isProcessing = true;
+    const loader = await this.presentProgressLoader('מוחק משמרות...');
+
+    const deletePromise = this.calendarService.deleteCustodySchedule()
+      .catch(error => console.error('Failed to delete custody schedule', error))
+      .finally(() => {
+        loader.dismiss();
+        this.isProcessing = false;
+      });
+
     await this.modalController.dismiss({ deleted: true });
+    deletePromise.finally(() => void 0);
+  }
+
+  private async presentProgressLoader(message: string) {
+    const loader = await this.loadingController.create({
+      message,
+      spinner: 'crescent',
+      backdropDismiss: false,
+      translucent: true,
+      cssClass: 'progress-loader'
+    });
+    await loader.present();
+    return loader;
   }
 }
