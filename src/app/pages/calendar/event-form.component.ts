@@ -1,16 +1,14 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { IonicModule, ModalController } from '@ionic/angular';
-import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ModalController } from '@ionic/angular';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { CalendarService } from '../../core/services/calendar.service';
 import { CalendarEvent, EventType } from '../../core/models/calendar-event.model';
 
 @Component({
-  standalone: true,
   selector: 'app-event-form',
   templateUrl: './event-form.component.html',
   styleUrls: ['./event-form.component.scss'],
-  imports: [IonicModule, CommonModule, ReactiveFormsModule]
+  standalone: false
 })
 export class EventFormComponent implements OnInit {
   @Input() event?: CalendarEvent;

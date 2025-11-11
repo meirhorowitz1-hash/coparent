@@ -1,6 +1,13 @@
 import { Injectable, inject } from '@angular/core';
 import { Messaging, getToken, onMessage } from '@angular/fire/messaging';
 import { ToastController } from '@ionic/angular';
+import { Capacitor } from '@capacitor/core';
+import { PushNotifications, PushNotificationSchema, Token } from '@capacitor/push-notifications';
+import {
+  FirebaseMessaging,
+  NotificationReceivedEvent,
+  TokenReceivedEvent
+} from '@capacitor-firebase/messaging';
 
 import { environment } from '../../../environments/environment';
 import { AuthService } from './auth.service';
@@ -14,14 +21,23 @@ export class PushNotificationService {
   private readonly authService = inject(AuthService);
   private readonly userProfileService = inject(UserProfileService);
   private readonly toastCtrl = inject(ToastController);
+  private readonly isNativePlatform = Capacitor.isNativePlatform();
 
   private currentUserId: string | null = null;
   private registering = false;
   private initialized = false;
+  private nativeListenersRegistered = false;
 
   constructor() {
-    if (!this.isPushSupported()) {
-      return;
+    if (this.isNativePlatform) {
+      this.registerNativeForegroundHandlers();
+    } else if (this.messaging && this.isPushSupported()) {
+      onMessage(this.messaging, payload => {
+        this.presentForegroundToast(
+          payload.notification?.title || 'CoParent',
+          payload.notification?.body || ''
+        );
+      });
     }
 
     this.authService.user$.subscribe(async user => {
@@ -30,26 +46,22 @@ export class PushNotificationService {
         await this.ensureRegistration();
       }
     });
-
-    if (this.messaging) {
-      onMessage(this.messaging, payload => {
-        this.presentForegroundToast(
-          payload.notification?.title || 'CoParent',
-          payload.notification?.body || ''
-        );
-      });
-    }
   }
 
   init(): void {
-    if (this.initialized || !this.isPushSupported()) {
+    if (this.initialized) {
       return;
     }
+
     this.initialized = true;
     this.ensureRegistration();
   }
 
   private isPushSupported(): boolean {
+    if (this.isNativePlatform) {
+      return false;
+    }
+
     if (typeof window === 'undefined') {
       return false;
     }
@@ -60,6 +72,11 @@ export class PushNotificationService {
   }
 
   private async ensureRegistration(): Promise<void> {
+    if (this.isNativePlatform) {
+      await this.registerNativePush();
+      return;
+    }
+
     console.debug('[PushNotificationService] ensureRegistration start', {
       hasUser: !!this.currentUserId,
       registering: this.registering,
@@ -111,10 +128,13 @@ export class PushNotificationService {
         serviceWorkerRegistration: registration
       });
 
-      console.debug('[PushNotificationService] retrieved token', token ? token.substring(0, 10) + '...' : 'none');
+      console.debug(
+        '[PushNotificationService] retrieved token',
+        token ? token.substring(0, 10) + '...' : 'none'
+      );
 
       if (token) {
-        await this.userProfileService.addPushToken(this.currentUserId, token);
+        await this.savePushToken(token);
         console.info('[PushNotificationService] token saved for user', this.currentUserId);
       }
     } catch (error) {
@@ -159,5 +179,98 @@ export class PushNotificationService {
     });
 
     await toast.present();
+  }
+
+  private registerNativeForegroundHandlers() {
+    if (this.nativeListenersRegistered || !this.isNativePlatform) {
+      return;
+    }
+
+    this.nativeListenersRegistered = true;
+
+    PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
+      this.presentForegroundToast(
+        notification.title || notification.data?.title || 'CoParent',
+        notification.body || (notification.data as any)?.body || ''
+      );
+    });
+
+    PushNotifications.addListener('registration', async (_: Token) => {
+      await this.refreshNativeToken();
+    });
+
+    PushNotifications.addListener('registrationError', err => {
+      console.error('[PushNotificationService] Native registration error', err);
+    });
+
+    FirebaseMessaging.addListener('notificationReceived', async (event: NotificationReceivedEvent) => {
+      const title = event.notification?.title || 'CoParent';
+      const dataPayload = event.notification?.data as Record<string, unknown> | undefined;
+      const fallbackBody = typeof dataPayload?.['body'] === 'string' ? (dataPayload['body'] as string) : '';
+      const body = event.notification?.body || fallbackBody || '';
+      await this.presentForegroundToast(title, body);
+    });
+
+    FirebaseMessaging.addListener('tokenReceived', async (event: TokenReceivedEvent) => {
+      await this.savePushToken(event.token);
+    });
+  }
+
+  private async registerNativePush(): Promise<void> {
+    if (!this.isNativePlatform || this.registering || !this.currentUserId) {
+      return;
+    }
+
+    try {
+      this.registering = true;
+      this.registerNativeForegroundHandlers();
+
+      let permission = await PushNotifications.checkPermissions();
+      if (permission.receive !== 'granted') {
+        permission = await PushNotifications.requestPermissions();
+        if (permission.receive !== 'granted') {
+          console.warn('[PushNotificationService] Notification permission not granted');
+          return;
+        }
+      }
+
+      let messagingPermission = await FirebaseMessaging.checkPermissions();
+      if (messagingPermission.receive !== 'granted') {
+        messagingPermission = await FirebaseMessaging.requestPermissions();
+        if (messagingPermission.receive !== 'granted') {
+          console.warn('[PushNotificationService] Firebase messaging permission not granted');
+          return;
+        }
+      }
+
+      await PushNotifications.register();
+      await this.refreshNativeToken();
+    } catch (error) {
+      console.error('[PushNotificationService] Failed to register native token', error);
+    } finally {
+      this.registering = false;
+    }
+  }
+
+  private async refreshNativeToken() {
+    try {
+      const { token } = await FirebaseMessaging.getToken();
+      if (token) {
+        await this.savePushToken(token);
+        console.info('[PushNotificationService] native token saved for user', this.currentUserId);
+      } else {
+        console.warn('[PushNotificationService] Native token not available yet');
+      }
+    } catch (error) {
+      console.error('[PushNotificationService] Failed to refresh native token', error);
+    }
+  }
+
+  private async savePushToken(token: string) {
+    if (!this.currentUserId || !token) {
+      return;
+    }
+
+    await this.userProfileService.addPushToken(this.currentUserId, token);
   }
 }

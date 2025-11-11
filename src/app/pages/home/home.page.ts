@@ -1,7 +1,5 @@
-import { Component, OnInit, OnDestroy, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
-import { IonicModule, ModalController, ToastController } from '@ionic/angular';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { ModalController, ToastController } from '@ionic/angular';
 import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 
@@ -11,14 +9,13 @@ import { SwapRequestModalComponent } from '../../components/swap-request-modal/s
 import { SwapRequest, SwapRequestStatus } from '../../core/models/swap-request.model';
 
 @Component({
-  standalone: true,
   selector: 'app-home',
   templateUrl: './home.page.html',
   styleUrls: ['./home.page.scss'],
-  imports: [IonicModule, CommonModule, FormsModule],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA]
+  standalone: false
 })
 export class HomePage implements OnInit, OnDestroy {
+  message = 'This modal example uses the modalController to present and dismiss modals.';
   dailyOverview: DailyOverview | null = null;
   quickActions: QuickAction[] = [];
   isLoading = true;
@@ -40,6 +37,8 @@ export class HomePage implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
+    console.log('ModalCtrl instance:', this.modalCtrl);
+console.log('create method:', typeof this.modalCtrl.create);
     this.loadData();
     this.subscribeToOverview();
   }
@@ -102,7 +101,7 @@ export class HomePage implements OnInit, OnDestroy {
   async executeQuickAction(action: QuickAction) {
     // מקרה מיוחד לבקשת החלפה - נפתח Modal
     if (action.id === 'swap-request') {
-      await this.openSwapRequestModal();
+      await this.openModal();
       return;
     }
 
@@ -116,22 +115,26 @@ export class HomePage implements OnInit, OnDestroy {
   /**
    * פתיחת Modal לבקשת החלפה
    */
-  async openSwapRequestModal() {
+ 
+  async openModal() {
     const modal = await this.modalCtrl.create({
       component: SwapRequestModalComponent,
-      presentingElement: await this.modalCtrl.getTop()
     });
-
     await modal.present();
 
     const { data, role } = await modal.onWillDismiss();
 
     if (role === 'confirm' && data) {
       try {
-        await this.homeService.submitSwapRequest(data);
+        await this.homeService.submitSwapRequest({
+          originalDate: data.originalDate,
+          proposedDate: data.proposedDate,
+          reason: data.reason
+        });
+        await this.presentToast('הבקשה נשלחה בהצלחה', 'success');
       } catch (error) {
         console.error('Failed to submit swap request', error);
-        this.presentErrorToast('שליחת הבקשה נכשלה, נסו שוב בעוד רגע.');
+        await this.presentToast('שליחת הבקשה נכשלה, נסו שוב', 'danger');
       }
     }
   }
@@ -140,7 +143,7 @@ export class HomePage implements OnInit, OnDestroy {
    * ניווט לאירוע
    */
   navigateToEvent(eventId: string) {
-    this.router.navigate(['/tabs/calendar'], { 
+    this.router.navigate(['/calendar'], { 
       queryParams: { eventId } 
     });
   }
@@ -149,7 +152,7 @@ export class HomePage implements OnInit, OnDestroy {
    * ניווט למשימה
    */
   navigateToTask(taskId: string) {
-    this.router.navigate(['/tabs/tasks'], { 
+    this.router.navigate(['/tasks'], { 
       queryParams: { taskId } 
     });
   }
@@ -158,7 +161,7 @@ export class HomePage implements OnInit, OnDestroy {
    * ניווט להוצאה
    */
   navigateToExpense(expenseId: string) {
-    this.router.navigate(['/tabs/expenses'], { 
+    this.router.navigate(['/expenses'], { 
       queryParams: { expenseId } 
     });
   }
@@ -317,6 +320,17 @@ export class HomePage implements OnInit, OnDestroy {
           role: 'cancel'
         }
       ]
+    });
+
+    await toast.present();
+  }
+
+  private async presentToast(message: string, color: 'success' | 'danger' = 'success') {
+    const toast = await this.toastCtrl.create({
+      message,
+      duration: 3000,
+      color,
+      position: 'bottom'
     });
 
     await toast.present();

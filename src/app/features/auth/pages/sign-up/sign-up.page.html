@@ -1,0 +1,163 @@
+<ion-content [fullscreen]="true">
+  <div class="signup-container">
+    
+    <div class="intro-section">
+      <button class="back-button" type="button" (click)="goToLogin()">
+        <ion-icon name="arrow-back-outline"></ion-icon>
+        <span>בחזרה להתחברות</span>
+      </button>
+      <h1>ברוך הבא!</h1>
+      <p>צור חשבון חדש והתחל לנהל את ההורות המשותפת שלך בצורה חכמה.</p>
+    </div>
+
+    <div class="form-card">
+      <div class="steps-indicator">
+        <div class="step" [class.active]="currentStep >= 1">
+          <span>1</span>
+          <small>פרטים אישיים</small>
+        </div>
+        <div class="divider-line"></div>
+        <div class="step" [class.active]="currentStep >= 2">
+          <span>2</span>
+          <small>אבטחת חשבון</small>
+        </div>
+      </div>
+
+      <form [formGroup]="signupForm" (ngSubmit)="onSignup()">
+        <ng-container *ngIf="currentStep === 1">
+          <div class="form-group">
+            <label for="fullName">שם מלא</label>
+            <div class="input-wrapper" [class.invalid]="isFieldInvalid('fullName')">
+              <ion-icon name="person-outline"></ion-icon>
+              <input
+                id="fullName"
+                type="text"
+                formControlName="fullName"
+                placeholder="לדוגמה: דנה כהן"
+                autocomplete="name"
+              />
+            </div>
+            <span class="error-message" *ngIf="isFieldInvalid('fullName')">
+              {{ getErrorMessage('fullName') }}
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label for="email">אימייל</label>
+            <div class="input-wrapper" [class.invalid]="isFieldInvalid('email')">
+              <ion-icon name="mail-outline"></ion-icon>
+              <input
+                id="email"
+                type="email"
+                formControlName="email"
+                placeholder="example@email.com"
+                autocomplete="email"
+              />
+            </div>
+            <span class="error-message" *ngIf="isFieldInvalid('email')">
+              {{ getErrorMessage('email') }}
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label for="phone">טלפון (לא חובה)</label>
+            <div class="input-wrapper" [class.invalid]="isFieldInvalid('phone')">
+              <ion-icon name="call-outline"></ion-icon>
+              <input
+                id="phone"
+                type="tel"
+                formControlName="phone"
+                placeholder="0501234567"
+                autocomplete="tel"
+              />
+            </div>
+            <span class="error-message" *ngIf="isFieldInvalid('phone')">
+              {{ getErrorMessage('phone') }}
+            </span>
+          </div>
+        </ng-container>
+
+        <ng-container *ngIf="currentStep === 2">
+          <div class="form-group">
+            <label for="password">סיסמה</label>
+            <div class="input-wrapper" [class.invalid]="isFieldInvalid('password')">
+              <ion-icon name="lock-closed-outline"></ion-icon>
+              <input
+                id="password"
+                [type]="showPassword ? 'text' : 'password'"
+                formControlName="password"
+                placeholder="••••••••"
+                autocomplete="new-password"
+              />
+              <button type="button" class="toggle-password" (click)="togglePasswordVisibility('password')">
+                <ion-icon [name]="showPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+              </button>
+            </div>
+            <span class="error-message" *ngIf="isFieldInvalid('password')">
+              {{ getErrorMessage('password') }}
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label for="confirmPassword">אימות סיסמה</label>
+            <div class="input-wrapper" [class.invalid]="isFieldInvalid('confirmPassword')">
+              <ion-icon name="lock-open-outline"></ion-icon>
+              <input
+                id="confirmPassword"
+                [type]="showConfirmPassword ? 'text' : 'password'"
+                formControlName="confirmPassword"
+                placeholder="חזור על הסיסמה"
+                autocomplete="new-password"
+              />
+              <button type="button" class="toggle-password" (click)="togglePasswordVisibility('confirmPassword')">
+                <ion-icon [name]="showConfirmPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+              </button>
+            </div>
+            <span class="error-message" *ngIf="isFieldInvalid('confirmPassword')">
+              {{ getErrorMessage('confirmPassword') }}
+            </span>
+          </div>
+
+          <label class="checkbox-label">
+            <input type="checkbox" formControlName="acceptTerms">
+            <span class="checkbox-custom"></span>
+            <span class="checkbox-text">
+              אני מאשר/ת את <a href="#">תנאי השימוש</a> ואת <a href="#">מדיניות הפרטיות</a>
+            </span>
+          </label>
+          <span class="error-message" *ngIf="isFieldInvalid('acceptTerms')">
+            {{ getErrorMessage('acceptTerms') }}
+          </span>
+        </ng-container>
+
+        <div class="actions">
+          <button type="button" class="secondary" *ngIf="currentStep > 1" (click)="previousStep()">
+            <ion-icon name="arrow-back-outline"></ion-icon>
+            <span>חזרה</span>
+          </button>
+
+          <button type="button" class="primary" *ngIf="currentStep === 1" (click)="nextStep()">
+            <span>המשך</span>
+            <ion-icon name="arrow-forward-outline"></ion-icon>
+          </button>
+
+          <button
+            type="submit"
+            class="primary"
+            *ngIf="currentStep === 2"
+            [class.loading]="isLoading"
+            [disabled]="isLoading"
+          >
+            <span *ngIf="!isLoading">צור חשבון</span>
+            <ion-spinner *ngIf="isLoading" name="crescent"></ion-spinner>
+          </button>
+        </div>
+
+        <div class="auth-error" *ngIf="authError">
+          <ion-icon name="alert-circle-outline"></ion-icon>
+          <span>{{ authError }}</span>
+        </div>
+      </form>
+    </div>
+  </div>
+</ion-content>

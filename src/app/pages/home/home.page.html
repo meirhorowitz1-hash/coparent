@@ -1,4 +1,4 @@
-<ion-page>
+
   <ion-header [translucent]="true">
     <ion-toolbar color="primary">
       <ion-title>דף הבית</ion-title>
@@ -10,7 +10,7 @@
     </ion-toolbar>
   </ion-header>
 
-  <ion-content [fullscreen]="true" class="ion-padding">
+  <ion-content  [fullscreen]="true"  class="ion-padding">
     <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
       <ion-refresher-content></ion-refresher-content>
     </ion-refresher>
@@ -101,7 +101,6 @@
 
         <div class="requests-body" *ngIf="!swapRequestsCollapsed">
           <ion-segment 
-            mode="md" 
             [(ngModel)]="requestFilter"
             class="requests-segment">
             <ion-segment-button [value]="SwapRequestStatus.PENDING">
@@ -308,7 +307,7 @@
           expand="block" 
           fill="clear" 
           *ngIf="dailyOverview.upcomingTasks.length > 5"
-          (click)="executeQuickAction({id: 'tasks', title: '', icon: '', route: '/tabs/tasks'})">
+          (click)="executeQuickAction({id: 'tasks', title: '', icon: '', route: '/tasks'})">
           הצג עוד משימות
           <ion-icon slot="end" name="arrow-forward"></ion-icon>
         </ion-button>
@@ -365,7 +364,7 @@
           expand="block" 
           fill="clear" 
           *ngIf="dailyOverview.pendingExpenses.length > 3"
-          (click)="executeQuickAction({id: 'expenses', title: '', icon: '', route: '/tabs/expenses'})">
+          (click)="executeQuickAction({id: 'expenses', title: '', icon: '', route: '/expenses'})">
           הצג עוד הוצאות
           <ion-icon slot="end" name="arrow-forward"></ion-icon>
         </ion-button>
@@ -388,4 +387,4 @@
     <ion-button (click)="loadData()">נסה שוב</ion-button>
   </div>
 </ion-content>
-</ion-page>
+

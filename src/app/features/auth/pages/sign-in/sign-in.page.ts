@@ -1,16 +1,16 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { AuthService } from '../../core/services/auth.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { take } from 'rxjs/operators';
 
 @Component({
-  selector: 'app-login',
-  templateUrl: './login.page.html',
-  styleUrls: ['./login.page.scss'],
+  selector: 'app-sign-in',
+  templateUrl: './sign-in.page.html',
+  styleUrls: ['./sign-in.page.scss'],
   standalone: false
 })
-export class LoginPage implements OnInit {
+export class SignInPage implements OnInit {
   loginForm!: FormGroup;
   isLoading = false;
   showPassword = false;
@@ -50,7 +50,7 @@ export class LoginPage implements OnInit {
     this.authService.login(email, password).pipe(take(1)).subscribe({
       next: () => {
         this.isLoading = false;
-        this.router.navigate(['/tabs/home']);
+        this.router.navigate(['/shell/home']);
       },
       error: (error) => {
         this.isLoading = false;
@@ -87,7 +87,7 @@ export class LoginPage implements OnInit {
   }
 
   goToSignup() {
-    this.router.navigate(['/signup']);
+    this.router.navigate(['/auth/sign-up']);
   }
 
   goToForgotPassword() {

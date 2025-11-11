@@ -152,14 +152,14 @@ export class HomeService implements OnDestroy {
         id: 'swap-request',
         title: 'בקשת החלפה',
         icon: 'swap-horizontal',
-        route: '/tabs/calendar',
+        route: '/calendar',
         color: 'primary'
       },
       {
         id: 'new-expense',
         title: 'הוצאה חדשה',
         icon: 'wallet',
-        route: '/tabs/expenses',
+        route: '/expenses',
         badge: overview?.pendingExpenses.length,
         color: 'success'
       },
@@ -167,7 +167,7 @@ export class HomeService implements OnDestroy {
         id: 'new-task',
         title: 'משימה חדשה',
         icon: 'checkbox',
-        route: '/tabs/tasks',
+        route: '/tasks',
         badge: overview?.upcomingTasks.filter(t => t.status !== TaskStatus.COMPLETED).length,
         color: 'warning'
       },
@@ -175,7 +175,7 @@ export class HomeService implements OnDestroy {
         id: 'add-event',
         title: 'אירוע חדש',
         icon: 'calendar',
-        route: '/tabs/calendar',
+        route: '/calendar',
         color: 'tertiary'
       }
     ];

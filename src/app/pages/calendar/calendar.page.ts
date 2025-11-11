@@ -1,7 +1,5 @@
-import { Component, OnInit, OnDestroy, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
-import { IonicModule, ModalController } from '@ionic/angular';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { ModalController } from '@ionic/angular';
 import { Subject, takeUntil } from 'rxjs';
 import { CalendarService } from '../../core/services/calendar.service';
 import { CalendarDay, CalendarEvent, EventType } from '../../core/models/calendar-event.model';
@@ -9,12 +7,10 @@ import { CustodySetupComponent } from './custody-setup.component';
 import { EventFormComponent } from './event-form.component';
 
 @Component({
-  standalone: true,
   selector: 'app-calendar',
   templateUrl: './calendar.page.html',
   styleUrls: ['./calendar.page.scss'],
-  imports: [IonicModule, CommonModule, FormsModule],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA]
+  standalone: false
 })
 export class CalendarPage implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();

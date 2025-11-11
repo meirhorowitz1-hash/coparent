@@ -2,18 +2,18 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ActivatedRoute } from '@angular/router';
-import { AuthService } from '../../core/services/auth.service';
-import { UserProfileService } from '../../core/services/user-profile.service';
-import { FamilyService } from '../../core/services/family.service';
+import { AuthService } from '../../../../core/services/auth.service';
+import { UserProfileService } from '../../../../core/services/user-profile.service';
+import { FamilyService } from '../../../../core/services/family.service';
 import { firstValueFrom } from 'rxjs';
 
 @Component({
-  selector: 'app-signup',
-  templateUrl: './signup.page.html',
-  styleUrls: ['./signup.page.scss'],
+  selector: 'app-sign-up',
+  templateUrl: './sign-up.page.html',
+  styleUrls: ['./sign-up.page.scss'],
   standalone: false
 })
-export class SignupPage implements OnInit {
+export class SignUpPage implements OnInit {
   signupForm!: FormGroup;
   isLoading = false;
   showPassword = false;
@@ -163,7 +163,7 @@ export class SignupPage implements OnInit {
       }
 
       this.isLoading = false;
-      this.router.navigate(['/calendar']);
+      this.router.navigate(['/shell/home']);
     } catch (error: any) {
       this.isLoading = false;
       if (error?.message === 'family-not-found') {
@@ -219,6 +219,6 @@ export class SignupPage implements OnInit {
   }
 
   goToLogin() {
-    this.router.navigate(['/login']);
+    this.router.navigate(['/auth/sign-in']);
   }
 }

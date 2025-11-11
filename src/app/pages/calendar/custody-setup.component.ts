@@ -1,17 +1,14 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { IonicModule, ModalController, LoadingController } from '@ionic/angular';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { ModalController, LoadingController } from '@ionic/angular';
 import { CalendarService } from '../../core/services/calendar.service';
 import { CustodySchedule, CustodyPattern, CustodyTemplate, CUSTODY_TEMPLATES } from '../../core/models/custody-schedule.model';
 import { Subject, takeUntil } from 'rxjs';
 
 @Component({
-  standalone: true,
   selector: 'app-custody-setup',
   templateUrl: './custody-setup.component.html',
   styleUrls: ['./custody-setup.component.scss'],
-  imports: [IonicModule, CommonModule, FormsModule]
+  standalone: false
 })
 export class CustodySetupComponent implements OnInit, OnDestroy {
   templates = CUSTODY_TEMPLATES;

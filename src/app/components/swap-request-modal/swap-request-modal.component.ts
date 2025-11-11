@@ -1,31 +1,29 @@
 import { Component, OnInit } from '@angular/core';
-import { IonicModule, ModalController } from '@ionic/angular';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { ModalController } from '@ionic/angular';
 
 @Component({
-  standalone: true,
   selector: 'app-swap-request-modal',
   templateUrl: './swap-request-modal.component.html',
   styleUrls: ['./swap-request-modal.component.scss'],
-  imports: [IonicModule, CommonModule, FormsModule]
+  standalone: false
 })
 export class SwapRequestModalComponent implements OnInit {
-  originalDate: Date = new Date();
-  proposedDate: Date = new Date();
+  originalDate: string = '';
+  proposedDate: string = '';
   reason: string = '';
   minDate: string = '';
 
   constructor(private modalCtrl: ModalController) {}
 
   ngOnInit() {
-    // Set minimum date to today
-    this.minDate = new Date().toISOString();
-    
-    // Set default proposed date to tomorrow
-    const tomorrow = new Date();
+    const today = new Date();
+    this.minDate = today.toISOString();
+
+    this.originalDate = this.minDate;
+
+    const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    this.proposedDate = tomorrow;
+    this.proposedDate = tomorrow.toISOString();
   }
 
   dismiss() {
@@ -34,15 +32,16 @@ export class SwapRequestModalComponent implements OnInit {
 
   submit() {
     if (!this.originalDate || !this.proposedDate) {
+      console.log('Form is invalid');
       return;
     }
 
     const swapRequest = {
-      originalDate: this.originalDate,
-      proposedDate: this.proposedDate,
+      originalDate: new Date(this.originalDate),
+      proposedDate: new Date(this.proposedDate),
       reason: this.reason
     };
-
+    console.log('confirm');
     this.modalCtrl.dismiss(swapRequest, 'confirm');
   }
 
