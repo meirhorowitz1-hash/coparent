@@ -1,129 +1,159 @@
-
-  <ion-header [translucent]="true">
-    <ion-toolbar color="primary">
-      <ion-title>לוח שנה משותף</ion-title>
-      <ion-buttons slot="start">
-        <ion-button (click)="openCustodySetup()">
-          <ion-icon name="calendar-outline" slot="icon-only"></ion-icon>
-        </ion-button>
-      </ion-buttons>
-      <ion-buttons slot="end">
-        <ion-button (click)="addNewEvent()">
-          <ion-icon name="add" slot="icon-only"></ion-icon>
-        </ion-button>
-      </ion-buttons>
-    </ion-toolbar>
-  </ion-header>
-
-  <ion-content  >
-    <!-- ניווט חודשים -->
-    <div class="month-navigation">
-      <ion-button fill="solid" (click)="previousMonth()" shape="round">
-        <ion-icon name="chevron-back-outline" slot="icon-only"></ion-icon>
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>לוח שנה משותף</ion-title>
+    <ion-buttons slot="start">
+      <ion-button fill="clear" size="small" (click)="openCustodySetup()">
+        <ion-icon slot="icon-only" name="calendar-clear-outline"></ion-icon>
       </ion-button>
-      
-      <h2>{{ monthName }} {{ yearNumber }}</h2>
-      
-      <ion-button fill="solid" (click)="nextMonth()" shape="round">
-        <ion-icon name="chevron-forward-outline" slot="icon-only"></ion-icon>
+    </ion-buttons>
+    <ion-buttons slot="end">
+      <ion-button fill="clear" size="small" (click)="addNewEvent()">
+        <ion-icon slot="icon-only" name="add"></ion-icon>
       </ion-button>
-    </div>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
 
-    <!-- כותרות ימים -->
-    <div class="calendar-header">
-      <div class="weekday" *ngFor="let day of weekDays">{{ day }}</div>
-    </div>
-
-    <!-- לוח השנה -->
-    <div class="calendar-grid">
-      <div 
-        *ngFor="let day of calendarDays" 
-        [class]="getDayClasses(day)"
-        (click)="onDayClick(day)">
-        
-        <div class="day-number">{{ day.date.getDate() }}</div>
-        <div 
-          *ngIf="day.primaryParent as parent"
-          class="custody-dot"
-          [class.parent1]="parent === 'parent1'"
-          [class.parent2]="parent === 'parent2'">
+<ion-content [fullscreen]="true">
+  <div class="calendar-shell">
+    <section class="calendar-hero surface-card">
+      <div class="hero-row">
+        <div>
+          <p class="eyebrow">חודש נוכחי</p>
+          <h1>{{ monthName }} {{ yearNumber }}</h1>
+          <p class="hero-subtitle">מסנכרן בין כל בני המשפחה</p>
         </div>
-        
-        <div class="day-events">
-          <div 
-            class="event-dot" 
-            *ngFor="let event of day.events.slice(0, 3)"
-            [style.background-color]="event.color">
-          </div>
-          <div class="more-events" *ngIf="day.events.length > 3">
-            +{{ day.events.length - 3 }}
-          </div>
+        <div class="hero-actions">
+          <ion-button
+            fill="clear"
+            size="small"
+            class="custody-manage-button"
+            (click)="openCustodySetup()">
+            <ion-icon slot="start" name="swap-horizontal-outline"></ion-icon>
+            ניהול משמרות
+            <span class="pending-dot" *ngIf="hasPendingCustodyApproval"></span>
+          </ion-button>
+          <ion-button size="small" (click)="addNewEvent()">
+            <ion-icon slot="start" name="add"></ion-icon>
+            אירוע חדש
+          </ion-button>
         </div>
       </div>
-    </div>
 
-    <!-- מקרא -->
-    <div class="legend">
+      <div class="month-controls">
+        <ion-button fill="clear" shape="round" (click)="previousMonth()">
+          <ion-icon slot="icon-only" name="chevron-back-outline"></ion-icon>
+        </ion-button>
+
+        <div class="month-label">
+          <span>{{ monthName }}</span>
+          <span>{{ yearNumber }}</span>
+        </div>
+
+        <ion-button fill="clear" shape="round" (click)="nextMonth()">
+          <ion-icon slot="icon-only" name="chevron-forward-outline"></ion-icon>
+        </ion-button>
+
+        <button type="button" class="today-chip" (click)="goToCurrentMonth()">היום</button>
+      </div>
+    </section>
+
+    <section class="calendar-panel">
+      <div class="calendar-header">
+        <div class="weekday" *ngFor="let day of weekDays">{{ day }}</div>
+      </div>
+
+      <div class="calendar-grid">
+        <button
+          type="button"
+          *ngFor="let day of calendarDays"
+          [class]="getDayClasses(day)"
+          (click)="onDayClick(day)">
+          <div class="day-number">{{ day.date.getDate() }}</div>
+
+          <div
+            *ngIf="day.primaryParent as parent"
+            class="custody-dot"
+            [class.parent1]="parent === 'parent1'"
+            [class.parent2]="parent === 'parent2'">
+          </div>
+
+          <div class="day-events">
+            <div
+              class="event-dot"
+              *ngFor="let event of day.events.slice(0, 3)"
+              [style.background-color]="event.color">
+            </div>
+            <div class="more-events" *ngIf="day.events.length > 3">
+              +{{ day.events.length - 3 }}
+            </div>
+          </div>
+        </button>
+      </div>
+    </section>
+
+    <section class="legend-panel">
       <div class="legend-item">
-        <div class="legend-color parent1"></div>
-        <span>הורה 1</span>
+        <span class="legend-color parent1"></span>
+        <span>{{ parentLabels.parent1 }}</span>
       </div>
       <div class="legend-item">
-        <div class="legend-color parent2"></div>
-        <span>הורה 2</span>
+        <span class="legend-color parent2"></span>
+        <span>{{ parentLabels.parent2 }}</span>
       </div>
       <div class="legend-item">
-        <div class="legend-color both"></div>
+        <span class="legend-color both"></span>
         <span>שניהם</span>
       </div>
-    </div>
+    </section>
+  </div>
 
-    <!-- Modal לפרטי יום -->
-    <ion-modal 
-      [isOpen]="showEventModal" 
-      (didDismiss)="closeModal()"
-      [breakpoints]="[0, 0.5, 0.75, 1]"
-      [initialBreakpoint]="0.5">
-      <ng-template>
-        <ion-header>
-          <ion-toolbar>
-            <ion-title *ngIf="selectedDay">
-              {{ selectedDay.date.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' }) }}
-            </ion-title>
-            <ion-buttons slot="end">
-              <ion-button (click)="closeModal()">
-                <ion-icon name="close" slot="icon-only"></ion-icon>
-              </ion-button>
-            </ion-buttons>
-          </ion-toolbar>
-        </ion-header>
+  <ion-modal
+    [isOpen]="showEventModal"
+    (didDismiss)="closeModal()"
+    [breakpoints]="[0, 0.45, 0.85]"
+    [initialBreakpoint]="0.45">
+    <ng-template>
+      <ion-header translucent="true">
+        <ion-toolbar>
+          <ion-title *ngIf="selectedDay">
+            {{ selectedDay.date.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' }) }}
+          </ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="closeModal()">
+              <ion-icon slot="icon-only" name="close"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
 
-        <ion-content class="ion-padding">
-          <ion-card *ngIf="selectedDay?.primaryParent as parent" class="custody-card">
-            <ion-card-content>
-              <div class="custody-summary">
-                <ion-icon name="people" class="custody-icon"></ion-icon>
-                <div>
-                  <h3>היום אצל {{ parent === 'parent1' ? 'הורה 1' : 'הורה 2' }}</h3>
-                  <p>ניתן לערוך את התבנית במסך המשמרות.</p>
-                </div>
-              </div>
-            </ion-card-content>
-          </ion-card>
+      <ion-content class="modal-content">
+        <div class="modal-shell" *ngIf="selectedDay">
+          <article class="custody-pill" *ngIf="selectedDay.primaryParent as parent">
+            <ion-icon name="people-outline"></ion-icon>
+            <div>
+              <h3>היום אצל {{ parent === 'parent1' ? parentLabels.parent1 : parentLabels.parent2 }}</h3>
+              <p>ניתן לערוך את התבנית במסך המשמרות.</p>
+            </div>
+          </article>
 
-          <div *ngIf="selectedDay && selectedDay.events.length === 0" class="no-events">
-            <ion-icon name="calendar-outline" size="large"></ion-icon>
+          <div class="empty-state" *ngIf="selectedDay.events.length === 0">
+            <ion-icon name="calendar-outline"></ion-icon>
             <p>אין אירועים ליום זה</p>
             <ion-button expand="block" (click)="addNewEvent()">
-              <ion-icon name="add" slot="start"></ion-icon>
+              <ion-icon slot="start" name="add"></ion-icon>
               הוסף אירוע
             </ion-button>
           </div>
 
-          <ion-list *ngIf="selectedDay && selectedDay.events.length > 0">
-            <ion-item *ngFor="let event of selectedDay.events" lines="full" button (click)="openEventForm(event)">
-              <ion-label>
-                <h2>{{ event.title }}</h2>
+          <div class="event-list" *ngIf="selectedDay.events.length > 0">
+            <article
+              class="event-row"
+              *ngFor="let event of selectedDay.events"
+              (click)="openEventForm(event)">
+              <div class="event-badge" [style.background]="event.color"></div>
+              <div class="event-body">
+                <strong>{{ event.title }}</strong>
                 <p>{{ getEventTypeLabel(event.type) }}</p>
                 <p *ngIf="event.description">{{ event.description }}</p>
                 <p *ngIf="!event.isAllDay">
@@ -133,27 +163,26 @@
                   <ion-icon name="location-outline"></ion-icon>
                   {{ event.location }}
                 </p>
-              </ion-label>
-              <ion-button 
-                slot="end" 
-                fill="clear" 
-                color="danger"
+              </div>
+              <ion-button
+                fill="clear"
+                color="medium"
                 (click)="deleteEvent(event.id); $event.stopPropagation()">
-                <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+                <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
               </ion-button>
-            </ion-item>
-          </ion-list>
+            </article>
+          </div>
 
-          <ion-button 
-            expand="block" 
+          <ion-button
+            expand="block"
             class="ion-margin-top"
-            *ngIf="selectedDay && selectedDay.events.length > 0"
+            *ngIf="selectedDay.events.length > 0"
             (click)="addNewEvent()">
-            <ion-icon name="add" slot="start"></ion-icon>
+            <ion-icon slot="start" name="add"></ion-icon>
             הוסף אירוע נוסף
           </ion-button>
-        </ion-content>
-      </ng-template>
-    </ion-modal>
-  </ion-content>
-
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+</ion-content>

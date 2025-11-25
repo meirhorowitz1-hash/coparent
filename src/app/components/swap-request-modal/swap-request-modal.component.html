@@ -25,16 +25,22 @@
           <ion-icon name="calendar-outline"></ion-icon>
           התאריך המקורי שלך
         </ion-label>
-        <ion-datetime
-          presentation="date"
-          [(ngModel)]="originalDate"
-          name="originalDate"
-          [min]="minDate"
-          displayFormat="DD/MM/YYYY"
-          cancelText="ביטול"
-          doneText="אישור">
-        </ion-datetime>
+        <ion-datetime-button datetime="swap-original-date"></ion-datetime-button>
       </ion-item>
+      <ion-modal keepContentsMounted="true">
+        <ng-template>
+          <ion-datetime
+            id="swap-original-date"
+            presentation="date"
+            [(ngModel)]="originalDate"
+            name="originalDate"
+            [min]="minDate"
+            displayFormat="DD/MM/YYYY"
+            cancelText="ביטול"
+            doneText="אישור">
+          </ion-datetime>
+        </ng-template>
+      </ion-modal>
 
       <!-- Proposed Date -->
       <ion-item>
@@ -42,16 +48,22 @@
           <ion-icon name="swap-horizontal"></ion-icon>
           תאריך מוצע להחלפה
         </ion-label>
-        <ion-datetime
-          presentation="date"
-          [(ngModel)]="proposedDate"
-          name="proposedDate"
-          [min]="minDate"
-          displayFormat="DD/MM/YYYY"
-          cancelText="ביטול"
-          doneText="אישור">
-        </ion-datetime>
+        <ion-datetime-button datetime="swap-proposed-date"></ion-datetime-button>
       </ion-item>
+      <ion-modal keepContentsMounted="true">
+        <ng-template>
+          <ion-datetime
+            id="swap-proposed-date"
+            presentation="date"
+            [(ngModel)]="proposedDate"
+            name="proposedDate"
+            [min]="minDate"
+            displayFormat="DD/MM/YYYY"
+            cancelText="ביטול"
+            doneText="אישור">
+          </ion-datetime>
+        </ng-template>
+      </ion-modal>
 
       <!-- Reason -->
       <ion-item>
@@ -99,4 +111,3 @@
     </ion-button>
   </ion-toolbar>
 </ion-footer>
-

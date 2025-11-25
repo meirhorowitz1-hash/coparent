@@ -1,8 +1,10 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit } from '@angular/core';
 import { ModalController } from '@ionic/angular';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { CalendarService } from '../../core/services/calendar.service';
 import { CalendarEvent, EventType } from '../../core/models/calendar-event.model';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 @Component({
   selector: 'app-event-form',
@@ -10,22 +12,19 @@ import { CalendarEvent, EventType } from '../../core/models/calendar-event.model
   styleUrls: ['./event-form.component.scss'],
   standalone: false
 })
-export class EventFormComponent implements OnInit {
+export class EventFormComponent implements OnInit, OnDestroy {
   @Input() event?: CalendarEvent;
   @Input() selectedDate?: Date;
   
   eventForm!: FormGroup;
   isEditMode = false;
+  parentLabels = { parent1: 'הורה 1', parent2: 'הורה 2' };
+  private destroy$ = new Subject<void>();
   
   eventTypes = [
     { value: EventType.CUSTODY, label: 'משמרת', icon: 'people', color: 'primary' },
-    { value: EventType.PICKUP, label: 'איסוף', icon: 'car', color: 'success' },
-    { value: EventType.DROPOFF, label: 'החזרה', icon: 'home', color: 'warning' },
-    { value: EventType.SCHOOL, label: 'בית ספר', icon: 'school', color: 'tertiary' },
     { value: EventType.ACTIVITY, label: 'פעילות', icon: 'football', color: 'secondary' },
     { value: EventType.MEDICAL, label: 'רפואי', icon: 'medical', color: 'danger' },
-    { value: EventType.HOLIDAY, label: 'חג', icon: 'gift', color: 'warning' },
-    { value: EventType.VACATION, label: 'חופשה', icon: 'airplane', color: 'tertiary' },
     { value: EventType.OTHER, label: 'אחר', icon: 'ellipsis-horizontal', color: 'medium' }
   ];
 
@@ -51,6 +50,16 @@ export class EventFormComponent implements OnInit {
   ) {}
 
   ngOnInit() {
+    this.calendarService.parentMetadata$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(metadata => {
+        this.parentLabels = {
+          parent1: metadata.parent1.name || 'הורה 1',
+          parent2: metadata.parent2.name || 'הורה 2'
+        };
+        this.refreshParentOptions();
+      });
+
     this.isEditMode = !!this.event;
     this.initForm();
     
@@ -60,6 +69,24 @@ export class EventFormComponent implements OnInit {
       this.setDefaultDate();
     }
   }
+
+  private refreshParentOptions() {
+    this.parentOptions = this.parentOptions.map(option => {
+      if (option.value === 'parent1') {
+        return { ...option, label: this.parentLabels.parent1 };
+      }
+      if (option.value === 'parent2') {
+        return { ...option, label: this.parentLabels.parent2 };
+      }
+      return option;
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+ 
 
   initForm() {
     const now = new Date();

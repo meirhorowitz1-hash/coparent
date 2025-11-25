@@ -14,12 +14,20 @@ const routes: Routes = [
         loadChildren: () => import('../home/home.module').then(m => m.HomePageModule)
       },
       {
+        path: 'swap-history',
+        loadChildren: () => import('../swap-history/swap-history.module').then(m => m.SwapHistoryPageModule)
+      },
+      {
         path: 'calendar',
         loadChildren: () => import('../calendar/calendar.module').then(m => m.CalendarPageModule)
       },
       {
         path: 'expenses',
         loadChildren: () => import('../expenses/expenses.module').then(m => m.ExpensesPageModule)
+      },
+      {
+        path: 'history',
+        loadChildren: () => import('../history/history.module').then(m => m.HistoryPageModule)
       },
       {
         path: 'tasks',

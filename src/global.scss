@@ -23,36 +23,19 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 * {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-family: 'SF Pro Display', 'SF Pro Text', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  background: var(--app-background);
+  background: radial-gradient(circle at 20% 20%, rgba(31, 111, 235, 0.08), transparent 38%),
+    radial-gradient(circle at 80% 0%, rgba(15, 157, 138, 0.08), transparent 34%),
+    linear-gradient(180deg, #f4f6fb 0%, #ffffff 100%);
   color: var(--app-text-primary);
   line-height: var(--leading-normal);
-  letter-spacing: -0.011em;
+  letter-spacing: -0.01em;
   overflow-x: hidden;
-}
-
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: radial-gradient(circle at 20% 20%, rgba(103, 85, 245, 0.16), transparent 45%),
-    radial-gradient(circle at 80% 0%, rgba(15, 197, 197, 0.2), transparent 40%),
-    var(--app-hero-gradient);
-  opacity: 0.9;
-  z-index: -2;
-}
-
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.7));
-  z-index: -1;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -81,29 +64,41 @@ p {
 
 ion-header {
   ion-toolbar {
-    --background: var(--app-surface);
+    --background: transparent;
     --color: var(--app-text-primary);
     --border-width: 0;
-    --min-height: 56px;
-    border-bottom: 1px solid var(--app-border);
+    --min-height: 64px;
+    backdrop-filter: blur(18px);
+    padding-inline: var(--space-4);
+    position: relative;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      left: var(--space-4);
+      right: var(--space-4);
+      bottom: 0;
+      height: 1px;
+      background: var(--app-border-light);
+    }
     
     ion-title {
-      font-weight: var(--font-semibold);
-      font-size: var(--text-lg);
+      font-weight: var(--font-bold);
+      font-size: var(--text-2xl);
       letter-spacing: -0.02em;
       padding: 0 var(--space-4);
+      color: var(--app-text-primary);
     }
     
     ion-button {
       --color: var(--app-text-primary);
-      --border-radius: var(--radius-md);
+      --border-radius: var(--radius-full);
       --padding-start: var(--space-3);
       --padding-end: var(--space-3);
       font-weight: var(--font-medium);
-      
-      &:hover {
-        --background: var(--app-background-secondary);
-      }
+      --background: transparent;
+      --box-shadow: none;
+      --ripple-color: rgba(60, 60, 67, 0.2);
     }
   }
 }
@@ -114,9 +109,12 @@ ion-header {
 
 ion-content {
   --background: transparent;
-  --padding-start: 0;
-  --padding-end: 0;
+  --padding-start: clamp(16px, 4vw, 32px);
+  --padding-end: clamp(16px, 4vw, 32px);
+  --padding-top: var(--space-4);
   --overflow: auto;
+  --ion-safe-area-bottom: env(safe-area-inset-bottom);
+  padding-bottom: calc(var(--space-8) + var(--ion-safe-area-bottom, 0px));
 }
 
 /* ============================================
@@ -124,30 +122,31 @@ ion-content {
    ============================================ */
 
 ion-card {
-  background: var(--app-card-gradient);
-  border-radius: var(--radius-2xl);
-  border: 1px solid var(--app-border-light);
+  background: var(--app-surface);
+  border-radius: 20px;
+  border: 1px solid var(--app-border);
   box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(18px);
-  margin: var(--space-4);
-  transition: var(--transition-base);
+  margin: var(--space-3) 0;
+  padding: 0;
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+  backdrop-filter: blur(12px);
   
   &:hover {
+    transform: translateY(-1px);
     box-shadow: var(--shadow-md);
-    transform: translateY(-2px);
-    border-color: rgba(103, 85, 245, 0.2);
   }
   
   ion-card-header {
-    padding: var(--space-6);
+    padding: var(--space-5) var(--space-6) var(--space-3);
     border-bottom: 1px solid var(--app-border-light);
+    background: transparent;
     
     ion-card-title {
-      font-size: var(--text-lg);
+      font-size: var(--text-xl);
       font-weight: var(--font-semibold);
       color: var(--app-text-primary);
       letter-spacing: -0.02em;
-      margin: 0 0 var(--space-2);
+      margin: 0 0 var(--space-1);
     }
     
     ion-card-subtitle {
@@ -159,7 +158,7 @@ ion-card {
   }
   
   ion-card-content {
-    padding: var(--space-6);
+    padding: var(--space-5) var(--space-6);
     color: var(--app-text-secondary);
     line-height: var(--leading-relaxed);
   }
@@ -171,34 +170,35 @@ ion-card {
 
 ion-list {
   background: transparent;
-  padding: var(--space-2) 0;
-  
+  padding: 0;
+  margin: 0;
+
   ion-list-header {
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     font-weight: var(--font-semibold);
-    color: var(--app-text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    padding: var(--space-4) var(--space-4) var(--space-2);
+    color: var(--app-text-secondary);
+    text-transform: none;
+    letter-spacing: 0;
+    padding: var(--space-3) var(--space-1);
   }
   
   ion-item {
-    --background: rgba(255, 255, 255, 0.88);
-    --border-radius: var(--radius-xl);
+    --background: var(--app-surface);
+    --border-radius: 24px;
     --padding-start: var(--space-4);
     --inner-padding-end: var(--space-4);
-    --min-height: 60px;
-    margin: 0 var(--space-4) var(--space-2);
-    border-radius: var(--radius-xl);
+    --min-height: 64px;
+    margin: 0 0 var(--space-2);
+    border-radius: 24px;
     border: 1px solid var(--app-border);
-    box-shadow: 0 15px 30px rgba(15, 23, 42, 0.08);
+    box-shadow: var(--shadow-xs);
     transition: var(--transition-base);
-    backdrop-filter: blur(14px);
+    backdrop-filter: blur(10px);
     
     &:hover {
       --background: rgba(255, 255, 255, 0.95);
-      border-color: rgba(103, 85, 245, 0.22);
-      transform: translateX(-1px) translateY(-1px);
+      box-shadow: var(--shadow-sm);
+      transform: translateY(-1px);
     }
     
     &::part(native) {
@@ -237,13 +237,13 @@ ion-list {
    ============================================ */
 
 ion-button {
-  --border-radius: 999px;
+  --border-radius: 18px;
   font-weight: var(--font-semibold);
   font-size: var(--text-base);
   letter-spacing: -0.01em;
   text-transform: none;
-  height: 46px;
-  transition: var(--transition-base);
+  height: 48px;
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
   --padding-start: var(--space-5);
   --padding-end: var(--space-5);
   
@@ -255,36 +255,41 @@ ion-button {
   }
   
   &[size="large"] {
-    height: 54px;
+    height: 56px;
     font-size: var(--text-lg);
   }
   
   &[fill="solid"] {
-    --box-shadow: 0 15px 30px rgba(103, 85, 245, 0.25);
+    --background: linear-gradient(120deg, #0a84ff, #5ac8fa);
+    --box-shadow: 0 12px 24px rgba(10, 132, 255, 0.28);
+    color: #fff;
     
     &:hover {
-      transform: translateY(-2px);
-      --box-shadow: 0 20px 35px rgba(103, 85, 245, 0.3);
+      transform: translateY(-1px);
+      --box-shadow: 0 16px 28px rgba(10, 132, 255, 0.32);
     }
     
     &:active {
-      transform: translateY(-1px);
+      transform: translateY(0);
     }
   }
   
   &[fill="outline"] {
     --border-width: 1.5px;
-    --border-color: rgba(103, 85, 245, 0.4);
+    --border-color: rgba(10, 132, 255, 0.5);
     --color: var(--ion-color-primary);
+    --background: rgba(10, 132, 255, 0.06);
     
     &:hover {
-      --background: rgba(103, 85, 245, 0.08);
+      --background: rgba(10, 132, 255, 0.1);
     }
   }
   
   &[fill="clear"] {
+    --color: var(--app-text-secondary);
+    
     &:hover {
-      --background: rgba(255, 255, 255, 0.4);
+      --background: rgba(60, 60, 67, 0.08);
     }
   }
 }
@@ -298,6 +303,9 @@ ion-textarea,
 ion-select,
 ion-datetime {
   --background: var(--app-surface);
+  --border-radius: 18px;
+  --padding-start: var(--space-4);
+  --padding-end: var(--space-4);
   --color: var(--app-text-primary);
   --placeholder-color: var(--app-text-tertiary);
   --placeholder-opacity: 1;
@@ -342,18 +350,14 @@ ion-checkbox {
    ============================================ */
 
 ion-chip {
-  border-radius: var(--radius-md);
+  border-radius: 999px;
   font-weight: var(--font-medium);
   font-size: var(--text-sm);
-  padding: var(--space-2) var(--space-3);
+  padding: 0 var(--space-3);
   height: 32px;
-  border: 1px solid var(--app-border);
-  transition: var(--transition-base);
-  
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-xs);
-  }
+  border: 1px solid var(--app-border-light);
+  background: var(--app-background-secondary);
+  color: var(--app-text-secondary);
 }
 
 /* ============================================
@@ -361,12 +365,13 @@ ion-chip {
    ============================================ */
 
 ion-modal {
-  --border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+  // --border-radius: 32px 32px 0 0;
   --box-shadow: var(--shadow-xl);
+  --background: var(--app-surface-elevated);
   
   &::part(backdrop) {
-    background: rgba(15, 23, 42, 0.4);
-    backdrop-filter: blur(4px);
+    background: rgba(15, 23, 42, 0.25);
+    backdrop-filter: blur(10px);
   }
 }
 
@@ -375,24 +380,31 @@ ion-modal {
    ============================================ */
 
 ion-tab-bar {
-  --background: var(--app-surface);
-  border-top: 1px solid var(--app-border);
-  padding: var(--space-2) 0;
-  height: 64px;
+  --background: rgba(255, 255, 255, 0.94);
+  border: 1px solid var(--app-border);
+  border-radius: 28px;
+  padding: var(--space-1);
+  height: 68px;
+  margin: 0 var(--space-4) var(--space-4);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(18px);
   
   ion-tab-button {
     --color: var(--app-text-tertiary);
     --color-selected: var(--ion-color-primary);
+    border-radius: 24px;
+    transition: var(--transition-base);
     
     ion-icon {
       font-size: 24px;
-      margin-bottom: var(--space-1);
+      margin-bottom: 2px;
     }
     
     ion-label {
       font-size: var(--text-xs);
-      font-weight: var(--font-medium);
-      letter-spacing: 0.01em;
+      font-weight: var(--font-semibold);
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
     }
   }
 }
@@ -402,22 +414,22 @@ ion-tab-bar {
    ============================================ */
 
 ion-segment {
-  background: var(--app-background-secondary);
-  border-radius: var(--radius-lg);
-  padding: 3px;
+  background: rgba(142, 142, 147, 0.12);
+  border-radius: 18px;
+  padding: 4px;
   
   ion-segment-button {
     --indicator-color: transparent;
     --color: var(--app-text-secondary);
     --color-checked: var(--app-text-primary);
-    border-radius: var(--radius-md);
+    border-radius: 14px;
     font-weight: var(--font-medium);
     font-size: var(--text-sm);
     min-height: 36px;
     transition: var(--transition-base);
     
     &.segment-button-checked {
-      background: var(--app-surface);
+      background: #ffffff;
       box-shadow: var(--shadow-xs);
     }
   }
@@ -489,14 +501,14 @@ ion-segment {
 }
 
 .primary-cta {
-  background: linear-gradient(120deg, #6755f5, #0fc5c5);
+  background: linear-gradient(120deg, #0a84ff, #5ac8fa);
   color: #ffffff;
-  box-shadow: 0 20px 35px rgba(103, 85, 245, 0.35);
+  box-shadow: 0 20px 35px rgba(10, 132, 255, 0.25);
 }
 
 .secondary-cta {
-  background: rgba(15, 197, 197, 0.12);
-  color: #0f766e;
+  background: rgba(10, 132, 255, 0.08);
+  color: #0a84ff;
 }
 
 .primary-cta:hover,
@@ -509,17 +521,17 @@ ion-segment {
    ============================================ */
 
 ion-tabs ion-tab-bar {
-  --background: rgba(255, 255, 255, 0.92);
-  --border: 0;
-  /* position: fixed; */
-  left: var(--space-4);
-  right: var(--space-4);
-  bottom: calc(var(--ion-safe-area-bottom, 0px) + var(--space-4));
+  --background: rgba(255, 255, 255, 0.94);
+  position: fixed;
+  left: clamp(16px, 5vw, 32px);
+  right: clamp(16px, 5vw, 32px);
+  bottom: calc(var(--ion-safe-area-bottom, 0px) + var(--space-3));
   margin: 0;
-  z-index: 20;
-  /* border-radius: var(--radius-2xl); */
-  box-shadow: 0 25px 45px rgba(15, 23, 42, 0.15);
+  border-radius: 32px;
+  border: 1px solid var(--app-border);
+  box-shadow: var(--shadow-lg);
   padding: 6px;
+  z-index: 40;
   -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
 }
@@ -531,13 +543,13 @@ ion-tab-button {
   transition: var(--transition-base);
   
   &.tab-selected {
-    background: rgba(103, 85, 245, 0.12);
-    box-shadow: inset 0 0 0 1px rgba(103, 85, 245, 0.2);
+    background: rgba(10, 132, 255, 0.12);
+    box-shadow: inset 0 0 0 1px rgba(10, 132, 255, 0.2);
   }
 }
 
 ion-tabs ion-content {
-  --padding-bottom: calc(var(--ion-safe-area-bottom, 0px) + 80px);
+  --padding-bottom: calc(var(--ion-safe-area-bottom, 0px) + 96px);
 }
 
 /* ============================================

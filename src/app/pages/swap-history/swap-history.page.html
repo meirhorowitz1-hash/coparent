@@ -1,0 +1,140 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/home"></ion-back-button>
+    </ion-buttons>
+    <ion-title>היסטוריית בקשות</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <div class="history-shell">
+    <div *ngIf="isLoading" class="state-block">
+      <ion-spinner name="crescent"></ion-spinner>
+      <p>טוען בקשות...</p>
+    </div>
+
+    <ng-container *ngIf="!isLoading">
+      <section class="panel filters-card">
+        <ion-segment [(ngModel)]="requestFilter" class="requests-segment">
+          <ion-segment-button value="all">
+            <ion-label>
+              כל הבקשות
+              <ion-badge color="primary">{{ swapRequests.length }}</ion-badge>
+            </ion-label>
+          </ion-segment-button>
+          <ion-segment-button [value]="SwapRequestStatus.PENDING">
+            <ion-label>
+              ממתינות
+              <ion-badge color="warning">{{ getStatusCount(SwapRequestStatus.PENDING) }}</ion-badge>
+            </ion-label>
+          </ion-segment-button>
+          <ion-segment-button [value]="SwapRequestStatus.APPROVED">
+            <ion-label>
+              אושרו
+              <ion-badge color="success">{{ getStatusCount(SwapRequestStatus.APPROVED) }}</ion-badge>
+            </ion-label>
+          </ion-segment-button>
+          <ion-segment-button [value]="SwapRequestStatus.REJECTED">
+            <ion-label>
+              נדחו
+              <ion-badge color="danger">{{ getStatusCount(SwapRequestStatus.REJECTED) }}</ion-badge>
+            </ion-label>
+          </ion-segment-button>
+        </ion-segment>
+      </section>
+
+      <section class="panel history-panel">
+        <ng-container *ngIf="filteredSwapRequests.length > 0; else emptyHistory">
+          <article class="swap-card" *ngFor="let request of filteredSwapRequests">
+            <header>
+              <div class="parties">
+                <strong>{{ request.requestedByName }}</strong>
+                <ion-icon name="swap-horizontal"></ion-icon>
+                <strong>{{ request.requestedToName }}</strong>
+              </div>
+              <ion-badge [color]="getRequestStatusColor(request.status)">
+                {{ getRequestStatusLabel(request.status) }}
+              </ion-badge>
+            </header>
+
+            <div class="swap-timeline">
+              <div>
+                <span class="label">תאריך מקורי</span>
+                <strong>{{ formatDate(request.originalDate) }}</strong>
+              </div>
+              <ion-icon name="chevron-back-outline"></ion-icon>
+              <div>
+                <span class="label">תאריך מוצע</span>
+                <strong>{{ formatDate(request.proposedDate) }}</strong>
+              </div>
+            </div>
+
+            <p class="request-reason" *ngIf="request.reason">
+              {{ request.reason }}
+            </p>
+
+            <ion-note class="request-meta">
+              נשלחה ב־{{ formatDate(request.createdAt) }}
+            </ion-note>
+            <ion-note class="request-meta" *ngIf="request.respondedAt">
+              עודכנה ב־{{ formatDate(request.respondedAt) }}
+            </ion-note>
+
+            <div class="response-note" *ngIf="request.status !== SwapRequestStatus.PENDING && request.responseNote">
+              <ion-icon name="chatbubbles-outline"></ion-icon>
+              <span>{{ request.responseNote }}</span>
+            </div>
+
+            <ion-textarea
+              *ngIf="canRespondToRequest(request)"
+              class="request-note-input"
+              placeholder="הוסף הערה להורה השני (אופציונלי)"
+              autoGrow="true"
+              [rows]="2"
+              [maxlength]="300"
+              [name]="'history-note-' + request.id"
+              [(ngModel)]="requestNotes[request.id]">
+            </ion-textarea>
+
+            <div class="request-actions" *ngIf="canRespondToRequest(request)">
+              <ion-button
+                color="success"
+                expand="block"
+                (click)="handleRequestAction(request, SwapRequestStatus.APPROVED)">
+                <ion-icon slot="start" name="checkmark-circle"></ion-icon>
+                אישור
+              </ion-button>
+              <ion-button
+                color="danger"
+                expand="block"
+                fill="outline"
+                (click)="handleRequestAction(request, SwapRequestStatus.REJECTED)">
+                <ion-icon slot="start" name="close-circle"></ion-icon>
+                דחייה
+              </ion-button>
+            </div>
+
+            <ion-button
+              *ngIf="canCancelRequest(request)"
+              expand="block"
+              fill="outline"
+              color="medium"
+              class="request-cancel-button"
+              (click)="handleRequestAction(request, SwapRequestStatus.CANCELLED)">
+              <ion-icon slot="start" name="close-circle-outline"></ion-icon>
+              בטל בקשה
+            </ion-button>
+          </article>
+        </ng-container>
+
+        <ng-template #emptyHistory>
+          <div class="empty-card">
+            <ion-icon name="time-outline"></ion-icon>
+            <p>אין בקשות החלפה להצגה</p>
+          </div>
+        </ng-template>
+      </section>
+    </ng-container>
+  </div>
+</ion-content>

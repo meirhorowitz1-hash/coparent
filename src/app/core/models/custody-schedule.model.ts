@@ -6,7 +6,11 @@ export interface CustodySchedule {
   endDate?: Date; // אם לא מוגדר - אין סוף
   parent1Days: number[]; // 0=ראשון, 1=שני, וכו'
   parent2Days: number[];
+  // לשבועיים: ניתן להגדיר דפוס משלים לשבוע הבא (שבוע לא). אם לא מוגדר - השבוע הלא פעיל נשאר ריק.
+  biweeklyAltParent1Days?: number[];
+  biweeklyAltParent2Days?: number[];
   isActive: boolean;
+  pendingApproval?: CustodyScheduleApprovalRequest | null;
 }
 
 export enum CustodyPattern {
@@ -24,6 +28,17 @@ export interface CustodyTemplate {
   pattern: CustodyPattern;
   parent1Days: number[];
   parent2Days: number[];
+}
+
+export interface CustodyScheduleApprovalRequest {
+  name: string;
+  pattern: CustodyPattern;
+  startDate: Date;
+  parent1Days: number[];
+  parent2Days: number[];
+  requestedBy: string | null;
+  requestedByName?: string | null;
+  requestedAt: Date;
 }
 
 // תבניות מוכנות

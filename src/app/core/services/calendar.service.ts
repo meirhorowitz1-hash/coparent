@@ -8,6 +8,7 @@ import {
   deleteDoc,
   doc,
   docSnapshots,
+  getDoc,
   getDocs,
   orderBy,
   query,
@@ -21,10 +22,12 @@ import { BehaviorSubject, Observable, Subscription, of } from 'rxjs';
 import { distinctUntilChanged, map, switchMap } from 'rxjs/operators';
 import { CalendarEvent, CalendarDay, EventType, RecurringPattern } from '../models/calendar-event.model';
 import { CustodyToday } from '../models/daily-overview.model';
-import { CustodySchedule, CustodyPattern } from '../models/custody-schedule.model';
+import { CustodySchedule, CustodyPattern, CustodyScheduleApprovalRequest } from '../models/custody-schedule.model';
 import { AuthService } from './auth.service';
 import { UserProfileService } from './user-profile.service';
 import { SwapRequest } from '../models/swap-request.model';
+import { Family } from '../models/family.model';
+import { UserProfile } from '../models/user-profile.model';
 
 type FirestoreRecurringPattern = Omit<RecurringPattern, 'endDate'> & {
   endDate?: Timestamp | null;
@@ -39,7 +42,30 @@ type FirestoreCalendarEvent = Omit<CalendarEvent, 'startDate' | 'endDate' | 'rec
 type FirestoreCustodySchedule = Omit<CustodySchedule, 'startDate' | 'endDate'> & {
   startDate: Timestamp;
   endDate?: Timestamp | null;
+  pendingApproval?: FirestorePendingApproval | null;
 };
+
+type FirestorePendingApproval = Omit<CustodyScheduleApprovalRequest, 'startDate' | 'requestedAt'> & {
+  startDate: Timestamp;
+  requestedAt: Timestamp;
+};
+
+interface ParentMetadataEntry {
+  uid?: string;
+  name: string;
+}
+
+interface ParentMetadata {
+  parent1: ParentMetadataEntry;
+  parent2: ParentMetadataEntry;
+}
+
+interface SaveCustodyOptions {
+  requestApproval?: boolean;
+  baseSchedule?: CustodySchedule | null;
+  requestedBy?: string | null;
+  requestedByName?: string | null;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -62,9 +88,17 @@ export class CalendarService implements OnDestroy {
   private activeFamilyIdSubject = new BehaviorSubject<string | null>(null);
   readonly activeFamilyId$: Observable<string | null> = this.activeFamilyIdSubject.asObservable();
 
+  private parentMetadataSubject = new BehaviorSubject<ParentMetadata>(this.createDefaultParentMetadata());
+  readonly parentMetadata$ = this.parentMetadataSubject.asObservable();
+
   private profileSubscription?: Subscription;
   private eventsSubscription?: Subscription;
   private custodySubscription?: Subscription;
+  private familyMetadataSubscription?: Subscription;
+  private currentProfile: UserProfile | null = null;
+  private currentUserId: string | null = null;
+  private memberProfileCache = new Map<string, UserProfile>();
+  private parentMetadataRequestId = 0;
 
   constructor() {
     this.profileSubscription = this.authService.user$
@@ -73,6 +107,8 @@ export class CalendarService implements OnDestroy {
         distinctUntilChanged((prev, curr) => prev?.activeFamilyId === curr?.activeFamilyId)
       )
       .subscribe(profile => {
+        this.currentProfile = profile;
+        this.currentUserId = profile?.uid ?? null;
         const familyId = profile?.activeFamilyId ?? null;
         this.activeFamilyIdSubject.next(familyId);
         this.subscribeToFamilyData(familyId);
@@ -88,10 +124,13 @@ export class CalendarService implements OnDestroy {
 
   private subscribeToFamilyData(familyId: string | null) {
     this.detachFamilyListeners();
+    this.memberProfileCache.clear();
+    this.parentMetadataRequestId++;
 
     if (!familyId) {
       this.eventsSubject.next([]);
       this.custodyScheduleSubject.next(null);
+       this.parentMetadataSubject.next(this.createDefaultParentMetadata());
       return;
     }
 
@@ -114,6 +153,17 @@ export class CalendarService implements OnDestroy {
         })
       )
       .subscribe(schedule => this.custodyScheduleSubject.next(schedule));
+
+    const familyRef = doc(this.firestore, 'families', familyId);
+    this.familyMetadataSubscription = docSnapshots(familyRef).subscribe(snapshot => {
+      if (!snapshot.exists()) {
+        this.parentMetadataSubject.next(this.createDefaultParentMetadata());
+        return;
+      }
+
+      const data = snapshot.data() as Family;
+      this.updateParentMetadata(data.members ?? []);
+    });
   }
 
   private detachFamilyListeners() {
@@ -121,6 +171,64 @@ export class CalendarService implements OnDestroy {
     this.eventsSubscription = undefined;
     this.custodySubscription?.unsubscribe();
     this.custodySubscription = undefined;
+    this.familyMetadataSubscription?.unsubscribe();
+    this.familyMetadataSubscription = undefined;
+  }
+
+  private async updateParentMetadata(memberIds: string[]) {
+    const requestId = ++this.parentMetadataRequestId;
+
+    if (!memberIds?.length) {
+      this.parentMetadataSubject.next(this.createDefaultParentMetadata());
+      return;
+    }
+
+    const unique = Array.from(new Set(memberIds)).sort();
+    const [parent1Uid, parent2Uid] = unique;
+
+    const [parent1Profile, parent2Profile] = await Promise.all([
+      this.fetchMemberProfile(parent1Uid),
+      this.fetchMemberProfile(parent2Uid)
+    ]);
+
+    if (requestId !== this.parentMetadataRequestId) {
+      return;
+    }
+
+    this.parentMetadataSubject.next({
+      parent1: {
+        uid: parent1Uid,
+        name: parent1Profile?.fullName || parent1Profile?.email || 'הורה 1'
+      },
+      parent2: {
+        uid: parent2Uid,
+        name: parent2Profile?.fullName || parent2Profile?.email || 'הורה 2'
+      }
+    });
+  }
+
+  private async fetchMemberProfile(uid?: string): Promise<UserProfile | null> {
+    if (!uid) {
+      return null;
+    }
+
+    if (this.memberProfileCache.has(uid)) {
+      return this.memberProfileCache.get(uid)!;
+    }
+
+    try {
+      const snapshot = await getDoc(doc(this.firestore, 'users', uid));
+      if (!snapshot.exists()) {
+        return null;
+      }
+
+      const profile = snapshot.data() as UserProfile;
+      this.memberProfileCache.set(uid, profile);
+      return profile;
+    } catch (error) {
+      console.error('Failed to fetch member profile', error);
+      return null;
+    }
   }
 
   private mapEventFromFirestore(data: FirestoreCalendarEvent): CalendarEvent {
@@ -149,7 +257,16 @@ export class CalendarService implements OnDestroy {
     return {
       ...data,
       startDate: this.toDate(data.startDate),
-      endDate: data.endDate ? this.toDate(data.endDate) : undefined
+      endDate: data.endDate ? this.toDate(data.endDate) : undefined,
+      biweeklyAltParent1Days: data.biweeklyAltParent1Days ?? [],
+      biweeklyAltParent2Days: data.biweeklyAltParent2Days ?? [],
+      pendingApproval: data.pendingApproval
+        ? {
+            ...data.pendingApproval,
+            startDate: this.toDate(data.pendingApproval.startDate),
+            requestedAt: this.toDate(data.pendingApproval.requestedAt)
+          }
+        : null
     };
   }
 
@@ -243,6 +360,40 @@ export class CalendarService implements OnDestroy {
     return this.resolvePrimaryParentForDate(date, this.getEventsForDay(date));
   }
 
+  getCurrentUserId(): string | null {
+    return this.currentUserId;
+  }
+
+  getCurrentUserDisplayName(): string {
+    return this.currentProfile?.fullName || this.currentProfile?.email || 'הורה';
+  }
+
+  getParentMetadataSnapshot(): ParentMetadata {
+    return this.parentMetadataSubject.value;
+  }
+
+  getParentRoleForUser(uid?: string | null): 'parent1' | 'parent2' | null {
+    if (!uid) {
+      return null;
+    }
+
+    const metadata = this.parentMetadataSubject.value;
+    if (metadata.parent1.uid === uid) {
+      return 'parent1';
+    }
+
+    if (metadata.parent2.uid === uid) {
+      return 'parent2';
+    }
+
+    return null;
+  }
+
+  hasBothParents(): boolean {
+    const metadata = this.parentMetadataSubject.value;
+    return Boolean(metadata.parent1.uid && metadata.parent2.uid);
+  }
+
   private resolvePrimaryParentForDate(date: Date, events: CalendarEvent[]): 'parent1' | 'parent2' | undefined {
     const custodyEvent = events.find(e => e.type === EventType.CUSTODY);
     if (custodyEvent && custodyEvent.parentId !== 'both') {
@@ -291,15 +442,23 @@ export class CalendarService implements OnDestroy {
       case CustodyPattern.BIWEEKLY: {
         const weekIndex = Math.floor(diffDays / 7);
         const isEvenWeek = weekIndex % 2 === 0;
-        const primaryDays = isEvenWeek ? parent1Days : parent2Days;
-        const secondaryDays = isEvenWeek ? parent2Days : parent1Days;
+        const altParent1 = schedule.biweeklyAltParent1Days ?? null;
+        const altParent2 = schedule.biweeklyAltParent2Days ?? null;
 
-        if (primaryDays.includes(dayOfWeek)) {
-          return isEvenWeek ? 'parent1' : 'parent2';
+        const hasAlt =
+          (altParent1 && altParent1.length > 0) || (altParent2 && altParent2.length > 0);
+
+        // שבוע כן: parent1Days/parent2Days. שבוע לא: alt sets (אם הוגדרו). אם אין אלטרנטיבה – חזור על הדפוס הראשי.
+        const activeParent1Days =
+          !hasAlt || isEvenWeek ? parent1Days : altParent1 ?? [];
+        const activeParent2Days =
+          !hasAlt || isEvenWeek ? parent2Days : altParent2 ?? [];
+
+        if (activeParent1Days.includes(dayOfWeek)) {
+          return 'parent1';
         }
-
-        if (secondaryDays.includes(dayOfWeek)) {
-          return isEvenWeek ? 'parent2' : 'parent1';
+        if (activeParent2Days.includes(dayOfWeek)) {
+          return 'parent2';
         }
         break;
       }
@@ -337,7 +496,8 @@ export class CalendarService implements OnDestroy {
   }
 
   private getParentDisplayName(parent: 'parent1' | 'parent2'): string {
-    return parent === 'parent1' ? 'הורה 1' : 'הורה 2';
+    const metadata = this.parentMetadataSubject.value;
+    return metadata[parent].name || (parent === 'parent1' ? 'הורה 1' : 'הורה 2');
   }
 
   addEvent(event: Omit<CalendarEvent, 'id'>): Promise<void> {
@@ -379,19 +539,44 @@ export class CalendarService implements OnDestroy {
     this.currentMonthSubject.next(prev);
   }
 
+  setMonth(date: Date): void {
+    const normalized = new Date(date.getFullYear(), date.getMonth(), 1);
+    this.currentMonthSubject.next(normalized);
+  }
+
   // ========= Custody Schedule =========
 
-  async saveCustodySchedule(schedule: CustodySchedule): Promise<void> {
+  async saveCustodySchedule(schedule: CustodySchedule, options?: SaveCustodyOptions): Promise<void> {
     const familyId = this.requireFamilyId();
     const scheduleRef = doc(this.firestore, 'families', familyId, 'settings', 'custodySchedule');
-    const payload = this.serializeSchedule(schedule);
+    let scheduleToPersist: CustodySchedule;
+
+    if (options?.requestApproval) {
+      const baseSchedule = options.baseSchedule ?? schedule;
+      const hasExistingSchedule = !!options.baseSchedule;
+      scheduleToPersist = {
+        ...baseSchedule,
+        pendingApproval: this.buildApprovalRequest(schedule, options.requestedBy, options.requestedByName),
+        isActive: hasExistingSchedule ? baseSchedule.isActive ?? true : false
+      };
+    } else {
+      scheduleToPersist = {
+        ...schedule,
+        pendingApproval: null,
+        isActive: schedule.isActive ?? true
+      };
+    }
+
+    const payload = this.serializeSchedule(scheduleToPersist);
 
     await setDoc(scheduleRef, {
       ...payload,
       updatedAt: serverTimestamp()
     });
 
-    await this.deleteOldCustodyEvents(familyId);
+    if (!options?.requestApproval) {
+      await this.deleteOldCustodyEvents(familyId);
+    }
   }
 
   async deleteCustodySchedule(): Promise<void> {
@@ -399,6 +584,70 @@ export class CalendarService implements OnDestroy {
     const scheduleRef = doc(this.firestore, 'families', familyId, 'settings', 'custodySchedule');
     await deleteDoc(scheduleRef);
     await this.deleteOldCustodyEvents(familyId);
+  }
+
+  async respondToCustodyApproval(approve: boolean): Promise<void> {
+    const pendingSchedule = this.custodyScheduleSubject.value;
+    if (!pendingSchedule?.pendingApproval) {
+      return;
+    }
+
+    const pending = pendingSchedule.pendingApproval;
+    if (pending.requestedBy === this.currentUserId) {
+      throw new Error('requester-cannot-approve');
+    }
+
+    const familyId = this.requireFamilyId();
+    const scheduleRef = doc(this.firestore, 'families', familyId, 'settings', 'custodySchedule');
+
+    const nextSchedule: CustodySchedule = approve
+      ? {
+          ...pendingSchedule,
+          ...pending,
+          startDate: new Date(pending.startDate),
+          parent1Days: [...pending.parent1Days],
+          parent2Days: [...pending.parent2Days],
+          pendingApproval: null,
+          isActive: true
+        }
+      : {
+          ...pendingSchedule,
+          pendingApproval: null
+        };
+
+    const payload = this.serializeSchedule(nextSchedule);
+    await setDoc(scheduleRef, {
+      ...payload,
+      updatedAt: serverTimestamp()
+    });
+
+    if (approve) {
+      await this.deleteOldCustodyEvents(familyId);
+    }
+  }
+
+  async cancelCustodyApprovalRequest(): Promise<void> {
+    const schedule = this.custodyScheduleSubject.value;
+    if (!schedule?.pendingApproval) {
+      return;
+    }
+
+    if (schedule.pendingApproval.requestedBy !== this.currentUserId) {
+      throw new Error('only-requester-can-cancel');
+    }
+
+    const familyId = this.requireFamilyId();
+    const scheduleRef = doc(this.firestore, 'families', familyId, 'settings', 'custodySchedule');
+    const nextSchedule: CustodySchedule = {
+      ...schedule,
+      pendingApproval: null
+    };
+
+    const payload = this.serializeSchedule(nextSchedule);
+    await setDoc(scheduleRef, {
+      ...payload,
+      updatedAt: serverTimestamp()
+    });
   }
 
   // ========= Swap Request Overrides =========
@@ -472,6 +721,30 @@ export class CalendarService implements OnDestroy {
 
   // ========= Internal helpers =========
 
+  private buildApprovalRequest(
+    schedule: CustodySchedule,
+    requestedBy?: string | null,
+    requestedByName?: string | null
+  ): CustodyScheduleApprovalRequest {
+    return {
+      name: schedule.name,
+      pattern: schedule.pattern,
+      startDate: new Date(schedule.startDate),
+      parent1Days: [...schedule.parent1Days],
+      parent2Days: [...schedule.parent2Days],
+      requestedBy: requestedBy ?? null,
+      requestedByName,
+      requestedAt: new Date()
+    };
+  }
+
+  private createDefaultParentMetadata(): ParentMetadata {
+    return {
+      parent1: { name: 'הורה 1' },
+      parent2: { name: 'הורה 2' }
+    };
+  }
+
   private serializeEvent(event: Partial<Omit<CalendarEvent, 'id'>>): Record<string, unknown> {
     const payload: Record<string, unknown> = { ...event };
 
@@ -494,11 +767,25 @@ export class CalendarService implements OnDestroy {
   }
 
   private serializeSchedule(schedule: CustodySchedule): Record<string, unknown> {
-    return {
+    const payload: Record<string, unknown> = {
       ...schedule,
       startDate: Timestamp.fromDate(new Date(schedule.startDate)),
-      endDate: schedule.endDate ? Timestamp.fromDate(new Date(schedule.endDate)) : null
+      endDate: schedule.endDate ? Timestamp.fromDate(new Date(schedule.endDate)) : null,
+      biweeklyAltParent1Days: schedule.biweeklyAltParent1Days ?? [],
+      biweeklyAltParent2Days: schedule.biweeklyAltParent2Days ?? []
     };
+
+    if (schedule.pendingApproval) {
+      payload['pendingApproval'] = {
+        ...schedule.pendingApproval,
+        startDate: Timestamp.fromDate(new Date(schedule.pendingApproval.startDate)),
+        requestedAt: Timestamp.fromDate(new Date(schedule.pendingApproval.requestedAt))
+      };
+    } else {
+      payload['pendingApproval'] = null;
+    }
+
+    return payload;
   }
 
   private async deleteOldCustodyEvents(familyId: string): Promise<void> {

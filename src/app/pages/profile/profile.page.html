@@ -8,14 +8,22 @@
   <ion-content [fullscreen]="true">
   <ng-container *ngIf="profile$ | async as profile; else loadingState">
     <div class="profile-layout">
-      <section class="profile-card">
-        <h1>{{ profile?.fullName || 'משתמש חדש' }}</h1>
-        <p class="email">{{ profile?.email }}</p>
-        <p class="phone" *ngIf="profile?.phone">טלפון: {{ profile.phone }}</p>
+      <section class="profile-card panel">
+        <div class="profile-hero">
+          <div class="avatar-ring">
+            <ion-icon name="person-outline"></ion-icon>
+          </div>
+          <div>
+            <p class="eyebrow">הפרופיל שלי</p>
+            <h1>{{ profile?.fullName || 'משתמש חדש' }}</h1>
+            <p class="email">{{ profile?.email }}</p>
+            <p class="phone" *ngIf="profile?.phone">טלפון: {{ profile.phone }}</p>
+          </div>
+        </div>
         <p class="hint">עדכן את הפרטים שלך בקרוב. בינתיים ניתן להזמין שותף/ה לחשבון.</p>
       </section>
 
-      <section class="family-card">
+      <section class="family-card panel">
         <header>
           <div>
             <h2>שותפות הורות</h2>
@@ -179,4 +187,3 @@
     </div>
   </ng-template>
 </ion-content>
-

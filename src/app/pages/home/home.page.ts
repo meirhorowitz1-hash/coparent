@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ModalController, ToastController } from '@ionic/angular';
 import { Router } from '@angular/router';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, firstValueFrom } from 'rxjs';
 
 import { HomeService } from '../../core/services/home.service';
 import { DailyOverview, QuickAction } from '../../core/models/daily-overview.model';
@@ -15,13 +15,11 @@ import { SwapRequest, SwapRequestStatus } from '../../core/models/swap-request.m
   standalone: false
 })
 export class HomePage implements OnInit, OnDestroy {
-  message = 'This modal example uses the modalController to present and dismiss modals.';
   dailyOverview: DailyOverview | null = null;
   quickActions: QuickAction[] = [];
   isLoading = true;
   currentDate = new Date();
   swapRequests: SwapRequest[] = [];
-  requestFilter: SwapRequestStatus = SwapRequestStatus.PENDING;
   requestNotes: Record<string, string> = {};
   SwapRequestStatus = SwapRequestStatus;
   currentUserId: string | null = null;
@@ -37,8 +35,6 @@ export class HomePage implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    console.log('ModalCtrl instance:', this.modalCtrl);
-console.log('create method:', typeof this.modalCtrl.create);
     this.loadData();
     this.subscribeToOverview();
   }
@@ -55,7 +51,7 @@ console.log('create method:', typeof this.modalCtrl.create);
   /**
    * טעינת נתונים ראשונית
    */
-   loadData() {
+  loadData() {
     this.homeService.loadDailyOverview(this.currentDate);
     this.quickActions = this.homeService.getQuickActions();
   }
@@ -68,7 +64,6 @@ console.log('create method:', typeof this.modalCtrl.create);
       .pipe(takeUntil(this.destroy$))
       .subscribe(overview => {
         this.dailyOverview = overview;
-        console.log('Daily Overview updated:', overview);
         this.swapRequests = overview?.swapRequests ?? [];
         this.currentUserId = this.homeService.getCurrentUserId();
         this.isLoading = false;
@@ -79,7 +74,7 @@ console.log('create method:', typeof this.modalCtrl.create);
    * רענון הנתונים
    */
   async handleRefresh(event: any) {
-    await this.homeService.refresh().toPromise();
+    await firstValueFrom(this.homeService.refresh());
     this.quickActions = this.homeService.getQuickActions();
     event.target.complete();
   }
@@ -106,7 +101,7 @@ console.log('create method:', typeof this.modalCtrl.create);
     }
 
     if (action.route) {
-      this.router.navigate([action.route]);
+      this.router.navigate([`/tabs${action.route}`]);
     } else if (action.action) {
       action.action();
     }
@@ -143,7 +138,7 @@ console.log('create method:', typeof this.modalCtrl.create);
    * ניווט לאירוע
    */
   navigateToEvent(eventId: string) {
-    this.router.navigate(['/calendar'], { 
+    this.router.navigate(['/tabs/calendar'], { 
       queryParams: { eventId } 
     });
   }
@@ -152,7 +147,7 @@ console.log('create method:', typeof this.modalCtrl.create);
    * ניווט למשימה
    */
   navigateToTask(taskId: string) {
-    this.router.navigate(['/tasks'], { 
+    this.router.navigate(['/tabs/tasks'], { 
       queryParams: { taskId } 
     });
   }
@@ -161,7 +156,7 @@ console.log('create method:', typeof this.modalCtrl.create);
    * ניווט להוצאה
    */
   navigateToExpense(expenseId: string) {
-    this.router.navigate(['/expenses'], { 
+    this.router.navigate(['/tabs/expenses'], { 
       queryParams: { expenseId } 
     });
   }
@@ -232,15 +227,8 @@ console.log('create method:', typeof this.modalCtrl.create);
     return icons[category] || 'help-circle';
   }
 
-  /**
-   * בקשות לפי סטטוס נבחר
-   */
-  get filteredSwapRequests(): SwapRequest[] {
-    return this.swapRequests.filter(request => request.status === this.requestFilter);
-  }
-
-  getStatusCount(status: SwapRequestStatus): number {
-    return this.swapRequests.filter(request => request.status === status).length;
+  get pendingSwapRequests(): SwapRequest[] {
+    return this.swapRequests.filter(request => request.status === SwapRequestStatus.PENDING);
   }
 
   getRequestStatusLabel(status: SwapRequestStatus): string {

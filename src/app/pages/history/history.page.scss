@@ -1,0 +1,121 @@
+.history-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 16px;
+}
+
+.filters-card {
+  background: var(--ion-color-light);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+}
+
+.filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.eyebrow {
+  color: var(--ion-color-medium);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.hint {
+  margin: 4px 0 0;
+  color: var(--ion-color-medium);
+}
+
+.history-section {
+  background: #fff;
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.item-row.parties {
+  gap: 6px;
+}
+
+.date {
+  color: var(--ion-color-medium);
+  font-size: 0.9rem;
+}
+
+.meta {
+  color: var(--ion-color-medium);
+  margin-top: 4px;
+  font-size: 0.9rem;
+}
+
+.note {
+  margin: 4px 0;
+  color: var(--ion-color-dark);
+}
+
+.amount-pill {
+  background: var(--ion-color-primary-tint);
+  color: var(--ion-color-primary-contrast);
+  padding: 6px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dates-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 10px;
+  align-items: center;
+  margin-top: 8px;
+  color: var(--ion-color-medium);
+}
+
+.dates-row .label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--ion-color-medium);
+}
+
+.empty-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+  color: var(--ion-color-medium);
+}
+
+@media (max-width: 640px) {
+  .filters-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .filter-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}

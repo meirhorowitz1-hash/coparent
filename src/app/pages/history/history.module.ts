@@ -1,20 +1,21 @@
 import { CUSTOM_ELEMENTS_SCHEMA, NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular';
 import { RouterModule, Routes } from '@angular/router';
-import { ExpensesPage } from './expenses.page';
+
+import { HistoryPage } from './history.page';
 
 const routes: Routes = [
   {
     path: '',
-    component: ExpensesPage
+    component: HistoryPage
   }
 ];
 
 @NgModule({
-  declarations: [ExpensesPage],
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, IonicModule, RouterModule.forChild(routes)],
+  declarations: [HistoryPage],
+  imports: [CommonModule, FormsModule, IonicModule, RouterModule.forChild(routes)],
   schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
-export class ExpensesPageModule {}
+export class HistoryPageModule {}

@@ -1,10 +1,36 @@
-ion-content {
-  --background: var(--ion-background-color, #f4f5f8);
+:host {
+  ion-content {
+    --background: transparent;
+    padding: clamp(16px, 4vw, 32px);
+  }
+
+  ion-header ion-toolbar {
+    --background: transparent;
+    --color: var(--app-text-primary);
+    --border-width: 0;
+    backdrop-filter: blur(12px);
+  }
 }
 
-ion-header {
-  ion-toolbar {
-    --background: var(--ion-color-primary);
-    --color: var(--ion-color-primary-contrast);
+.tasks-shell {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.tasks-card {
+  border-radius: 18px;
+  border: 1px solid var(--app-border);
+  background: var(--app-surface);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-5);
+  display: grid;
+  gap: var(--space-3);
+
+  p {
+    margin: 0;
+    color: var(--app-text-secondary);
   }
 }

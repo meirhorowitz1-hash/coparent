@@ -1,5 +1,5 @@
 <ion-header>
-  <ion-toolbar color="primary">
+  <ion-toolbar>
     <ion-title>{{ isEditMode ? 'עריכת אירוע' : 'אירוע חדש' }}</ion-title>
     <ion-buttons slot="end">
       <ion-button (click)="cancel()">
@@ -9,165 +9,208 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-  <form [formGroup]="eventForm">
-    
-    <!-- סוג אירוע -->
-    <div class="form-section">
-      <ion-label class="section-label">סוג אירוע</ion-label>
+<ion-content>
+  <form [formGroup]="eventForm" class="form-shell">
+
+    <section class="form-card hero-card">
+      <div>
+        <p class="eyebrow">{{ eventForm.get('isAllDay')?.value ? 'אירוע של יום שלם' : 'אירוע מתוזמן' }}</p>
+        <h1>{{ eventForm.get('title')?.value || 'אירוע ללא שם' }}</h1>
+        <p class="hero-date" *ngIf="eventForm.get('startDate')?.value as start">
+          {{ start | date:'EEEE, d MMMM' }}
+        </p>
+      </div>
+      <div class="hero-meta">
+        <span *ngIf="eventForm.get('startTime')?.value && !eventForm.get('isAllDay')?.value">
+          {{ eventForm.get('startTime')?.value }}
+        </span>
+        <span *ngIf="eventForm.get('location')?.value">
+          {{ eventForm.get('location')?.value }}
+        </span>
+      </div>
+    </section>
+
+    <section class="form-card">
+      <div class="section-heading">
+        <p class="eyebrow">סוג אירוע</p>
+        <h2>בחרו קטגוריה</h2>
+      </div>
       <div class="event-type-grid">
-        <ion-chip 
+        <button
+          type="button"
+          class="event-type-chip"
           *ngFor="let type of eventTypes"
-          [outline]="eventForm.get('type')?.value !== type.value"
-          [color]="eventForm.get('type')?.value === type.value ? type.color : 'medium'"
+          [class.selected]="eventForm.get('type')?.value === type.value"
           (click)="eventForm.patchValue({ type: type.value })">
           <ion-icon [name]="type.icon"></ion-icon>
-          <ion-label>{{ type.label }}</ion-label>
-        </ion-chip>
+          <span>{{ type.label }}</span>
+        </button>
       </div>
-    </div>
+    </section>
 
-    <!-- כותרת -->
-    <ion-item [class.ion-invalid]="isFieldInvalid('title')">
-      <ion-label position="floating">כותרת *</ion-label>
-      <ion-input 
-        formControlName="title" 
-        type="text"
-        placeholder="לדוגמה: פגישה עם רופא שיניים">
-      </ion-input>
-      <ion-note slot="error" *ngIf="isFieldInvalid('title')">
-        {{ getErrorMessage('title') }}
-      </ion-note>
-    </ion-item>
+    <section class="form-card fields-card">
+      <div class="section-heading">
+        <p class="eyebrow">פרטים</p>
+        <h2>גדירו את האירוע</h2>
+      </div>
 
-    <!-- תיאור -->
-    <ion-item>
-      <ion-label position="floating">תיאור</ion-label>
-      <ion-textarea 
-        formControlName="description"
-        rows="3"
-        placeholder="פרטים נוספים על האירוע...">
-      </ion-textarea>
-    </ion-item>
+      <ion-item [class.ion-invalid]="isFieldInvalid('title')">
+        <ion-label position="floating">כותרת *</ion-label>
+        <ion-input
+          formControlName="title"
+          type="text"
+          placeholder="לדוגמה: פגישה עם רופא שיניים">
+        </ion-input>
+        <ion-note slot="error" *ngIf="isFieldInvalid('title')">
+          {{ getErrorMessage('title') }}
+        </ion-note>
+      </ion-item>
 
-    <!-- הורה אחראי -->
-    <div class="form-section">
-      <ion-label class="section-label">מי אחראי?</ion-label>
-      <ion-segment formControlName="parentId">
-        <ion-segment-button 
-          *ngFor="let parent of parentOptions" 
-          [value]="parent.value">
-          <ion-label>{{ parent.label }}</ion-label>
-        </ion-segment-button>
-      </ion-segment>
-    </div>
+      <ion-item>
+        <ion-label position="floating">תיאור</ion-label>
+        <ion-textarea
+          formControlName="description"
+          rows="3"
+          placeholder="פרטים נוספים על האירוע...">
+        </ion-textarea>
+      </ion-item>
 
-    <!-- יום שלם -->
-    <ion-item>
-      <ion-label>אירוע של יום שלם</ion-label>
-      <ion-toggle formControlName="isAllDay" slot="end"></ion-toggle>
-    </ion-item>
+      <div class="form-section compact">
+        <ion-label class="section-label">מי אחראי?</ion-label>
+        <ion-segment formControlName="parentId">
+          <ion-segment-button
+            *ngFor="let parent of parentOptions"
+            [value]="parent.value">
+            <ion-label>{{ parent.label }}</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+      </div>
 
-    <!-- תאריך התחלה -->
-    <ion-item>
-      <ion-label position="stacked">תאריך התחלה *</ion-label>
-      <ion-datetime 
-        formControlName="startDate"
-        presentation="date"
-        [preferWheel]="true">
-      </ion-datetime>
-    </ion-item>
+      <ion-item lines="none" class="toggle-row">
+        <ion-label>אירוע של יום שלם</ion-label>
+        <ion-toggle formControlName="isAllDay" slot="end"></ion-toggle>
+      </ion-item>
 
-    <!-- שעת התחלה -->
-    <ion-item *ngIf="!eventForm.get('isAllDay')?.value">
-      <ion-label position="stacked">שעת התחלה</ion-label>
-      <ion-datetime 
-        formControlName="startTime"
-        presentation="time"
-        [preferWheel]="true">
-      </ion-datetime>
-    </ion-item>
+      <div class="datetime-grid">
+        <ion-item class="datetime-item">
+          <ion-label position="stacked">תאריך התחלה *</ion-label>
+          <ion-datetime-button datetime="event-start-date"></ion-datetime-button>
+        </ion-item>
+        <ion-modal keepContentsMounted="true">
+          <ng-template>
+            <ion-datetime
+              id="event-start-date"
+              formControlName="startDate"
+              presentation="date">
+            </ion-datetime>
+          </ng-template>
+        </ion-modal>
+        <ion-item class="datetime-item">
+          <ion-label position="stacked">תאריך סיום</ion-label>
+          <ion-datetime-button datetime="event-end-date"></ion-datetime-button>
+        </ion-item>
+        <ion-modal keepContentsMounted="true">
+          <ng-template>
+            <ion-datetime
+              id="event-end-date"
+              formControlName="endDate"
+              presentation="date">
+            </ion-datetime>
+          </ng-template>
+        </ion-modal>
+      </div>
 
-    <!-- תאריך סיום -->
-    <ion-item>
-      <ion-label position="stacked">תאריך סיום</ion-label>
-      <ion-datetime 
-        formControlName="endDate"
-        presentation="date"
-        [preferWheel]="true">
-      </ion-datetime>
-    </ion-item>
+      <div class="datetime-grid" *ngIf="!eventForm.get('isAllDay')?.value">
+        <ion-item class="datetime-item">
+          <ion-label position="stacked">שעת התחלה</ion-label>
+          <ion-datetime-button datetime="event-start-time"></ion-datetime-button>
+        </ion-item>
+        <ion-modal keepContentsMounted="true">
+          <ng-template>
+            <ion-datetime
+              id="event-start-time"
+              formControlName="startTime"
+              presentation="time"
+              hourCycle="h23">
+            </ion-datetime>
+          </ng-template>
+        </ion-modal>
+        <ion-item class="datetime-item">
+          <ion-label position="stacked">שעת סיום</ion-label>
+          <ion-datetime-button datetime="event-end-time"></ion-datetime-button>
+        </ion-item>
+        <ion-modal keepContentsMounted="true">
+          <ng-template>
+            <ion-datetime
+              id="event-end-time"
+              formControlName="endTime"
+              presentation="time"
+              hourCycle="h23">
+            </ion-datetime>
+          </ng-template>
+        </ion-modal>
+      </div>
 
-    <!-- שעת סיום -->
-    <ion-item *ngIf="!eventForm.get('isAllDay')?.value">
-      <ion-label position="stacked">שעת סיום</ion-label>
-      <ion-datetime 
-        formControlName="endTime"
-        presentation="time"
-        [preferWheel]="true">
-      </ion-datetime>
-    </ion-item>
+      <ion-item>
+        <ion-label position="floating">מיקום</ion-label>
+        <ion-input
+          formControlName="location"
+          type="text"
+          placeholder="לדוגמה: רחוב הרצל 10, תל אביב">
+          <ion-icon name="location-outline" slot="start"></ion-icon>
+        </ion-input>
+      </ion-item>
 
-    <!-- מיקום -->
-    <ion-item>
-      <ion-label position="floating">מיקום</ion-label>
-      <ion-input 
-        formControlName="location"
-        type="text"
-        placeholder="לדוגמה: רחוב הרצל 10, תל אביב">
-        <ion-icon name="location-outline" slot="start"></ion-icon>
-      </ion-input>
-    </ion-item>
+      <div class="inline-fields">
+        <ion-item>
+          <ion-label>תזכורת</ion-label>
+          <ion-select formControlName="reminderMinutes" interface="action-sheet">
+            <ion-select-option
+              *ngFor="let reminder of reminderOptions"
+              [value]="reminder.value">
+              {{ reminder.label }}
+            </ion-select-option>
+          </ion-select>
+        </ion-item>
 
-    <!-- תזכורת -->
-    <ion-item>
-      <ion-label>תזכורת</ion-label>
-      <ion-select formControlName="reminderMinutes" interface="action-sheet">
-        <ion-select-option 
-          *ngFor="let reminder of reminderOptions" 
-          [value]="reminder.value">
-          {{ reminder.label }}
-        </ion-select-option>
-      </ion-select>
-    </ion-item>
+        <ion-item>
+          <ion-label>צבע</ion-label>
+          <input
+            type="color"
+            formControlName="color"
+            class="color-picker">
+        </ion-item>
+      </div>
+    </section>
 
-    <!-- צבע -->
-    <ion-item>
-      <ion-label>צבע</ion-label>
-      <input 
-        type="color" 
-        formControlName="color" 
-        class="color-picker">
-    </ion-item>
-
-    <!-- תצוגה מקדימה -->
-    <ion-card class="summary-card" *ngIf="eventForm.get('title')?.value">
-      <ion-card-header>
-        <ion-card-subtitle>תצוגה מקדימה</ion-card-subtitle>
-      </ion-card-header>
-      <ion-card-content>
-        <div class="event-preview" [style.--preview-color]="eventForm.get('color')?.value">
-          <h3>{{ eventForm.get('title')?.value }}</h3>
+    <section class="form-card preview-card" *ngIf="eventForm.get('title')?.value">
+      <div class="section-heading">
+        <p class="eyebrow">תצוגה מקדימה</p>
+        <h2>כך זה יראה בלוח</h2>
+      </div>
+      <div class="event-preview" [style.--preview-color]="eventForm.get('color')?.value">
+        <div>
+          <strong>{{ eventForm.get('title')?.value }}</strong>
           <p *ngIf="eventForm.get('description')?.value">
             {{ eventForm.get('description')?.value }}
           </p>
-          <div class="preview-details">
-            <span>
-              <ion-icon name="calendar"></ion-icon>
-              {{ eventForm.get('startDate')?.value | date:'dd/MM/yyyy' }}
-            </span>
-            <span *ngIf="!eventForm.get('isAllDay')?.value">
-              <ion-icon name="time"></ion-icon>
-              {{ eventForm.get('startTime')?.value }}
-            </span>
-            <span *ngIf="eventForm.get('location')?.value">
-              <ion-icon name="location"></ion-icon>
-              {{ eventForm.get('location')?.value }}
-            </span>
-          </div>
         </div>
-      </ion-card-content>
-    </ion-card>
+        <div class="preview-details">
+          <span *ngIf="eventForm.get('startDate')?.value">
+            <ion-icon name="calendar-outline"></ion-icon>
+            {{ eventForm.get('startDate')?.value | date:'dd/MM/yyyy' }}
+          </span>
+          <span *ngIf="!eventForm.get('isAllDay')?.value && eventForm.get('startTime')?.value">
+            <ion-icon name="time-outline"></ion-icon>
+            {{ eventForm.get('startTime')?.value }}
+          </span>
+          <span *ngIf="eventForm.get('location')?.value">
+            <ion-icon name="location-outline"></ion-icon>
+            {{ eventForm.get('location')?.value }}
+          </span>
+        </div>
+      </div>
+    </section>
 
   </form>
 </ion-content>

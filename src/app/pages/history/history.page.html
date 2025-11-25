@@ -1,0 +1,175 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>היסטוריה</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <div class="history-shell">
+    <section class="filters-card">
+      <div>
+        <p class="eyebrow">סינון לפי חודש</p>
+        <h2>{{ selectedMonthLabel }}</h2>
+        <p class="hint">היסטוריה של הוצאות, משימות ובקשות החלפה</p>
+      </div>
+      <div class="filter-actions">
+        <ion-select
+          interface="popover"
+          [value]="selectedMonth"
+          placeholder="בחרו חודש"
+          (ionChange)="onMonthChange($event.detail.value)">
+          <ion-select-option
+            *ngFor="let month of monthOptions"
+            [value]="month.value">
+            {{ month.label }}
+          </ion-select-option>
+        </ion-select>
+        <ion-button
+          *ngIf="selectedMonth !== 'all'"
+          fill="clear"
+          size="small"
+          color="medium"
+          (click)="clearMonthFilter()">
+          <ion-icon slot="start" name="close-circle-outline"></ion-icon>
+          נקה
+        </ion-button>
+      </div>
+    </section>
+
+    <ng-container *ngIf="!isLoading; else loadingState">
+      <section class="history-section">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">כספים</p>
+            <h3>הוצאות</h3>
+          </div>
+          <ion-chip color="primary">
+            <ion-icon name="wallet-outline"></ion-icon>
+            <ion-label>{{ filteredExpenses.length }}</ion-label>
+          </ion-chip>
+        </div>
+
+        <ion-list lines="full" *ngIf="filteredExpenses.length; else noExpenses">
+          <ion-item *ngFor="let expense of filteredExpenses">
+            <ion-icon slot="start" name="receipt-outline"></ion-icon>
+            <ion-label>
+              <div class="item-row">
+                <strong>{{ expense.title }}</strong>
+                <span class="date">{{ formatDate(expense.date) }}</span>
+              </div>
+              <p class="note" *ngIf="expense.notes">{{ expense.notes }}</p>
+              <p class="meta">נוצרה ב־{{ formatDate(expense.createdAt) }}</p>
+            </ion-label>
+            <div class="amount-pill">{{ formatCurrency(expense.amount) }}</div>
+            <ion-badge
+              slot="end"
+              [color]="expense.status === 'approved' ? 'success' : expense.status === 'pending' ? 'warning' : 'medium'">
+              {{ expense.status === 'approved' ? 'אושרה' : expense.status === 'pending' ? 'ממתינה' : 'נדחתה' }}
+            </ion-badge>
+          </ion-item>
+        </ion-list>
+        <ng-template #noExpenses>
+          <div class="empty-row">
+            <ion-icon name="trending-down-outline"></ion-icon>
+            <p>אין הוצאות עבור החודש שנבחר</p>
+          </div>
+        </ng-template>
+      </section>
+
+      <section class="history-section">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">משימות</p>
+            <h3>פעילות משותפת</h3>
+          </div>
+          <ion-chip color="tertiary">
+            <ion-icon name="checkbox-outline"></ion-icon>
+            <ion-label>{{ filteredTasks.length }}</ion-label>
+          </ion-chip>
+        </div>
+
+        <ion-list lines="full" *ngIf="filteredTasks.length; else noTasks">
+          <ion-item *ngFor="let task of filteredTasks">
+            <ion-icon slot="start" name="list-outline"></ion-icon>
+            <ion-label>
+              <div class="item-row">
+                <strong>{{ task.title }}</strong>
+                <span class="date">{{ formatDate(task.dueDate) }}</span>
+              </div>
+              <p class="note" *ngIf="task.description">{{ task.description }}</p>
+              <p class="meta">סטטוס: {{ getTaskStatusLabel(task.status) }}</p>
+            </ion-label>
+            <ion-badge
+              slot="end"
+              [color]="getTaskPriorityColor(task.priority)">
+              {{ task.priority === 'urgent' ? 'דחוף' : task.priority === 'high' ? 'גבוהה' : task.priority === 'medium' ? 'בינונית' : 'נמוכה' }}
+            </ion-badge>
+          </ion-item>
+        </ion-list>
+        <ng-template #noTasks>
+          <div class="empty-row">
+            <ion-icon name="calendar-outline"></ion-icon>
+            <p>אין משימות לחודש זה</p>
+          </div>
+        </ng-template>
+      </section>
+
+      <section class="history-section">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">משמורת</p>
+            <h3>בקשות החלפה</h3>
+          </div>
+          <ion-chip color="success">
+            <ion-icon name="swap-horizontal"></ion-icon>
+            <ion-label>{{ filteredSwapRequests.length }}</ion-label>
+          </ion-chip>
+        </div>
+
+        <ion-list lines="full" *ngIf="filteredSwapRequests.length; else noRequests">
+          <ion-item *ngFor="let request of filteredSwapRequests">
+            <ion-icon slot="start" name="swap-horizontal"></ion-icon>
+            <ion-label>
+              <div class="item-row parties">
+                <strong>{{ request.requestedByName }}</strong>
+                <ion-icon name="chevron-back"></ion-icon>
+                <strong>{{ request.requestedToName }}</strong>
+              </div>
+              <p class="meta">הוגשה ב־{{ formatDate(request.createdAt) }}</p>
+              <p class="note" *ngIf="request.reason">{{ request.reason }}</p>
+              <div class="dates-row">
+                <div>
+                  <span class="label">תאריך מקורי</span>
+                  <strong>{{ formatDate(request.originalDate) }}</strong>
+                </div>
+                <ion-icon name="swap-horizontal-outline"></ion-icon>
+                <div>
+                  <span class="label">תאריך מוצע</span>
+                  <strong>{{ formatDate(request.proposedDate) }}</strong>
+                </div>
+              </div>
+            </ion-label>
+            <ion-badge
+              slot="end"
+              [color]="getRequestStatusColor(request.status)">
+              {{ getRequestStatusLabel(request.status) }}
+            </ion-badge>
+          </ion-item>
+        </ion-list>
+        <ng-template #noRequests>
+          <div class="empty-row">
+            <ion-icon name="time-outline"></ion-icon>
+            <p>אין בקשות החלפה עבור החודש</p>
+          </div>
+        </ng-template>
+      </section>
+    </ng-container>
+
+    <ng-template #loadingState>
+      <div class="empty-row">
+        <ion-spinner name="crescent"></ion-spinner>
+        <p>טוען היסטוריה...</p>
+      </div>
+    </ng-template>
+  </div>
+</ion-content>

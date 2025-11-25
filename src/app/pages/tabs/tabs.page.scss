@@ -1,0 +1,19 @@
+ion-tab-bar {
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -8px 30px rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
+
+  ion-tab-button {
+    flex-direction: column;
+    gap: 2px;
+    --color: var(--app-text-tertiary);
+    --color-selected: var(--ion-color-primary);
+    --padding-start: 6px;
+    --padding-end: 6px;
+
+    &.tab-active ion-icon {
+      transform: translateY(-1px);
+    }
+  }
+}

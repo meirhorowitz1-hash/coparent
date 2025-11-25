@@ -1,101 +1,101 @@
 // Ionic Variables and Theming
 // Classic, Clean & Innovative Design System
 
-/** Aurora Design Palette - Minimal, Playful & Calm **/
+/** Modern Neutral Palette - Crisp, Minimal, Professional **/
 :root {
-  // Primary - Aurora Violet
-  --ion-color-primary: #6755f5;
-  --ion-color-primary-rgb: 103, 85, 245;
+  // Primary - Deep Azure
+  --ion-color-primary: #1f6feb;
+  --ion-color-primary-rgb: 31, 111, 235;
   --ion-color-primary-contrast: #ffffff;
   --ion-color-primary-contrast-rgb: 255, 255, 255;
-  --ion-color-primary-shade: #5b4bd6;
-  --ion-color-primary-tint: #7b6cf6;
+  --ion-color-primary-shade: #1b60ce;
+  --ion-color-primary-tint: #3d82ef;
 
-  // Secondary - Neo Turquoise
-  --ion-color-secondary: #0fc5c5;
-  --ion-color-secondary-rgb: 15, 197, 197;
+  // Secondary - Teal
+  --ion-color-secondary: #0f9d8a;
+  --ion-color-secondary-rgb: 15, 157, 138;
   --ion-color-secondary-contrast: #ffffff;
   --ion-color-secondary-contrast-rgb: 255, 255, 255;
-  --ion-color-secondary-shade: #0da9aa;
-  --ion-color-secondary-tint: #2bd0d1;
+  --ion-color-secondary-shade: #0d8979;
+  --ion-color-secondary-tint: #2cae9c;
 
-  // Tertiary - Sunset Coral
-  --ion-color-tertiary: #ff9d7a;
-  --ion-color-tertiary-rgb: 255, 157, 122;
+  // Tertiary - Warm Amber
+  --ion-color-tertiary: #f59e0b;
+  --ion-color-tertiary-rgb: 245, 158, 11;
   --ion-color-tertiary-contrast: #ffffff;
   --ion-color-tertiary-contrast-rgb: 255, 255, 255;
-  --ion-color-tertiary-shade: #e1896b;
-  --ion-color-tertiary-tint: #ffad8e;
+  --ion-color-tertiary-shade: #d48709;
+  --ion-color-tertiary-tint: #f7ad2a;
 
-  // Success - Fresh Mint
+  // Success - Emerald
   --ion-color-success: #22c55e;
   --ion-color-success-rgb: 34, 197, 94;
   --ion-color-success-contrast: #ffffff;
   --ion-color-success-contrast-rgb: 255, 255, 255;
-  --ion-color-success-shade: #1ea957;
-  --ion-color-success-tint: #3ad075;
+  --ion-color-success-shade: #1da955;
+  --ion-color-success-tint: #3fd274;
 
-  // Warning - Golden Glow
-  --ion-color-warning: #f7b731;
-  --ion-color-warning-rgb: 247, 183, 49;
+  // Warning - Gold
+  --ion-color-warning: #eab308;
+  --ion-color-warning-rgb: 234, 179, 8;
   --ion-color-warning-contrast: #000000;
   --ion-color-warning-contrast-rgb: 0, 0, 0;
-  --ion-color-warning-shade: #d79f2b;
-  --ion-color-warning-tint: #f8c249;
+  --ion-color-warning-shade: #d09d07;
+  --ion-color-warning-tint: #edbd2a;
 
-  // Danger - Rosy Punch
-  --ion-color-danger: #f25767;
-  --ion-color-danger-rgb: 242, 87, 103;
+  // Danger - Coral
+  --ion-color-danger: #ef4444;
+  --ion-color-danger-rgb: 239, 68, 68;
   --ion-color-danger-contrast: #ffffff;
   --ion-color-danger-contrast-rgb: 255, 255, 255;
-  --ion-color-danger-shade: #d24c59;
-  --ion-color-danger-tint: #f36f7d;
+  --ion-color-danger-shade: #d73c3c;
+  --ion-color-danger-tint: #f26262;
 
   // Neutral Ink
-  --ion-color-dark: #111827;
-  --ion-color-dark-rgb: 17, 24, 39;
+  --ion-color-dark: #0f172a;
+  --ion-color-dark-rgb: 15, 23, 42;
   --ion-color-dark-contrast: #ffffff;
   --ion-color-dark-contrast-rgb: 255, 255, 255;
-  --ion-color-dark-shade: #0f1522;
-  --ion-color-dark-tint: #293140;
+  --ion-color-dark-shade: #0c1323;
+  --ion-color-dark-tint: #27314a;
 
-  --ion-color-medium: #6b7280;
-  --ion-color-medium-rgb: 107, 114, 128;
+  --ion-color-medium: #64748b;
+  --ion-color-medium-rgb: 100, 116, 139;
   --ion-color-medium-contrast: #ffffff;
   --ion-color-medium-contrast-rgb: 255, 255, 255;
-  --ion-color-medium-shade: #5e6370;
-  --ion-color-medium-tint: #7a808d;
+  --ion-color-medium-shade: #566275;
+  --ion-color-medium-tint: #7a889e;
 
-  --ion-color-light: #f5f7fb;
-  --ion-color-light-rgb: 245, 247, 251;
-  --ion-color-light-contrast: #000000;
-  --ion-color-light-contrast-rgb: 0, 0, 0;
-  --ion-color-light-shade: #d8dae1;
-  --ion-color-light-tint: #f7f8fc;
+  --ion-color-light: #f7f9fc;
+  --ion-color-light-rgb: 247, 249, 252;
+  --ion-color-light-contrast: #0f172a;
+  --ion-color-light-contrast-rgb: 15, 23, 42;
+  --ion-color-light-shade: #d8dbe0;
+  --ion-color-light-tint: #f8fafe;
 
   // Design System Surfaces
-  --app-background: #f4f5fb;
-  --app-background-secondary: #eef1ff;
-  --app-surface: rgba(255, 255, 255, 0.95);
+  --app-background: #f4f6fb;
+  --app-background-secondary: #ffffff;
+  --app-surface: rgba(255, 255, 255, 0.96);
   --app-surface-elevated: rgba(255, 255, 255, 0.98);
   
-  --app-text-primary: #111827;
-  --app-text-secondary: #4b5563;
-  --app-text-tertiary: #9ca3af;
+  --app-text-primary: #0f172a;
+  --app-text-secondary: #334155;
+  --app-text-tertiary: #64748b;
   
-  --app-border: rgba(99, 102, 241, 0.12);
-  --app-border-light: rgba(15, 23, 42, 0.06);
-  --app-divider: rgba(15, 23, 42, 0.08);
+  --app-border: rgba(15, 23, 42, 0.08);
+  --app-border-light: rgba(15, 23, 42, 0.04);
+  --app-divider: rgba(15, 23, 42, 0.12);
 
-  --app-hero-gradient: linear-gradient(120deg, rgba(103, 85, 245, 0.18), rgba(15, 197, 197, 0.18));
-  --app-card-gradient: linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
+  --app-hero-gradient: radial-gradient(circle at 20% 20%, rgba(31, 111, 235, 0.12), transparent 45%), radial-gradient(circle at 80% 10%, rgba(15, 157, 138, 0.12), transparent 40%);
+  --app-card-gradient: linear-gradient(165deg, rgba(255, 255, 255, 0.98), rgba(247, 249, 252, 0.92));
 
   // Shadows - Soft & Elegant
-  --shadow-xs: 0 1px 3px rgba(15, 23, 42, 0.08);
-  --shadow-sm: 0 8px 20px rgba(15, 23, 42, 0.08);
-  --shadow-md: 0 15px 30px rgba(15, 23, 42, 0.12);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.07);
+  --shadow-sm: 0 6px 18px rgba(15, 23, 42, 0.08);
+  --shadow-md: 0 12px 28px rgba(15, 23, 42, 0.12);
+  --shadow-lg: 0 20px 40px rgba(15, 23, 42, 0.14);
+  --shadow-xl: 0 35px 70px rgba(15, 23, 42, 0.16);
   
   // Border Radius - Subtle & Refined
   --radius-sm: 6px;
@@ -170,6 +170,6 @@
     --ion-background-color: #0f172a;
     --ion-text-color: #f8fafc;
     --ion-color-light: #1e293b;
-    --app-hero-gradient: linear-gradient(140deg, rgba(103, 85, 245, 0.2), rgba(15, 197, 197, 0.2));
+    --app-hero-gradient: radial-gradient(circle at top, rgba(10, 132, 255, 0.25), transparent 65%);
   }
 }

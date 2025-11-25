@@ -22,6 +22,8 @@ export class CalendarPage implements OnInit, OnDestroy {
   weekDays = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
   selectedDay: CalendarDay | null = null;
   showEventModal = false;
+  parentLabels = { parent1: 'הורה 1', parent2: 'הורה 2' };
+  hasPendingCustodyApproval = false;
 
   constructor(
     private calendarService: CalendarService,
@@ -51,7 +53,22 @@ export class CalendarPage implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(schedule => {
         console.log('[CalendarPage] custodySchedule$ updated', schedule);
+        const currentUid = this.calendarService.getCurrentUserId();
+        this.hasPendingCustodyApproval = !!(
+          schedule?.pendingApproval &&
+          currentUid &&
+          schedule.pendingApproval.requestedBy !== currentUid
+        );
         this.updateCalendar();
+      });
+
+    this.calendarService.parentMetadata$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(metadata => {
+        this.parentLabels = {
+          parent1: metadata.parent1.name || 'הורה 1',
+          parent2: metadata.parent2.name || 'הורה 2'
+        };
       });
   }
 
@@ -85,6 +102,10 @@ export class CalendarPage implements OnInit, OnDestroy {
   nextMonth() {
 
     this.calendarService.nextMonth();
+  }
+
+  goToCurrentMonth() {
+    this.calendarService.setMonth(new Date());
   }
 
   onDayClick(day: CalendarDay) {

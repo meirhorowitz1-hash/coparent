@@ -1,7 +1,13 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ModalController, LoadingController } from '@ionic/angular';
 import { CalendarService } from '../../core/services/calendar.service';
-import { CustodySchedule, CustodyPattern, CustodyTemplate, CUSTODY_TEMPLATES } from '../../core/models/custody-schedule.model';
+import {
+  CustodySchedule,
+  CustodyPattern,
+  CustodyTemplate,
+  CustodyScheduleApprovalRequest,
+  CUSTODY_TEMPLATES
+} from '../../core/models/custody-schedule.model';
 import { Subject, takeUntil } from 'rxjs';
 
 @Component({
@@ -21,8 +27,18 @@ export class CustodySetupComponent implements OnInit, OnDestroy {
     startDate: new Date(),
     parent1Days: [],
     parent2Days: [],
-    isActive: true
+    biweeklyAltParent1Days: [],
+    biweeklyAltParent2Days: [],
+    isActive: true,
+    pendingApproval: null
   };
+  parentLabels = { parent1: 'הורה 1', parent2: 'הורה 2' };
+  pendingApproval: CustodyScheduleApprovalRequest | null = null;
+  currentSchedule: CustodySchedule | null = null;
+  requiresPartnerApproval = false;
+  currentUserId: string | null = null;
+  currentUserParentRole: 'parent1' | 'parent2' | null = null;
+  activeBiweeklyWeek: 'a' | 'b' = 'a';
 
   weekDays = [
     { value: 0, label: 'ראשון', short: 'א' },
@@ -45,18 +61,44 @@ export class CustodySetupComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
+    this.calendarService.parentMetadata$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(metadata => {
+        this.parentLabels = {
+          parent1: metadata.parent1.name || 'הורה 1',
+          parent2: metadata.parent2.name || 'הורה 2'
+        };
+        this.requiresPartnerApproval = !!(metadata.parent1.uid && metadata.parent2.uid);
+        const uid = this.calendarService.getCurrentUserId();
+        this.currentUserId = uid;
+        this.currentUserParentRole = this.calendarService.getParentRoleForUser(uid);
+      });
+
     this.calendarService.custodySchedule$
       .pipe(takeUntil(this.destroy$))
       .subscribe(schedule => {
- 
         if (schedule) {
-         
+          this.currentSchedule = schedule;
+          this.pendingApproval = schedule.pendingApproval ?? null;
+          const source = schedule.pendingApproval ?? schedule;
+          const biAltParent1 = (source as any).biweeklyAltParent1Days ?? (schedule as any).biweeklyAltParent1Days ?? [];
+          const biAltParent2 = (source as any).biweeklyAltParent2Days ?? (schedule as any).biweeklyAltParent2Days ?? [];
+
           this.custodySchedule = {
             ...schedule,
-            parent1Days: [...schedule.parent1Days],
-            parent2Days: [...schedule.parent2Days]
+            ...source,
+            parent1Days: [...source.parent1Days],
+            parent2Days: [...source.parent2Days],
+            biweeklyAltParent1Days: [...biAltParent1],
+            biweeklyAltParent2Days: [...biAltParent2],
+            startDate: new Date(source.startDate)
           };
-          this.step = 'customize';
+          this.step = 'confirm';
+          this.resolveSelectedTemplate(schedule);
+        } else {
+          this.currentSchedule = null;
+          this.pendingApproval = null;
+          this.step = 'template';
         }
       });
   }
@@ -67,13 +109,20 @@ export class CustodySetupComponent implements OnInit, OnDestroy {
   }
 
   selectTemplate(template: CustodyTemplate) {
+    if (this.pendingApproval) {
+      return;
+    }
+
     this.selectedTemplate = template;
     this.custodySchedule.pattern = template.pattern;
     this.custodySchedule.name = template.nameHebrew;
+    this.activeBiweeklyWeek = 'a';
     
     if (template.id !== 'custom') {
       this.custodySchedule.parent1Days = [...template.parent1Days];
       this.custodySchedule.parent2Days = [...template.parent2Days];
+      this.custodySchedule.biweeklyAltParent1Days = [];
+      this.custodySchedule.biweeklyAltParent2Days = [];
       this.step = 'confirm';
     } else {
       this.step = 'customize';
@@ -81,7 +130,11 @@ export class CustodySetupComponent implements OnInit, OnDestroy {
   }
 
   toggleDay(parent: 'parent1' | 'parent2', day: number) {
-    const days = parent === 'parent1' ? this.custodySchedule.parent1Days : this.custodySchedule.parent2Days;
+    if (this.pendingApproval) {
+      return;
+    }
+
+    const days = this.getActiveParentDays(parent);
     const index = days.indexOf(day);
     
     if (index > -1) {
@@ -90,7 +143,7 @@ export class CustodySetupComponent implements OnInit, OnDestroy {
       days.push(day);
       // הסר מההורה השני
       const otherParent = parent === 'parent1' ? 'parent2' : 'parent1';
-      const otherDays = otherParent === 'parent1' ? this.custodySchedule.parent1Days : this.custodySchedule.parent2Days;
+      const otherDays = this.getActiveParentDays(otherParent);
       const otherIndex = otherDays.indexOf(day);
       if (otherIndex > -1) {
         otherDays.splice(otherIndex, 1);
@@ -99,19 +152,95 @@ export class CustodySetupComponent implements OnInit, OnDestroy {
   }
 
   isDaySelected(parent: 'parent1' | 'parent2', day: number): boolean {
-    const days = parent === 'parent1' ? this.custodySchedule.parent1Days : this.custodySchedule.parent2Days;
+    const days = this.getActiveParentDays(parent);
     return days.includes(day);
   }
 
   goToCustomize() {
+    if (this.pendingApproval) {
+      return;
+    }
     this.step = 'customize';
   }
 
   goToConfirm() {
-    if (this.custodySchedule.parent1Days.length === 0 && this.custodySchedule.parent2Days.length === 0) {
+    if (this.pendingApproval) {
+      return;
+    }
+    const hasAnyDay =
+      this.custodySchedule.parent1Days.length > 0 ||
+      this.custodySchedule.parent2Days.length > 0 ||
+      (this.custodySchedule.biweeklyAltParent1Days?.length ?? 0) > 0 ||
+      (this.custodySchedule.biweeklyAltParent2Days?.length ?? 0) > 0;
+    if (!hasAnyDay) {
       return;
     }
     this.step = 'confirm';
+  }
+
+  get isApprovalPending(): boolean {
+    return !!this.pendingApproval;
+  }
+
+  get isWaitingForOtherParent(): boolean {
+    return !!(this.pendingApproval && this.pendingApproval.requestedBy === this.currentUserId);
+  }
+
+  get isAwaitingMyApproval(): boolean {
+    return !!(this.pendingApproval && this.pendingApproval.requestedBy !== this.currentUserId);
+  }
+
+  get awaitingParentName(): string {
+    const otherRole = this.currentUserParentRole === 'parent1' ? 'parent2' : 'parent1';
+    return this.parentLabels[otherRole] || 'הורה שותף';
+  }
+
+  get startDateIso(): string {
+    return this.custodySchedule.startDate
+      ? new Date(this.custodySchedule.startDate).toISOString()
+      : new Date().toISOString();
+  }
+
+  onStartDateChange(value: string | string[] | null) {
+    const normalized = Array.isArray(value) ? value[0] : value;
+    if (!normalized) {
+      return;
+    }
+    const next = new Date(normalized);
+    if (!isNaN(next.getTime())) {
+      this.custodySchedule.startDate = next;
+    }
+  }
+
+  describeTemplate(template: CustodyTemplate): string {
+    return template.description
+      .replace(/הורה 1/g, this.parentLabels.parent1)
+      .replace(/הורה 2/g, this.parentLabels.parent2);
+  }
+
+  private getActiveParentDays(parent: 'parent1' | 'parent2'): number[] {
+    if (this.custodySchedule.pattern !== CustodyPattern.BIWEEKLY || this.activeBiweeklyWeek === 'a') {
+      return parent === 'parent1' ? this.custodySchedule.parent1Days : this.custodySchedule.parent2Days;
+    }
+
+    const key = parent === 'parent1' ? 'biweeklyAltParent1Days' : 'biweeklyAltParent2Days';
+    if (!this.custodySchedule[key]) {
+      this.custodySchedule[key] = [];
+    }
+    return this.custodySchedule[key] as number[];
+  }
+
+  private resolveSelectedTemplate(schedule: CustodySchedule) {
+    const match = this.templates.find(
+      template =>
+        template.pattern === schedule.pattern &&
+        template.parent1Days.length === schedule.parent1Days.length &&
+        template.parent2Days.length === schedule.parent2Days.length &&
+        template.parent1Days.every(day => schedule.parent1Days.includes(day)) &&
+        template.parent2Days.every(day => schedule.parent2Days.includes(day))
+    );
+
+    this.selectedTemplate = match || this.templates.find(t => t.id === 'custom') || null;
   }
 
   async save() {
@@ -119,12 +248,23 @@ export class CustodySetupComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (this.pendingApproval) {
+      return;
+    }
+
     this.custodySchedule.id = this.custodySchedule.id || `schedule_${Date.now()}`;
+    const requestApproval = this.requiresPartnerApproval && !!this.currentUserId;
+    const loader = await this.presentProgressLoader(requestApproval ? 'שולח לאישור...' : 'מעדכן את המשמרות...');
 
     this.isProcessing = true;
-    const loader = await this.presentProgressLoader('מעדכן את המשמרות...');
 
-    const savePromise = this.calendarService.saveCustodySchedule(this.custodySchedule)
+    const savePromise = this.calendarService
+      .saveCustodySchedule(this.custodySchedule, {
+        requestApproval,
+        baseSchedule: this.currentSchedule,
+        requestedBy: this.calendarService.getCurrentUserId(),
+        requestedByName: this.calendarService.getCurrentUserDisplayName()
+      })
       .catch(error => console.error('Failed to save custody schedule', error))
       .finally(() => {
         loader.dismiss();
@@ -156,6 +296,47 @@ export class CustodySetupComponent implements OnInit, OnDestroy {
 
     await this.modalController.dismiss({ deleted: true });
     deletePromise.finally(() => void 0);
+  }
+
+  async respondToPending(approve: boolean) {
+    if (!this.pendingApproval || this.isProcessing) {
+      return;
+    }
+
+    this.isProcessing = true;
+    const loader = await this.presentProgressLoader(approve ? 'מאשר את ההצעה...' : 'דוחה את ההצעה...');
+
+    const actionPromise = this.calendarService
+      .respondToCustodyApproval(approve)
+      .catch(error => console.error('Failed to respond to custody approval', error))
+      .finally(() => {
+        loader.dismiss();
+        this.isProcessing = false;
+      });
+
+    await actionPromise;
+    if (approve) {
+      await this.modalController.dismiss({ saved: true, approved: true });
+    }
+  }
+
+  async cancelPendingRequest() {
+    if (!this.pendingApproval || this.pendingApproval.requestedBy !== this.currentUserId || this.isProcessing) {
+      return;
+    }
+
+    this.isProcessing = true;
+    const loader = await this.presentProgressLoader('מבטל את הבקשה...');
+
+    const actionPromise = this.calendarService
+      .cancelCustodyApprovalRequest()
+      .catch(error => console.error('Failed to cancel custody approval request', error))
+      .finally(() => {
+        loader.dismiss();
+        this.isProcessing = false;
+      });
+
+    await actionPromise;
   }
 
   private async presentProgressLoader(message: string) {
