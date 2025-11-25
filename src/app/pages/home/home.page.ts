@@ -23,7 +23,7 @@ export class HomePage implements OnInit, OnDestroy {
   requestNotes: Record<string, string> = {};
   SwapRequestStatus = SwapRequestStatus;
   currentUserId: string | null = null;
-  swapRequestsCollapsed = true;
+  openAccordions: string[] = [];
 
   private destroy$ = new Subject<void>();
 
@@ -37,10 +37,6 @@ export class HomePage implements OnInit, OnDestroy {
   ngOnInit() {
     this.loadData();
     this.subscribeToOverview();
-  }
-
-  toggleSwapRequests() {
-    this.swapRequestsCollapsed = !this.swapRequestsCollapsed;
   }
 
   ngOnDestroy() {
@@ -67,6 +63,10 @@ export class HomePage implements OnInit, OnDestroy {
         this.swapRequests = overview?.swapRequests ?? [];
         this.currentUserId = this.homeService.getCurrentUserId();
         this.isLoading = false;
+
+        if (overview) {
+          this.syncOpenAccordions(overview);
+        }
       });
   }
 
@@ -322,5 +322,21 @@ export class HomePage implements OnInit, OnDestroy {
     });
 
     await toast.present();
+  }
+
+  private syncOpenAccordions(overview: DailyOverview) {
+    const current = new Set(this.openAccordions);
+
+    if (overview.pendingExpenses.length > 0) {
+      current.add('expenses');
+    }
+    if (this.pendingSwapRequests.length > 0) {
+      current.add('requests');
+    }
+    if (overview.events.length > 0) {
+      current.add('events');
+    }
+
+    this.openAccordions = Array.from(current);
   }
 }

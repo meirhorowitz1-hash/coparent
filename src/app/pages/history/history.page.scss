@@ -33,11 +33,20 @@
   color: var(--ion-color-medium);
 }
 
-.history-section {
-  background: #fff;
+.history-list {
+  padding: 0;
+  margin: 0;
+}
+
+.history-item {
+  --background: rgba(255, 255, 255, 0.96);
+  --background-activated: rgba(255, 255, 255, 0.9);
+  --inner-padding-end: 12px;
+  --padding-start: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.05);
   border-radius: 14px;
-  padding: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  margin-bottom: 10px;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
 }
 
 .section-header {
@@ -106,6 +115,50 @@
   gap: 8px;
   padding: 20px;
   color: var(--ion-color-medium);
+}
+
+.history-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.accordion-shell {
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+ion-accordion.history-accordion-card {
+  display: block;
+  --border-radius: 20px;
+}
+
+ion-accordion.history-accordion-card::part(container) {
+  margin: 0;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+ion-accordion.history-accordion-card::part(header) {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(246, 248, 255, 0.95));
+  border-radius: 20px 20px 0 0;
+}
+
+ion-accordion.history-accordion-card::part(content) {
+  padding: 0 14px 14px;
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 0 0 20px 20px;
 }
 
 @media (max-width: 640px) {

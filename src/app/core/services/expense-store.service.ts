@@ -8,6 +8,8 @@ export interface ExpenseRecord {
   title: string;
   amount: number;
   date: Date;
+  createdBy: string;
+  createdByName?: string;
   notes?: string;
   receiptName?: string;
   receiptPreview?: string;
@@ -35,6 +37,8 @@ export class ExpenseStoreService {
       id: expense.id ?? crypto.randomUUID(),
       status: expense.status ?? 'pending',
       isPaid: expense.isPaid ?? false,
+      createdBy: expense.createdBy ?? 'unknown',
+      createdByName: expense.createdByName ?? 'הורה',
       createdAt: new Date(),
       date: new Date(expense.date),
       notes: expense.notes?.trim() || undefined,
@@ -64,6 +68,10 @@ export class ExpenseStoreService {
   clear(): void {
     this.expensesSubject.next([]);
     this.persist([]);
+  }
+
+  getAll(): ExpenseRecord[] {
+    return [...this.expensesSubject.value];
   }
 
   private patchExpense(
@@ -125,7 +133,9 @@ export class ExpenseStoreService {
       return parsed.map(expense => ({
         ...expense,
         date: new Date(expense.date),
-        createdAt: new Date(expense.createdAt)
+        createdAt: new Date(expense.createdAt),
+        createdBy: expense.createdBy ?? 'unknown',
+        createdByName: expense.createdByName ?? 'הורה'
       }));
     } catch (error) {
       console.warn('Failed to read expenses history, starting fresh', error);

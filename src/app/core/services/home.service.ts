@@ -3,10 +3,11 @@ import { Observable, BehaviorSubject, Subscription } from 'rxjs';
 import { DailyOverview, CustodyToday, DailySummary, QuickAction } from '../models/daily-overview.model';
 import { CalendarEvent } from '../models/calendar-event.model';
 import { Task, TaskStatus, TaskPriority } from '../models/task.model';
-import { Expense } from '../models/expense.model';
+import { Expense, ExpenseCategory, ExpenseStatus, SplitType } from '../models/expense.model';
 import { CalendarService } from './calendar.service';
 import { SwapRequest, SwapRequestStatus } from '../models/swap-request.model';
 import { SwapRequestService } from './swap-request.service';
+import { ExpenseStoreService, ExpenseRecord } from './expense-store.service';
 
 @Injectable({
   providedIn: 'root'
@@ -20,7 +21,8 @@ export class HomeService implements OnDestroy {
 
   constructor(
     private calendarService: CalendarService,
-    private swapRequestService: SwapRequestService
+    private swapRequestService: SwapRequestService,
+    private expenseStore: ExpenseStoreService
   ) {
     this.subscriptions.add(
       this.calendarService.events$.subscribe(() => {
@@ -44,6 +46,12 @@ export class HomeService implements OnDestroy {
             swapRequests: [...requests]
           });
         }
+      })
+    );
+
+    this.subscriptions.add(
+      this.expenseStore.expenses$.subscribe(() => {
+        this.loadDailyOverview(this.currentDate);
       })
     );
   }
@@ -115,8 +123,36 @@ export class HomeService implements OnDestroy {
    * מחזיר הוצאות ממתינות לאישור
    */
   private getPendingExpenses(): Expense[] {
-    // כאן תהיה קריאה ל-Firebase
-    return [];
+    return this.expenseStore
+      .getAll()
+      .filter(expense => expense.status === 'pending')
+      .map(expense => this.mapExpenseRecord(expense));
+  }
+
+  private mapExpenseRecord(expense: ExpenseRecord): Expense {
+    const statusMap: Record<ExpenseRecord['status'], ExpenseStatus> = {
+      pending: ExpenseStatus.PENDING,
+      approved: ExpenseStatus.APPROVED,
+      rejected: ExpenseStatus.REJECTED
+    };
+
+    return {
+      id: expense.id,
+      title: expense.title,
+      description: expense.notes,
+      amount: expense.amount,
+      currency: 'ILS',
+      date: expense.date,
+      category: ExpenseCategory.OTHER,
+      paidBy: expense.createdBy || '',
+      splitType: SplitType.EQUAL,
+      splitDetails: [],
+      status: statusMap[expense.status],
+      receipt: expense.receiptName,
+      approvedBy: expense.status === 'approved' ? [expense.createdByName || expense.createdBy || 'local'] : [],
+      createdAt: expense.createdAt,
+      updatedAt: expense.createdAt
+    };
   }
 
   /**

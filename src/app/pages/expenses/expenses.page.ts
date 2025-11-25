@@ -23,6 +23,8 @@ export class ExpensesPage implements OnInit, OnDestroy {
   isSubmitting = false;
   private destroy$ = new Subject<void>();
   currentParentRole: 'parent1' | 'parent2' | null = null;
+  currentUserId: string | null = null;
+  currentUserName: string = 'הורה';
 
   constructor(
     private formBuilder: FormBuilder,
@@ -48,7 +50,9 @@ export class ExpensesPage implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
         const uid = this.calendarService.getCurrentUserId();
+        this.currentUserId = uid;
         this.currentParentRole = this.calendarService.getParentRoleForUser(uid);
+        this.currentUserName = this.calendarService.getCurrentUserDisplayName();
       });
   }
 
@@ -160,6 +164,8 @@ export class ExpensesPage implements OnInit, OnDestroy {
         amount: Number(amount),
         date,
         notes: notes?.trim(),
+        createdBy: this.currentUserId || 'anonymous',
+        createdByName: this.currentUserName || 'הורה',
         splitParent1: 50, // Hardcoded 50/50 split for now
         receiptName: this.pendingReceipt?.name,
         receiptPreview: this.pendingReceiptPreview,

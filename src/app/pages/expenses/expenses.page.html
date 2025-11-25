@@ -58,20 +58,26 @@
           <ion-icon name="cloud-upload-outline"></ion-icon>
           <div>
             <strong>{{ pendingReceipt?.name || 'צרפו קבלה (PDF/JPG)' }}</strong>
-            <p *ngIf="!pendingReceipt">לא חובה, אך עוזר לשקיפות</p>
-            <p *ngIf="pendingReceipt">{{ (pendingReceipt.size / 1024) | number:'1.0-0' }}KB</p>
+            @if (!pendingReceipt) {
+              <p>לא חובה, אך עוזר לשקיפות</p>
+            }
+            @if (pendingReceipt) {
+              <p>{{ (pendingReceipt.size / 1024) | number:'1.0-0' }}KB</p>
+            }
           </div>
           <ion-button fill="clear" size="small">
             בחר קובץ
           </ion-button>
         </div>
 
-        <div class="receipt-preview" *ngIf="pendingReceiptPreview">
-          <img [src]="pendingReceiptPreview" alt="קבלה" />
-          <ion-button fill="clear" color="danger" size="small" (click)="removePendingReceipt()">
-            הסר
-          </ion-button>
-        </div>
+        @if (pendingReceiptPreview) {
+          <div class="receipt-preview">
+            <img [src]="pendingReceiptPreview" alt="קבלה" />
+            <ion-button fill="clear" color="danger" size="small" (click)="removePendingReceipt()">
+              הסר
+            </ion-button>
+          </div>
+        }
 
         <input
           type="file"
@@ -88,102 +94,107 @@
     </form>
   </section>
 
-  <section *ngIf="groupedExpenses.length; else emptyState">
+  @if (groupedExpenses.length) {
     <div
       class="month-card"
       *ngFor="let bucket of groupedExpenses">
-      <ng-container *ngIf="getMonthlyReport(bucket.expenses) as report">
-      <div class="month-header">
-        <div>
-          <h3>{{ bucket.label }}</h3>
-          <p>{{ bucket.expenses.length }} הוצאות</p>
+      @if (getMonthlyReport(bucket.expenses); as report) {
+        <div class="month-header">
+          <div>
+            <h3>{{ bucket.label }}</h3>
+            <p>{{ bucket.expenses.length }} הוצאות</p>
+          </div>
+          <div class="month-totals">
+            <strong>{{ formatCurrency(report.total) }}</strong>
+            <span>סה״כ</span>
+          </div>
         </div>
-        <div class="month-totals">
-          <strong>{{ formatCurrency(report.total) }}</strong>
-          <span>סה״כ</span>
-        </div>
-      </div>
 
-      <div class="report-row">
-        <div>
-          <label>ממתין</label>
-          <span>{{ formatCurrency(report.pendingTotal) }}</span>
+        <div class="report-row">
+          <div>
+            <label>ממתין</label>
+            <span>{{ formatCurrency(report.pendingTotal) }}</span>
+          </div>
+          <div>
+            <label>מאושר</label>
+            <span>{{ formatCurrency(report.approvedTotal) }}</span>
+          </div>
+          <div>
+            <label>מאוזן (הורה 1 - הורה 2)</label>
+            <span
+              [class.positive]="report.balance >= 0"
+              [class.negative]="report.balance < 0">
+              {{ formatCurrency(report.balance) }}
+            </span>
+          </div>
         </div>
-        <div>
-          <label>מאושר</label>
-          <span>{{ formatCurrency(report.approvedTotal) }}</span>
-        </div>
-        <div>
-          <label>מאוזן (הורה 1 - הורה 2)</label>
-          <span
-            [class.positive]="report.balance >= 0"
-            [class.negative]="report.balance < 0">
-            {{ formatCurrency(report.balance) }}
-          </span>
-        </div>
-      </div>
 
-      <ion-list lines="none">
-        <ion-item *ngFor="let expense of bucket.expenses">
-          <ion-avatar slot="start">
-            <div class="avatar">{{ expense.title.charAt(0) }}</div>
-          </ion-avatar>
-          <ion-label>
-            <div class="item-header">
-              <h3>{{ expense.title }}</h3>
-              <span class="status-chip" [class]="expense.status">
-                {{ expense.status === 'pending' ? 'ממתין לאישור' : expense.status === 'approved' ? 'מאושר' : 'נדחה' }}
-              </span>
+        <ion-list lines="none">
+          <ion-item *ngFor="let expense of bucket.expenses">
+            <ion-avatar slot="start">
+              <div class="avatar">{{ expense.title.charAt(0) }}</div>
+            </ion-avatar>
+            <ion-label>
+              <div class="item-header">
+                <h3>{{ expense.title }}</h3>
+                <span class="status-chip" [class]="expense.status">
+                  {{ expense.status === 'pending' ? 'ממתין לאישור' : expense.status === 'approved' ? 'מאושר' : 'נדחה' }}
+                </span>
+              </div>
+              <p>
+                {{ expense.date | date:'dd/MM/yyyy' }}
+                <span class="byline">• הוסף ע"י {{ expense.createdByName || expense.createdBy || 'לא ידוע' }}</span>
+              </p>
+              @if (expense.notes) {
+                <p>{{ expense.notes }}</p>
+              }
+            </ion-label>
+            <div class="amount-chip">
+              {{ formatCurrency(expense.amount) }}
             </div>
-            <p>{{ expense.date | date:'dd/MM/yyyy' }}</p>
-            <p *ngIf="expense.notes">{{ expense.notes }}</p>
-          </ion-label>
-          <div class="amount-chip">
-            {{ formatCurrency(expense.amount) }}
-          </div>
-          <div class="item-actions">
-            <ng-container *ngIf="expense.status === 'pending' && canApproveExpenses">
-              <ion-button
-                size="small"
-                fill="clear"
-                color="success"
-                (click)="approveExpense(expense, true)">
-                אשר
-              </ion-button>
-              <ion-button
-                size="small"
-                fill="clear"
-                color="medium"
-                (click)="approveExpense(expense, false)">
-                דחה
-              </ion-button>
-            </ng-container>
-            <ion-button
-              *ngIf="expense.status === 'approved'"
-              size="small"
-              fill="clear"
-              color="tertiary"
-              (click)="markPaid(expense)">
-              {{ expense.isPaid ? 'שולם' : 'סמן כשולם' }}
-            </ion-button>
-            <ion-button
-              *ngIf="expense.receiptPreview"
-              fill="clear"
-              size="small"
-              (click)="openReceipt(expense)">
-              קבלה
-            </ion-button>
-          </div>
-        </ion-item>
-      </ion-list>
-      </ng-container>
+            <div class="item-actions">
+              @if (expense.status === 'pending' && canApproveExpenses) {
+                <ion-button
+                  size="small"
+                  fill="clear"
+                  color="success"
+                  (click)="approveExpense(expense, true)">
+                  אשר
+                </ion-button>
+                <ion-button
+                  size="small"
+                  fill="clear"
+                  color="medium"
+                  (click)="approveExpense(expense, false)">
+                  דחה
+                </ion-button>
+              }
+              @if (expense.status === 'approved') {
+                <ion-button
+                  size="small"
+                  fill="clear"
+                  color="tertiary"
+                  (click)="markPaid(expense)">
+                  {{ expense.isPaid ? 'שולם' : 'סמן כשולם' }}
+                </ion-button>
+              }
+              @if (expense.receiptPreview) {
+                <ion-button
+                  fill="clear"
+                  size="small"
+                  (click)="openReceipt(expense)">
+                  קבלה
+                </ion-button>
+              }
+            </div>
+          </ion-item>
+        </ion-list>
+      }
     </div>
-  </section>
-
-  <ng-template #emptyState>
+  } @else {
     <div class="empty-state">
       <ion-icon name="receipt-outline"></ion-icon>
       <p>עדיין לא נוספו הוצאות. התחילו כדי לשמור על שקיפות.</p>
     </div>
-  </ng-template>
+  }
 </ion-content>

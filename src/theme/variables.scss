@@ -1,56 +1,54 @@
 // Ionic Variables and Theming
-// Classic, Clean & Innovative Design System
+// Classic, Clean & Innovative Design System - Apple HIG Inspired
 
 /** Modern Neutral Palette - Crisp, Minimal, Professional **/
 :root {
-  // Primary - Deep Azure
-  --ion-color-primary: #1f6feb;
-  --ion-color-primary-rgb: 31, 111, 235;
+  // Primary - iOS Blue
+  --ion-color-primary: #0f7878; // Teal from reference
+  --ion-color-primary-rgb: 15, 120, 120;
   --ion-color-primary-contrast: #ffffff;
   --ion-color-primary-contrast-rgb: 255, 255, 255;
-  --ion-color-primary-shade: #1b60ce;
-  --ion-color-primary-tint: #3d82ef;
+  --ion-color-primary-shade: #0d6969;
+  --ion-color-primary-tint: #278a8a;
 
-  // Secondary - Teal
-  --ion-color-secondary: #0f9d8a;
-  --ion-color-secondary-rgb: 15, 157, 138;
+  --ion-color-secondary: #48bfa3; // Soft mint
+  --ion-color-secondary-rgb: 72, 191, 163;
   --ion-color-secondary-contrast: #ffffff;
   --ion-color-secondary-contrast-rgb: 255, 255, 255;
-  --ion-color-secondary-shade: #0d8979;
-  --ion-color-secondary-tint: #2cae9c;
+  --ion-color-secondary-shade: #3fa893;
+  --ion-color-secondary-tint: #61c7b0;
 
-  // Tertiary - Warm Amber
-  --ion-color-tertiary: #f59e0b;
-  --ion-color-tertiary-rgb: 245, 158, 11;
+  --ion-color-tertiary: #0b6a6a; // Deeper teal
+  --ion-color-tertiary-rgb: 11, 106, 106;
   --ion-color-tertiary-contrast: #ffffff;
   --ion-color-tertiary-contrast-rgb: 255, 255, 255;
-  --ion-color-tertiary-shade: #d48709;
-  --ion-color-tertiary-tint: #f7ad2a;
+  --ion-color-tertiary-shade: #0a5c5c;
+  --ion-color-tertiary-tint: #267a7a;
 
-  // Success - Emerald
-  --ion-color-success: #22c55e;
-  --ion-color-success-rgb: 34, 197, 94;
+  // Success - iOS Green
+  --ion-color-success: #34C759;
+  --ion-color-success-rgb: 52, 199, 89;
   --ion-color-success-contrast: #ffffff;
   --ion-color-success-contrast-rgb: 255, 255, 255;
-  --ion-color-success-shade: #1da955;
-  --ion-color-success-tint: #3fd274;
+  --ion-color-success-shade: #2fae4f;
+  --ion-color-success-tint: #49ca6a;
 
-  // Warning - Gold
-  --ion-color-warning: #eab308;
-  --ion-color-warning-rgb: 234, 179, 8;
-  --ion-color-warning-contrast: #000000;
-  --ion-color-warning-contrast-rgb: 0, 0, 0;
-  --ion-color-warning-shade: #d09d07;
-  --ion-color-warning-tint: #edbd2a;
+  // Warning - iOS Yellow
+  --ion-color-warning: #f8ba4b;
+  --ion-color-warning-rgb: 248, 186, 75;
+  --ion-color-warning-contrast: #0f172a;
+  --ion-color-warning-contrast-rgb: 15, 23, 42;
+  --ion-color-warning-shade: #da9f40;
+  --ion-color-warning-tint: #f9c362;
 
-  // Danger - Coral
-  --ion-color-danger: #ef4444;
-  --ion-color-danger-rgb: 239, 68, 68;
+  // Danger - iOS Red
+  --ion-color-danger: #e65b54;
+  --ion-color-danger-rgb: 230, 91, 84;
   --ion-color-danger-contrast: #ffffff;
   --ion-color-danger-contrast-rgb: 255, 255, 255;
-  --ion-color-danger-shade: #d73c3c;
-  --ion-color-danger-tint: #f26262;
-
+  --ion-color-danger-shade: #ca504a;
+  --ion-color-danger-tint: #e96c66;
+  
   // Neutral Ink
   --ion-color-dark: #0f172a;
   --ion-color-dark-rgb: 15, 23, 42;
@@ -74,7 +72,7 @@
   --ion-color-light-tint: #f8fafe;
 
   // Design System Surfaces
-  --app-background: #f4f6fb;
+  --app-background: #f7fbfb;
   --app-background-secondary: #ffffff;
   --app-surface: rgba(255, 255, 255, 0.96);
   --app-surface-elevated: rgba(255, 255, 255, 0.98);
@@ -87,7 +85,7 @@
   --app-border-light: rgba(15, 23, 42, 0.04);
   --app-divider: rgba(15, 23, 42, 0.12);
 
-  --app-hero-gradient: radial-gradient(circle at 20% 20%, rgba(31, 111, 235, 0.12), transparent 45%), radial-gradient(circle at 80% 10%, rgba(15, 157, 138, 0.12), transparent 40%);
+  --app-hero-gradient: radial-gradient(circle at 20% 20%, rgba(10, 132, 255, 0.1), transparent 45%), radial-gradient(circle at 80% 10%, rgba(88, 86, 214, 0.1), transparent 40%);
   --app-card-gradient: linear-gradient(165deg, rgba(255, 255, 255, 0.98), rgba(247, 249, 252, 0.92));
 
   // Shadows - Soft & Elegant
@@ -151,13 +149,20 @@
   --accent-turquoise: #0fc5c5;
 }
 
-// Dark Mode - Sophisticated
+// Dark Mode - Apple HIG Inspired
 @media (prefers-color-scheme: dark) {
   :root {
-    --app-background: #0f172a;
-    --app-background-secondary: #1b2440;
-    --app-surface: rgba(20, 27, 51, 0.9);
-    --app-surface-elevated: rgba(34, 45, 78, 0.95);
+    --ion-color-primary: #0A84FF;
+    --ion-color-secondary: #5856D6;
+    --ion-color-tertiary: #FF9500;
+    --ion-color-success: #34C759;
+    --ion-color-warning: #FFCC00;
+    --ion-color-danger: #FF3B30;
+    
+    --app-background: #000000;
+    --app-background-secondary: #1C1C1E;
+    --app-surface: rgba(28, 28, 30, 0.85);
+    --app-surface-elevated: rgba(44, 44, 46, 0.9);
     
     --app-text-primary: #f8fafc;
     --app-text-secondary: #c7d1f5;
@@ -167,9 +172,9 @@
     --app-border-light: rgba(148, 163, 184, 0.08);
     --app-divider: rgba(148, 163, 184, 0.22);
     
-    --ion-background-color: #0f172a;
+    --ion-background-color: #000000;
     --ion-text-color: #f8fafc;
-    --ion-color-light: #1e293b;
+    --ion-color-light: #1C1C1E;
     --app-hero-gradient: radial-gradient(circle at top, rgba(10, 132, 255, 0.25), transparent 65%);
   }
 }

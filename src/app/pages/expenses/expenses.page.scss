@@ -217,6 +217,12 @@ ion-item.invalid {
   }
 }
 
+p .byline {
+  color: var(--app-text-tertiary);
+  font-size: var(--text-xs);
+  margin-inline-start: 6px;
+}
+
 .status-chip {
   border-radius: var(--radius-full);
   padding: 2px 10px;

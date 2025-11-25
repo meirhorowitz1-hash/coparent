@@ -9,374 +9,367 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
+<ion-content [fullscreen]="true" class="home-content">
   <ion-refresher slot="fixed" pullMin="60" pullMax="120" (ionRefresh)="handleRefresh($event)">
     <ion-refresher-content pullingText="משוך לרענון" refreshingSpinner="crescent"></ion-refresher-content>
   </ion-refresher>
 
+  <div class="bg-shapes">
+    <span class="blob blob-1"></span>
+    <span class="blob blob-2"></span>
+    <span class="blob blob-3"></span>
+  </div>
+
   <div class="screen-wrapper">
-    <div *ngIf="isLoading" class="state-block">
-      <ion-spinner name="crescent"></ion-spinner>
-      <p>טוען...</p>
-    </div>
-
-    <ng-container *ngIf="!isLoading && dailyOverview as overview; else overviewError">
-      <section class="home-hero surface-card">
-        <div class="hero-heading">
-          <div>
-            <p class="eyebrow">היום</p>
-            <h1>{{ formatDate(currentDate) }}</h1>
-          </div>
-          <ion-chip color="danger" *ngIf="overview.summary.hasUrgentTasks">
-            <ion-icon name="flame-outline"></ion-icon>
-            משימה דחופה
-          </ion-chip>
-        </div>
-
-        <div class="hero-metrics">
-          <div class="metric">
-            <span>אירועים</span>
-            <strong>{{ overview.summary.eventsCount || 0 }}</strong>
-          </div>
-          <div class="metric">
-            <span>משימות</span>
-            <strong>{{ overview.summary.tasksCount || 0 }}</strong>
-          </div>
-          <div class="metric">
-            <span>הוצאות</span>
-            <strong>{{ overview.summary.pendingExpensesCount || overview.pendingExpenses.length || 0 }}</strong>
-          </div>
-        </div>
-
-        <div class="hero-foot">
-          <span>סה״כ הוצאות בהמתנה</span>
-          <strong>{{ formatCurrency(overview.summary.totalPendingAmount || 0) }}</strong>
-        </div>
-      </section>
-
-      <ion-card class="status-card" *ngIf="overview.custodyToday">
-        <ion-card-header>
-          <ion-card-title>משמורת היום</ion-card-title>
-          <ion-card-subtitle>מי נמצא עם הילדים והעברה הבאה</ion-card-subtitle>
-        </ion-card-header>
-        <ion-card-content>
-          <div class="custody-row">
-            <div class="pill-icon">
-              <ion-icon name="person-circle-outline"></ion-icon>
+    @if (isLoading) {
+      <div class="state-block">
+        <ion-spinner name="crescent"></ion-spinner>
+        <p>טוען...</p>
+      </div>
+    } @else if (dailyOverview; as overview) {
+      <section class="home-hero">
+        <div class="hero-top">
+          <div class="device-chip">
+            <div class="avatar">
+              <ion-icon name="sparkles-outline"></ion-icon>
             </div>
             <div>
-              <p class="label">כעת</p>
+              <p class="eyebrow">משמורת עכשיו</p>
               <strong>{{ overview.custodyToday.currentParentName || 'לא מוגדר' }}</strong>
-              <span>משמורת עד מחר</span>
+              @if (overview.custodyToday.nextTransition; as transition) {
+                <span>עד {{ formatDate(transition.date) }}</span>
+              }
             </div>
           </div>
 
-          <div class="custody-row next" *ngIf="overview.custodyToday.nextTransition as transition">
-            <div class="pill-icon neutral">
-              <ion-icon name="swap-horizontal-outline"></ion-icon>
-            </div>
-            <div>
-              <p class="label">העברה הבאה</p>
-              <strong>{{ transition.toParentName }}</strong>
-              <span>{{ formatDate(transition.date) }}</span>
-            </div>
-          </div>
-        </ion-card-content>
-      </ion-card>
-
-      <section class="panel quick-actions-section" *ngIf="quickActions.length">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">פעולות</p>
-            <h2>מה תרצו לעשות?</h2>
-          </div>
-          <ion-badge color="primary">{{ quickActions.length }}</ion-badge>
+          @if (overview.summary.hasUrgentTasks) {
+            <ion-chip color="danger">
+              <ion-icon name="flame-outline"></ion-icon>
+              משימה דחופה
+            </ion-chip>
+          }
         </div>
 
-        <div class="quick-actions-grid">
+        <div class="hero-main">
+          <p class="eyebrow">סה״כ הוצאות בהמתנה</p>
+          <h1 class="hero-number">{{ formatCurrency(overview.summary.totalPendingAmount || 0) }}</h1>
+          <p class="muted">
+            {{ overview.summary.eventsCount || 0 }} אירועים • {{ overview.summary.tasksCount || 0 }} משימות
+          </p>
+          @if (overview.pendingExpenses.length > 0) {
+            <div class="hero-highlight">
+              <div class="pill warning">הוצאות ממתינות</div>
+              <div class="highlight-metrics">
+                <strong>{{ overview.pendingExpenses.length }}</strong>
+                <span>{{ formatCurrency(overview.summary.totalPendingAmount || 0) }}</span>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="hero-controls">
           <button
-            *ngFor="let action of quickActions"
             type="button"
-            class="quick-action-card"
+            class="hero-control"
+            [style.--accent]="'var(--ion-color-primary)'"
+            (click)="executeQuickAction({ id: 'add-event', title: 'אירוע חדש', icon: 'add-circle-outline', route: '/calendar' })">
+            <ion-icon name="add-circle-outline"></ion-icon>
+            <span>אירוע חדש</span>
+          </button>
+          <button
+            *ngFor="let action of quickActions | slice:0:3"
+            type="button"
+            class="hero-control"
             (click)="executeQuickAction(action)"
-            [style.--action-color]="action.color ? 'var(--ion-color-' + action.color + ')' : 'var(--ion-color-primary)'">
-            <div class="action-badge" *ngIf="action.badge && action.badge > 0">
-              {{ action.badge }}
-            </div>
-            <div class="icon-ring">
-              <ion-icon [name]="action.icon"></ion-icon>
-            </div>
-            <p>{{ action.title }}</p>
+            [style.--accent]="action.color ? 'var(--ion-color-' + action.color + ')' : 'var(--ion-color-primary)'">
+            <ion-icon [name]="action.icon"></ion-icon>
+            <span>{{ action.title }}</span>
           </button>
         </div>
       </section>
 
-      <section class="panel requests-section">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">בקשות</p>
-            <h2>בקשות החלפה</h2>
+      <ion-accordion-group
+        multiple="true"
+        expand="inset"
+        class="panel-accordion"
+        [value]="openAccordions"
+        (ionChange)="openAccordions = $event.detail.value">
+        <ion-accordion value="requests" class="accordion-card">
+          <div slot="header" class="accordion-header">
+            <div>
+              <p class="eyebrow">בקשות</p>
+              <h2>בקשות החלפה</h2>
+            </div>
+            <div class="accordion-meta">
+              <ion-chip class="accordion-chip" color="warning">{{ pendingSwapRequests.length }}</ion-chip>
+              <ion-icon class="accordion-chevron" name="chevron-down-outline"></ion-icon>
+            </div>
           </div>
-          <div class="section-actions">
-            <ion-chip color="warning">{{ pendingSwapRequests.length }}</ion-chip>
+          <div slot="content" class="accordion-body">
+            @if (pendingSwapRequests.length > 0) {
+              <article class="swap-card" *ngFor="let request of pendingSwapRequests">
+                <header>
+                  <div class="parties">
+                    <strong>{{ request.requestedByName }}</strong>
+                    <ion-icon name="swap-horizontal"></ion-icon>
+                    <strong>{{ request.requestedToName }}</strong>
+                  </div>
+                  <ion-badge [color]="getRequestStatusColor(request.status)">
+                    {{ getRequestStatusLabel(request.status) }}
+                  </ion-badge>
+                </header>
+
+                <div class="swap-timeline">
+                  <div>
+                    <span class="label">תאריך מקורי</span>
+                    <strong>{{ formatDate(request.originalDate) }}</strong>
+                  </div>
+                  <ion-icon name="chevron-back-outline"></ion-icon>
+                  <div>
+                    <span class="label">תאריך מוצע</span>
+                    <strong>{{ formatDate(request.proposedDate) }}</strong>
+                  </div>
+                </div>
+
+                @if (request.reason) {
+                  <p class="request-reason">{{ request.reason }}</p>
+                }
+
+                <ion-note class="request-meta">
+                  נשלחה ב־{{ formatDate(request.createdAt) }}
+                </ion-note>
+
+                @if (request.respondedAt) {
+                  <ion-note class="request-meta">
+                    עודכנה ב־{{ formatDate(request.respondedAt) }}
+                  </ion-note>
+                }
+
+                @if (request.status !== SwapRequestStatus.PENDING && request.responseNote) {
+                  <div class="response-note">
+                    <ion-icon name="chatbubbles-outline"></ion-icon>
+                    <span>{{ request.responseNote }}</span>
+                  </div>
+                }
+
+                @if (canRespondToRequest(request)) {
+                  <ion-textarea
+                    class="request-note-input"
+                    placeholder="הוסיפו הערה לבן/בת הזוג"
+                    autoGrow="true"
+                    [rows]="2"
+                    [maxlength]="300"
+                    [name]="'note-' + request.id"
+                    [(ngModel)]="requestNotes[request.id]">
+                  </ion-textarea>
+
+                  <div class="request-actions">
+                    <ion-button
+                      color="success"
+                      expand="block"
+                      (click)="handleRequestAction(request, SwapRequestStatus.APPROVED)">
+                      <ion-icon slot="start" name="checkmark-circle"></ion-icon>
+                      אישור
+                    </ion-button>
+                    <ion-button
+                      color="danger"
+                      expand="block"
+                      fill="outline"
+                      (click)="handleRequestAction(request, SwapRequestStatus.REJECTED)">
+                      <ion-icon slot="start" name="close-circle"></ion-icon>
+                      דחייה
+                    </ion-button>
+                  </div>
+                }
+
+                @if (canCancelRequest(request)) {
+                  <ion-button
+                    expand="block"
+                    fill="outline"
+                    color="medium"
+                    class="request-cancel-button"
+                    (click)="handleRequestAction(request, SwapRequestStatus.CANCELLED)">
+                    <ion-icon slot="start" name="close-circle-outline"></ion-icon>
+                    בטל בקשה
+                  </ion-button>
+                }
+              </article>
+            } @else {
+              <div class="empty-card">
+                <ion-icon name="swap-horizontal-outline"></ion-icon>
+                <p>אין בקשות ממתינות כרגע</p>
+              </div>
+            }
             <ion-button fill="clear" size="small" [routerLink]="['/tabs/swap-history']">
-              היסטוריה
+              היסטוריה מלאה
               <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>
             </ion-button>
-            <ion-button fill="clear" size="small" (click)="toggleSwapRequests()">
-              {{ swapRequestsCollapsed ? 'הצג' : 'הסתר' }}
-              <ion-icon
-                slot="end"
-                [name]="swapRequestsCollapsed ? 'chevron-down-outline' : 'chevron-up-outline'">
-              </ion-icon>
-            </ion-button>
           </div>
-        </div>
+        </ion-accordion>
 
-        <div class="panel-body" *ngIf="!swapRequestsCollapsed">
-          <ng-container *ngIf="pendingSwapRequests.length > 0; else emptyPendingRequests">
-            <article class="swap-card" *ngFor="let request of pendingSwapRequests">
-              <header>
-                <div class="parties">
-                  <strong>{{ request.requestedByName }}</strong>
-                  <ion-icon name="swap-horizontal"></ion-icon>
-                  <strong>{{ request.requestedToName }}</strong>
-                </div>
-                <ion-badge [color]="getRequestStatusColor(request.status)">
-                  {{ getRequestStatusLabel(request.status) }}
-                </ion-badge>
-              </header>
-
-              <div class="swap-timeline">
-                <div>
-                  <span class="label">תאריך מקורי</span>
-                  <strong>{{ formatDate(request.originalDate) }}</strong>
-                </div>
-                <ion-icon name="chevron-back-outline"></ion-icon>
-                <div>
-                  <span class="label">תאריך מוצע</span>
-                  <strong>{{ formatDate(request.proposedDate) }}</strong>
-                </div>
-              </div>
-
-              <p class="request-reason" *ngIf="request.reason">{{ request.reason }}</p>
-
-              <ion-note class="request-meta">
-                נשלחה ב־{{ formatDate(request.createdAt) }}
-              </ion-note>
-
-              <ion-note class="request-meta" *ngIf="request.respondedAt">
-                עודכנה ב־{{ formatDate(request.respondedAt) }}
-              </ion-note>
-
-              <div class="response-note" *ngIf="request.status !== SwapRequestStatus.PENDING && request.responseNote">
-                <ion-icon name="chatbubbles-outline"></ion-icon>
-                <span>{{ request.responseNote }}</span>
-              </div>
-
-              <ion-textarea
-                *ngIf="canRespondToRequest(request)"
-                class="request-note-input"
-                placeholder="הוסיפו הערה לבן/בת הזוג"
-                autoGrow="true"
-                [rows]="2"
-                [maxlength]="300"
-                [name]="'note-' + request.id"
-                [(ngModel)]="requestNotes[request.id]">
-              </ion-textarea>
-
-              <div class="request-actions" *ngIf="canRespondToRequest(request)">
-                <ion-button
-                  color="success"
-                  expand="block"
-                  (click)="handleRequestAction(request, SwapRequestStatus.APPROVED)">
-                  <ion-icon slot="start" name="checkmark-circle"></ion-icon>
-                  אישור
-                </ion-button>
-                <ion-button
-                  color="danger"
-                  expand="block"
-                  fill="outline"
-                  (click)="handleRequestAction(request, SwapRequestStatus.REJECTED)">
-                  <ion-icon slot="start" name="close-circle"></ion-icon>
-                  דחייה
-                </ion-button>
-              </div>
-
-              <ion-button
-                *ngIf="canCancelRequest(request)"
-                expand="block"
-                fill="outline"
-                color="medium"
-                class="request-cancel-button"
-                (click)="handleRequestAction(request, SwapRequestStatus.CANCELLED)">
-                <ion-icon slot="start" name="close-circle-outline"></ion-icon>
-                בטל בקשה
-              </ion-button>
-            </article>
-          </ng-container>
-
-          <ng-template #emptyPendingRequests>
-            <div class="empty-card">
-              <ion-icon name="swap-horizontal-outline"></ion-icon>
-              <p>אין בקשות ממתינות כרגע</p>
+        <ion-accordion value="events" class="accordion-card">
+          <div slot="header" class="accordion-header">
+            <div>
+              <p class="eyebrow">לוח היום</p>
+              <h2>אירועים</h2>
             </div>
-          </ng-template>
-        </div>
-      </section>
-
-      <section class="panel stack-section">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">לוח היום</p>
-            <h2>אירועים</h2>
+            <div class="accordion-meta">
+              <ion-chip class="accordion-chip" color="primary">{{ overview.events.length }}</ion-chip>
+              <ion-icon class="accordion-chevron" name="chevron-down-outline"></ion-icon>
+            </div>
           </div>
-          <ion-chip color="primary">{{ overview.events.length }}</ion-chip>
-        </div>
-
-        <ng-container *ngIf="overview.events.length > 0; else noEvents">
-          <div class="stack-list">
-            <button
-              type="button"
-              class="stack-item"
-              *ngFor="let event of overview.events"
-              (click)="navigateToEvent(event.id)">
-              <div class="stack-icon accent">
-                <ion-icon name="time-outline"></ion-icon>
+          <div slot="content" class="accordion-body">
+            @if (overview.events.length > 0) {
+              <ion-list class="stack-list" lines="none">
+                <ion-item
+                  button
+                  detail="false"
+                  class="stack-item"
+                  *ngFor="let event of overview.events"
+                  (click)="navigateToEvent(event.id)">
+                  <div slot="start" class="stack-icon accent">
+                    <ion-icon name="time-outline"></ion-icon>
+                  </div>
+                  <ion-label class="stack-body">
+                    <strong>{{ event.title }}</strong>
+                    <p>
+                      {{ formatTime(event.startDate) }}
+                      @if (event.location) {
+                        <span>• {{ event.location }}</span>
+                      }
+                    </p>
+                  </ion-label>
+                  <ion-icon slot="end" class="chevron" name="chevron-forward-outline"></ion-icon>
+                </ion-item>
+              </ion-list>
+            } @else {
+              <div class="empty-card">
+                <ion-icon name="calendar-outline"></ion-icon>
+                <p>אין אירועים מתוכננים להיום</p>
               </div>
-              <div class="stack-body">
-                <strong>{{ event.title }}</strong>
-                <p>
-                  {{ formatTime(event.startDate) }}
-                  <ng-container *ngIf="event.location">
-                    • {{ event.location }}
-                  </ng-container>
-                </p>
+            }
+          </div>
+        </ion-accordion>
+
+        <ion-accordion value="tasks" class="accordion-card">
+          <div slot="header" class="accordion-header">
+            <div>
+              <p class="eyebrow">תכנון</p>
+              <h2>משימות קרובות</h2>
+            </div>
+            <div class="accordion-meta">
+              <ion-chip class="accordion-chip" [color]="overview.summary.hasUrgentTasks ? 'danger' : 'warning'">
+                {{ overview.summary.tasksCount || 0 }}
+              </ion-chip>
+              <ion-icon class="accordion-chevron" name="chevron-down-outline"></ion-icon>
+            </div>
+          </div>
+          <div slot="content" class="accordion-body">
+            @if (overview.upcomingTasks.length > 0) {
+              <ion-list class="stack-list" lines="none">
+                <ion-item
+                  button
+                  detail="false"
+                  class="stack-item"
+                  *ngFor="let task of overview.upcomingTasks.slice(0, 5)"
+                  (click)="navigateToTask(task.id)">
+                  <ion-checkbox
+                    slot="start"
+                    [checked]="task.status === 'completed'"
+                    (click)="$event.stopPropagation()"
+                    (ionChange)="$event.stopPropagation()">
+                  </ion-checkbox>
+                  <ion-label class="stack-body">
+                    <strong>{{ task.title }}</strong>
+                    <p>
+                      <ion-icon [name]="getCategoryIcon(task.category || 'other')" size="small"></ion-icon>
+                      {{ formatDate(task.dueDate) }}
+                    </p>
+                  </ion-label>
+                  <ion-badge slot="end" [color]="getTaskPriorityColor(task.priority)">
+                    {{ task.priority }}
+                  </ion-badge>
+                  <ion-icon slot="end" class="chevron" name="chevron-forward-outline"></ion-icon>
+                </ion-item>
+              </ion-list>
+
+              @if (overview.upcomingTasks.length > 5) {
+                <ion-button
+                  expand="block"
+                  fill="clear"
+                  (click)="executeQuickAction({ id: 'tasks', title: '', icon: '', route: '/tasks' })">
+                  הצג עוד משימות
+                  <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>
+                </ion-button>
+              }
+            } @else {
+              <div class="empty-card">
+                <ion-icon name="checkbox-outline"></ion-icon>
+                <p>אין משימות קרובות</p>
               </div>
-              <ion-icon class="chevron" name="chevron-forward-outline"></ion-icon>
-            </button>
+            }
           </div>
-        </ng-container>
+        </ion-accordion>
 
-        <ng-template #noEvents>
-          <div class="empty-card">
-            <ion-icon name="calendar-outline"></ion-icon>
-            <p>אין אירועים מתוכננים להיום</p>
+        <ion-accordion value="expenses" class="accordion-card">
+          <div slot="header" class="accordion-header">
+            <div>
+              <p class="eyebrow">כספים</p>
+              <h2>הוצאות ממתינות</h2>
+            </div>
+            <div class="accordion-meta">
+              <ion-chip class="accordion-chip" color="success">{{ overview.pendingExpenses.length }}</ion-chip>
+              <ion-icon class="accordion-chevron" name="chevron-down-outline"></ion-icon>
+            </div>
           </div>
-        </ng-template>
-      </section>
+          <div slot="content" class="accordion-body">
+            @if (overview.pendingExpenses.length > 0) {
+              <ion-list class="stack-list" lines="none">
+                <ion-item
+                  button
+                  detail="false"
+                  class="stack-item"
+                  *ngFor="let expense of overview.pendingExpenses.slice(0, 3)"
+                  (click)="navigateToExpense(expense.id)">
+                  <div slot="start" class="stack-icon positive">
+                    <ion-icon [name]="getCategoryIcon(expense.category)"></ion-icon>
+                  </div>
+                  <ion-label class="stack-body">
+                    <strong>{{ expense.title }}</strong>
+                    <p>{{ formatDate(expense.date) }}</p>
+                  </ion-label>
+                  <div class="amount" slot="end">
+                    <strong>{{ formatCurrency(expense.amount) }}</strong>
+                    <ion-badge color="warning">ממתין</ion-badge>
+                  </div>
+                  <ion-icon slot="end" class="chevron" name="chevron-forward-outline"></ion-icon>
+                </ion-item>
+              </ion-list>
 
-      <section class="panel stack-section">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">תכנון</p>
-            <h2>משימות קרובות</h2>
-          </div>
-          <ion-chip [color]="overview.summary.hasUrgentTasks ? 'danger' : 'warning'">
-            {{ overview.summary.tasksCount || 0 }}
-          </ion-chip>
-        </div>
-
-        <ng-container *ngIf="overview.upcomingTasks.length > 0; else noTasks">
-          <div class="stack-list">
-            <button
-              type="button"
-              class="stack-item"
-              *ngFor="let task of overview.upcomingTasks.slice(0, 5)"
-              (click)="navigateToTask(task.id)">
-              <ion-checkbox
-                [checked]="task.status === 'completed'"
-                (click)="$event.stopPropagation()"
-                (ionChange)="$event.stopPropagation()">
-              </ion-checkbox>
-              <div class="stack-body">
-                <strong>{{ task.title }}</strong>
-                <p>
-                  <ion-icon [name]="getCategoryIcon(task.category || 'other')" size="small"></ion-icon>
-                  {{ formatDate(task.dueDate) }}
-                </p>
+              @if (overview.pendingExpenses.length > 3) {
+                <ion-button
+                  expand="block"
+                  fill="clear"
+                  (click)="executeQuickAction({ id: 'expenses', title: '', icon: '', route: '/expenses' })">
+                  הצג עוד הוצאות
+                  <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>
+                </ion-button>
+              }
+            } @else {
+              <div class="empty-card">
+                <ion-icon name="wallet-outline"></ion-icon>
+                <p>אין הוצאות ממתינות</p>
               </div>
-              <ion-badge [color]="getTaskPriorityColor(task.priority)">
-                {{ task.priority }}
-              </ion-badge>
-              <ion-icon class="chevron" name="chevron-forward-outline"></ion-icon>
-            </button>
+            }
           </div>
-
-          <ion-button
-            expand="block"
-            fill="clear"
-            *ngIf="overview.upcomingTasks.length > 5"
-            (click)="executeQuickAction({ id: 'tasks', title: '', icon: '', route: '/tasks' })">
-            הצג עוד משימות
-            <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>
-          </ion-button>
-        </ng-container>
-
-        <ng-template #noTasks>
-          <div class="empty-card">
-            <ion-icon name="checkbox-outline"></ion-icon>
-            <p>אין משימות קרובות</p>
-          </div>
-        </ng-template>
-      </section>
-
-      <section class="panel stack-section">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">כספים</p>
-            <h2>הוצאות ממתינות</h2>
-          </div>
-          <ion-chip color="success">{{ overview.pendingExpenses.length }}</ion-chip>
-        </div>
-
-        <ng-container *ngIf="overview.pendingExpenses.length > 0; else noExpenses">
-          <div class="stack-list">
-            <button
-              type="button"
-              class="stack-item"
-              *ngFor="let expense of overview.pendingExpenses.slice(0, 3)"
-              (click)="navigateToExpense(expense.id)">
-              <div class="stack-icon positive">
-                <ion-icon [name]="getCategoryIcon(expense.category)"></ion-icon>
-              </div>
-              <div class="stack-body">
-                <strong>{{ expense.title }}</strong>
-                <p>{{ formatDate(expense.date) }}</p>
-              </div>
-              <div class="amount">
-                <strong>{{ formatCurrency(expense.amount) }}</strong>
-                <ion-badge color="warning">ממתין</ion-badge>
-              </div>
-              <ion-icon class="chevron" name="chevron-forward-outline"></ion-icon>
-            </button>
-          </div>
-
-          <ion-button
-            expand="block"
-            fill="clear"
-            *ngIf="overview.pendingExpenses.length > 3"
-            (click)="executeQuickAction({ id: 'expenses', title: '', icon: '', route: '/expenses' })">
-            הצג עוד הוצאות
-            <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>
-          </ion-button>
-        </ng-container>
-
-        <ng-template #noExpenses>
-          <div class="empty-card">
-            <ion-icon name="wallet-outline"></ion-icon>
-            <p>אין הוצאות ממתינות</p>
-          </div>
-        </ng-template>
-      </section>
-    </ng-container>
+        </ion-accordion>
+      </ion-accordion-group>
+    } @else {
+      <div class="state-block error">
+        <ion-icon name="alert-circle-outline"></ion-icon>
+        <h3>שגיאה בטעינת הנתונים</h3>
+        <ion-button (click)="loadData()">נסה שוב</ion-button>
+      </div>
+    }
   </div>
 </ion-content>
-
-<ng-template #overviewError>
-  <div class="state-block error">
-    <ion-icon name="alert-circle-outline"></ion-icon>
-    <h3>שגיאה בטעינת הנתונים</h3>
-    <ion-button (click)="loadData()">נסה שוב</ion-button>
-  </div>
-</ng-template>
