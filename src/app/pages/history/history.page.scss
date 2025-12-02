@@ -99,6 +99,18 @@
   align-items: center;
   margin-top: 8px;
   color: var(--ion-color-medium);
+
+  .no-return {
+    grid-column: 2 / 4;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ion-color-tertiary);
+
+    ion-icon {
+      color: var(--ion-color-tertiary);
+    }
+  }
 }
 
 .dates-row .label {

@@ -13,10 +13,10 @@ const routes: Routes = [
         path: 'home',
         loadChildren: () => import('../home/home.module').then(m => m.HomePageModule)
       },
-      {
-        path: 'swap-history',
-        loadChildren: () => import('../swap-history/swap-history.module').then(m => m.SwapHistoryPageModule)
-      },
+      // {
+      //   path: 'swap-history',
+      //   loadChildren: () => import('../swap-history/swap-history.module').then(m => m.SwapHistoryPageModule)
+      // },
       {
         path: 'calendar',
         loadChildren: () => import('../calendar/calendar.module').then(m => m.CalendarPageModule)

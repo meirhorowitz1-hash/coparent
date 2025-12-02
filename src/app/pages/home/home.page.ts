@@ -123,13 +123,14 @@ export class HomePage implements OnInit, OnDestroy {
       try {
         await this.homeService.submitSwapRequest({
           originalDate: data.originalDate,
-          proposedDate: data.proposedDate,
-          reason: data.reason
+          proposedDate: data.proposedDate ?? null,
+          reason: data.reason,
+          requestType: data.requestType
         });
         await this.presentToast('הבקשה נשלחה בהצלחה', 'success');
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to submit swap request', error);
-        await this.presentToast('שליחת הבקשה נכשלה, נסו שוב', 'danger');
+        await this.presentToast(this.mapSwapErrorMessage(error?.message), 'danger');
       }
     }
   }
@@ -155,9 +156,9 @@ export class HomePage implements OnInit, OnDestroy {
   /**
    * ניווט להוצאה
    */
-  navigateToExpense(expenseId: string) {
+  navigateToExpense(expenseId: string, openSummary = false) {
     this.router.navigate(['/tabs/expenses'], { 
-      queryParams: { expenseId } 
+      queryParams: { expenseId, ...(openSummary ? { openSummary: true } : {}) } 
     });
   }
 
@@ -338,5 +339,23 @@ export class HomePage implements OnInit, OnDestroy {
     }
 
     this.openAccordions = Array.from(current);
+  }
+
+  getRequestTypeLabel(request: SwapRequest): string {
+    return request.requestType === 'one-way' ? 'בקשה ללא החזרה' : 'בקשת החלפה';
+  }
+
+  private mapSwapErrorMessage(code?: string): string {
+    switch (code) {
+      case 'swap-invalid-original-day':
+        return 'אי אפשר לבקש החלפה על יום שאינו שלך';
+      case 'swap-missing-proposed-day':
+      case 'swap-invalid-proposed-day':
+        return 'בחרי תאריך חלופי תקין של ההורה השני';
+      case 'swap-proposed-same-parent':
+        return 'תאריך החלופי חייב להיות של ההורה השני';
+      default:
+        return 'שליחת הבקשה נכשלה, בדקו את התאריכים ונסו שוב';
+    }
   }
 }

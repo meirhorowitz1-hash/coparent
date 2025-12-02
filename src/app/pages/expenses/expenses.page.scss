@@ -40,6 +40,16 @@
     font-size: 48px;
     color: var(--ion-color-primary);
   }
+
+  .pending-link {
+    margin-top: var(--space-2);
+    color: var(--ion-color-warning);
+    font-weight: var(--font-semibold);
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-decoration-color: rgba(246, 173, 85, 0.4);
+  }
 }
 
 .form-card form {
@@ -262,5 +272,26 @@ p .byline {
     flex-direction: row;
     flex-wrap: wrap;
     justify-content: flex-end;
+  }
+}
+.payment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+
+  .balance {
+    font-size: 16px;
+    color: #0f172a;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+  }
+
+  .balance.positive {
+    color: #16a34a;
+  }
+
+  .balance.negative {
+    color: #dc2626;
   }
 }

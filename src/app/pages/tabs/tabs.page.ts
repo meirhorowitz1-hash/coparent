@@ -33,7 +33,6 @@ export class TabsPage implements AfterViewInit {
     { id: 'home', label: 'בית', icon: 'home-outline', activeIcon: 'home' },
     { id: 'calendar', label: 'לוח שנה', icon: 'calendar-outline', activeIcon: 'calendar' },
     { id: 'expenses', label: 'הוצאות', icon: 'cash-outline', activeIcon: 'cash' },
-    { id: 'history', label: 'היסטוריה', icon: 'time-outline', activeIcon: 'time' },
     { id: 'tasks', label: 'משימות', icon: 'list-outline', activeIcon: 'list' },
     { id: 'profile', label: 'פרופיל', icon: 'person-outline', activeIcon: 'person' }
   ];

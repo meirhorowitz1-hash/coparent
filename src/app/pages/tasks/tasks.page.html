@@ -2,6 +2,11 @@
   <ion-header [translucent]="true">
     <ion-toolbar>
       <ion-title>משימות</ion-title>
+      <ion-buttons slot="end">
+        <ion-button [routerLink]="['/tabs/history']" [queryParams]="{ section: 'tasks' }" fill="clear" color="medium">
+          <ion-icon slot="icon-only" name="time-outline"></ion-icon>
+        </ion-button>
+      </ion-buttons>
     </ion-toolbar>
   </ion-header>
 

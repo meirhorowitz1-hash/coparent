@@ -114,9 +114,14 @@
                     <ion-icon name="swap-horizontal"></ion-icon>
                     <strong>{{ request.requestedToName }}</strong>
                   </div>
-                  <ion-badge [color]="getRequestStatusColor(request.status)">
-                    {{ getRequestStatusLabel(request.status) }}
-                  </ion-badge>
+                  <div class="header-actions">
+                    <ion-chip color="tertiary" class="type-chip">
+                      {{ getRequestTypeLabel(request) }}
+                    </ion-chip>
+                    <ion-badge [color]="getRequestStatusColor(request.status)">
+                      {{ getRequestStatusLabel(request.status) }}
+                    </ion-badge>
+                  </div>
                 </header>
 
                 <div class="swap-timeline">
@@ -124,11 +129,18 @@
                     <span class="label">תאריך מקורי</span>
                     <strong>{{ formatDate(request.originalDate) }}</strong>
                   </div>
-                  <ion-icon name="chevron-back-outline"></ion-icon>
-                  <div>
-                    <span class="label">תאריך מוצע</span>
-                    <strong>{{ formatDate(request.proposedDate) }}</strong>
-                  </div>
+                  @if (request.proposedDate) {
+                    <ion-icon name="chevron-back-outline"></ion-icon>
+                    <div>
+                      <span class="label">תאריך מוצע</span>
+                      <strong>{{ formatDate(request.proposedDate) }}</strong>
+                    </div>
+                  } @else {
+                    <div class="oneway-note">
+                      <ion-icon name="arrow-forward-circle"></ion-icon>
+                      <span>בקשה ללא תאריך חלופי</span>
+                    </div>
+                  }
                 </div>
 
                 @if (request.reason) {
@@ -200,10 +212,7 @@
                 <p>אין בקשות ממתינות כרגע</p>
               </div>
             }
-            <ion-button fill="clear" size="small" [routerLink]="['/tabs/swap-history']">
-              היסטוריה מלאה
-              <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>
-            </ion-button>
+           
           </div>
         </ion-accordion>
 
@@ -330,7 +339,7 @@
                   detail="false"
                   class="stack-item"
                   *ngFor="let expense of overview.pendingExpenses.slice(0, 3)"
-                  (click)="navigateToExpense(expense.id)">
+                  (click)="navigateToExpense(expense.id, true)">
                   <div slot="start" class="stack-icon positive">
                     <ion-icon [name]="getCategoryIcon(expense.category)"></ion-icon>
                   </div>

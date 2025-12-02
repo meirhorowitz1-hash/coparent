@@ -18,6 +18,18 @@
       <p>בקש מההורה השני להחליף יום משמורת</p>
     </div>
 
+    <ion-item lines="full">
+      <ion-label>
+        <strong>בקשה ללא יום חלופי</strong>
+        <p>תעביר יום משמורת ללא קבלת יום אחר בתמורה</p>
+      </ion-label>
+      <ion-toggle
+        slot="end"
+        [checked]="requestType === 'one-way'"
+        (ionChange)="requestType = $event.detail.checked ? 'one-way' : 'swap'">
+      </ion-toggle>
+    </ion-item>
+
     <form>
       <!-- Original Date -->
       <ion-item>
@@ -25,7 +37,7 @@
           <ion-icon name="calendar-outline"></ion-icon>
           התאריך המקורי שלך
         </ion-label>
-        <ion-datetime-button datetime="swap-original-date"></ion-datetime-button>
+        <ion-datetime-button datetime="swap-original-date" [disabled]="lockOriginalDate"></ion-datetime-button>
       </ion-item>
       <ion-modal keepContentsMounted="true">
         <ng-template>
@@ -35,6 +47,7 @@
             [(ngModel)]="originalDate"
             name="originalDate"
             [min]="minDate"
+            [disabled]="lockOriginalDate"
             displayFormat="DD/MM/YYYY"
             cancelText="ביטול"
             doneText="אישור">
@@ -43,27 +56,29 @@
       </ion-modal>
 
       <!-- Proposed Date -->
-      <ion-item>
-        <ion-label position="stacked">
-          <ion-icon name="swap-horizontal"></ion-icon>
-          תאריך מוצע להחלפה
-        </ion-label>
-        <ion-datetime-button datetime="swap-proposed-date"></ion-datetime-button>
-      </ion-item>
-      <ion-modal keepContentsMounted="true">
-        <ng-template>
-          <ion-datetime
-            id="swap-proposed-date"
-            presentation="date"
-            [(ngModel)]="proposedDate"
-            name="proposedDate"
-            [min]="minDate"
-            displayFormat="DD/MM/YYYY"
-            cancelText="ביטול"
-            doneText="אישור">
-          </ion-datetime>
-        </ng-template>
-      </ion-modal>
+      @if (requestType === 'swap') {
+        <ion-item>
+          <ion-label position="stacked">
+            <ion-icon name="swap-horizontal"></ion-icon>
+            תאריך מוצע להחלפה
+          </ion-label>
+          <ion-datetime-button datetime="swap-proposed-date"></ion-datetime-button>
+        </ion-item>
+        <ion-modal keepContentsMounted="true">
+          <ng-template>
+            <ion-datetime
+              id="swap-proposed-date"
+              presentation="date"
+              [(ngModel)]="proposedDate"
+              name="proposedDate"
+              [min]="minDate"
+              displayFormat="DD/MM/YYYY"
+              cancelText="ביטול"
+              doneText="אישור">
+            </ion-datetime>
+          </ng-template>
+        </ion-modal>
+      }
 
       <!-- Reason -->
       <ion-item>
@@ -85,16 +100,23 @@
       </div>
     </form>
 
-    <div class="swap-preview" *ngIf="originalDate && proposedDate">
+    <div class="swap-preview" *ngIf="originalDate">
       <h4>תצוגה מקדימה:</h4>
       <div class="preview-item">
         <ion-icon name="arrow-back" color="danger"></ion-icon>
         <span>{{ originalDate | date:'dd/MM/yyyy':'':'he-IL' }} → תתן להורה השני</span>
       </div>
-      <div class="preview-item">
-        <ion-icon name="arrow-forward" color="success"></ion-icon>
-        <span>{{ proposedDate | date:'dd/MM/yyyy':'':'he-IL' }} → תקבל במקום</span>
-      </div>
+      @if (requestType === 'swap' && proposedDate) {
+        <div class="preview-item">
+          <ion-icon name="arrow-forward" color="success"></ion-icon>
+          <span>{{ proposedDate | date:'dd/MM/yyyy':'':'he-IL' }} → תקבל במקום</span>
+        </div>
+      } @else {
+        <div class="preview-item">
+          <ion-icon name="checkmark-circle" color="tertiary"></ion-icon>
+          <span>ללא תאריך חלופי</span>
+        </div>
+      }
     </div>
 
   </div>

@@ -6,6 +6,7 @@ export interface CalendarEvent {
   endDate: Date;
   type: EventType;
   parentId: 'parent1' | 'parent2' | 'both';
+  targetUids?: string[];
   color?: string;
   location?: string;
   reminderMinutes?: number;

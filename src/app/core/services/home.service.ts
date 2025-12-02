@@ -36,6 +36,13 @@ export class HomeService implements OnDestroy {
       })
     );
 
+    // עדכון שמות/מטא־דאטה של הורים כדי לרענן תצוגה בלי ריענון ידני
+    this.subscriptions.add(
+      this.calendarService.parentMetadata$.subscribe(() => {
+        this.loadDailyOverview(this.currentDate);
+      })
+    );
+
     this.subscriptions.add(
       this.swapRequestService.swapRequests$.subscribe(requests => {
         this.swapRequests = requests;
@@ -238,8 +245,9 @@ export class HomeService implements OnDestroy {
 
   submitSwapRequest(payload: {
     originalDate: Date;
-    proposedDate: Date;
+    proposedDate?: Date | null;
     reason?: string;
+    requestType?: 'swap' | 'one-way';
   }): Promise<void> {
     return this.swapRequestService.createSwapRequest(payload);
   }

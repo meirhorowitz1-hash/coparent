@@ -1,5 +1,5 @@
 import { Component, Input, OnDestroy, OnInit } from '@angular/core';
-import { ModalController } from '@ionic/angular';
+import { ModalController, ToastController } from '@ionic/angular';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { CalendarService } from '../../core/services/calendar.service';
 import { CalendarEvent, EventType } from '../../core/models/calendar-event.model';
@@ -46,7 +46,8 @@ export class EventFormComponent implements OnInit, OnDestroy {
   constructor(
     private modalController: ModalController,
     private formBuilder: FormBuilder,
-    private calendarService: CalendarService
+    private calendarService: CalendarService,
+    private toastCtrl: ToastController
   ) {}
 
   ngOnInit() {
@@ -62,11 +63,8 @@ export class EventFormComponent implements OnInit, OnDestroy {
 
     this.isEditMode = !!this.event;
     this.initForm();
-    
     if (this.event) {
       this.loadEventData();
-    } else if (this.selectedDate) {
-      this.setDefaultDate();
     }
   }
 
@@ -89,7 +87,9 @@ export class EventFormComponent implements OnInit, OnDestroy {
  
 
   initForm() {
-    const now = new Date();
+    const baseDate = this.selectedDate ? new Date(this.selectedDate) : new Date();
+    baseDate.setSeconds(0, 0);
+    const now = baseDate;
     const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
     
     this.eventForm = this.formBuilder.group({
@@ -97,12 +97,11 @@ export class EventFormComponent implements OnInit, OnDestroy {
       description: [''],
       type: [EventType.OTHER, Validators.required],
       parentId: ['both', Validators.required],
-      startDate: [now.toISOString(), Validators.required],
       startTime: [now.toTimeString().slice(0, 5)],
-      endDate: [now.toISOString()],
       endTime: [oneHourLater.toTimeString().slice(0, 5)],
       isAllDay: [false],
       location: [''],
+      reminderEnabled: [true],
       reminderMinutes: [15],
       color: ['#2196F3']
     });
@@ -135,23 +134,13 @@ export class EventFormComponent implements OnInit, OnDestroy {
       description: this.event.description || '',
       type: this.event.type,
       parentId: this.event.parentId,
-      startDate: new Date(this.event.startDate).toISOString(),
       startTime: new Date(this.event.startDate).toTimeString().slice(0, 5),
-      endDate: new Date(this.event.endDate).toISOString(),
       endTime: new Date(this.event.endDate).toTimeString().slice(0, 5),
       isAllDay: this.event.isAllDay || false,
       location: this.event.location || '',
       reminderMinutes: this.event.reminderMinutes || 15,
+      reminderEnabled: this.event.reminderMinutes !== undefined && this.event.reminderMinutes !== null,
       color: this.event.color || '#2196F3'
-    });
-  }
-
-  setDefaultDate() {
-    if (!this.selectedDate) return;
-    
-    this.eventForm.patchValue({
-      startDate: this.selectedDate.toISOString(),
-      endDate: this.selectedDate.toISOString()
     });
   }
 
@@ -193,9 +182,15 @@ export class EventFormComponent implements OnInit, OnDestroy {
 
     const formValue = this.eventForm.getRawValue();
     
-    // צור תאריכים מלאים
-    const startDateTime = this.combineDateTime(formValue.startDate, formValue.startTime, formValue.isAllDay);
-    const endDateTime = this.combineDateTime(formValue.endDate, formValue.endTime, formValue.isAllDay);
+    const eventDay = this.getEventDay();
+    if (!eventDay) {
+      await this.presentToast('בחרו יום בלוח לפני יצירת אירוע', 'danger');
+      return;
+    }
+
+    // צור תאריכים מלאים (עבור היום שנבחר)
+    const startDateTime = this.combineDateTime(eventDay, formValue.startTime, formValue.isAllDay);
+    const endDateTime = this.combineDateTime(eventDay, formValue.endTime, formValue.isAllDay);
 
     const eventData: Omit<CalendarEvent, 'id'> = {
       title: formValue.title,
@@ -206,33 +201,39 @@ export class EventFormComponent implements OnInit, OnDestroy {
       endDate: endDateTime,
       isAllDay: formValue.isAllDay,
       location: formValue.location,
-      reminderMinutes: formValue.reminderMinutes,
+      reminderMinutes: formValue.reminderEnabled ? formValue.reminderMinutes : undefined,
       color: formValue.color
     };
+
+    if (this.hasOverlap(eventData, this.event?.id)) {
+      await this.presentToast('יש כבר אירוע חופף להורה הזה', 'danger');
+      return;
+    }
 
     try {
       if (this.isEditMode && this.event) {
         await this.calendarService.updateEvent(this.event.id, eventData);
+        await this.presentToast('האירוע עודכן', 'success');
       } else {
         await this.calendarService.addEvent(eventData);
+        await this.presentToast('האירוע נוצר', 'success');
       }
 
       await this.modalController.dismiss({ saved: true });
     } catch (error) {
       console.error('Failed to save calendar event', error);
+      await this.presentToast('שמירת האירוע נכשלה, נסו שוב', 'danger');
     }
   }
 
-  combineDateTime(dateStr: string, timeStr: string, isAllDay: boolean): Date {
-    const date = new Date(dateStr);
-    
+  combineDateTime(baseDate: Date, timeStr: string, isAllDay: boolean): Date {
+    const date = new Date(baseDate);
     if (isAllDay) {
       date.setHours(0, 0, 0, 0);
     } else if (timeStr) {
       const [hours, minutes] = timeStr.split(':').map(Number);
       date.setHours(hours, minutes, 0, 0);
     }
-    
     return date;
   }
 
@@ -245,9 +246,11 @@ export class EventFormComponent implements OnInit, OnDestroy {
     
     try {
       await this.calendarService.deleteEvent(this.event.id);
+      await this.presentToast('האירוע נמחק', 'success');
       await this.modalController.dismiss({ deleted: true });
     } catch (error) {
       console.error('Failed to delete calendar event', error);
+      await this.presentToast('מחיקת האירוע נכשלה', 'danger');
     }
   }
 
@@ -269,5 +272,56 @@ export class EventFormComponent implements OnInit, OnDestroy {
     }
     
     return '';
+  }
+
+  private hasOverlap(eventData: Omit<CalendarEvent, 'id'>, currentId?: string): boolean {
+    // בודק אם יש אירוע אחר עם חפיפה בזמן לאותו הורה
+    const dayEvents = this.calendarService.getEventsForDay(eventData.startDate);
+
+    const currentStart = new Date(eventData.startDate).getTime();
+    const currentEnd = new Date(eventData.endDate).getTime();
+
+    const isSameParent = (a: 'parent1' | 'parent2' | 'both', b: 'parent1' | 'parent2' | 'both') =>
+      a === 'both' || b === 'both' || a === b;
+
+    return dayEvents.some(existing => {
+      if (existing.id === currentId) {
+        return false;
+      }
+      if (!isSameParent(eventData.parentId, existing.parentId)) {
+        return false;
+      }
+
+      const existingStart = new Date(existing.startDate).getTime();
+      const existingEnd = new Date(existing.endDate).getTime();
+
+      return currentStart <= existingEnd && existingStart <= currentEnd;
+    });
+  }
+
+  private async presentToast(message: string, color: 'success' | 'danger' = 'success') {
+    const toast = await this.toastCtrl.create({
+      message,
+      duration: 2500,
+      color,
+      position: 'bottom'
+    });
+    await toast.present();
+  }
+
+  getEventDay(): Date | null {
+    if (this.event) {
+      const date = new Date(this.event.startDate);
+      date.setHours(0, 0, 0, 0);
+      return date;
+    }
+
+    if (this.selectedDate) {
+      const date = new Date(this.selectedDate);
+      date.setHours(0, 0, 0, 0);
+      return date;
+    }
+
+    return null;
   }
 }

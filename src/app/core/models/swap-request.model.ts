@@ -5,13 +5,16 @@ export interface SwapRequest {
   requestedTo: string;
   requestedToName: string;
   originalDate: Date;
-  proposedDate: Date;
+  proposedDate?: Date | null;
+  requestType: SwapRequestType;
   reason?: string;
   status: SwapRequestStatus;
   createdAt: Date;
   respondedAt?: Date;
   responseNote?: string;
 }
+
+export type SwapRequestType = 'swap' | 'one-way';
 
 export enum SwapRequestStatus {
   PENDING = 'pending',

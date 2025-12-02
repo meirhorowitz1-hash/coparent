@@ -1,10 +1,12 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { ModalController } from '@ionic/angular';
+import { ModalController, ToastController } from '@ionic/angular';
 import { Subject, takeUntil } from 'rxjs';
 import { CalendarService } from '../../core/services/calendar.service';
 import { CalendarDay, CalendarEvent, EventType } from '../../core/models/calendar-event.model';
 import { CustodySetupComponent } from './custody-setup.component';
 import { EventFormComponent } from './event-form.component';
+import { SwapRequestModalComponent } from '../../components/swap-request-modal/swap-request-modal.component';
+import { SwapRequestService } from '../../core/services/swap-request.service';
 
 @Component({
   selector: 'app-calendar',
@@ -24,10 +26,14 @@ export class CalendarPage implements OnInit, OnDestroy {
   showEventModal = false;
   parentLabels = { parent1: 'הורה 1', parent2: 'הורה 2' };
   hasPendingCustodyApproval = false;
+  currentUserId: string | null = null;
+  currentUserRole: 'parent1' | 'parent2' | null = null;
 
   constructor(
     private calendarService: CalendarService,
-    private modalController: ModalController
+    private modalController: ModalController,
+    private toastCtrl: ToastController,
+    private swapRequestService: SwapRequestService
   ) {}
 
   ngOnInit() {
@@ -59,6 +65,8 @@ export class CalendarPage implements OnInit, OnDestroy {
           currentUid &&
           schedule.pendingApproval.requestedBy !== currentUid
         );
+        this.currentUserId = currentUid;
+        this.currentUserRole = this.calendarService.getParentRoleForUser(currentUid);
         this.updateCalendar();
       });
 
@@ -174,7 +182,66 @@ export class CalendarPage implements OnInit, OnDestroy {
   }
 
   addNewEvent() {
-    this.openEventForm();
+    if (!this.selectedDay) {
+      this.presentToast('בחרו יום בלוח כדי להוסיף אירוע', 'danger');
+      return;
+    }
+    this.openEventForm(undefined, this.selectedDay.date);
+  }
+
+  canRequestSwap(day: CalendarDay | null): boolean {
+    if (!day || !day.primaryParent) {
+      return false;
+    }
+    const role =
+      this.currentUserRole ||
+      this.calendarService.getParentRoleForUser(this.calendarService.getCurrentUserId());
+    if (!role) {
+      return false;
+    }
+    return day.primaryParent === role;
+  }
+
+  isSwapOverride(event: CalendarEvent): boolean {
+    return !!event.swapRequestId;
+  }
+
+  async requestSwapForSelectedDay() {
+    if (!this.selectedDay) {
+      return;
+    }
+    if (!this.canRequestSwap(this.selectedDay)) {
+      await this.presentToast('אפשר לבקש החלפה רק ביום שבו הילדים אצלך', 'danger');
+      return;
+    }
+
+    const lockedDate = new Date(this.selectedDay.date);
+    lockedDate.setHours(12, 0, 0, 0); // set to midday to avoid TZ shifting the date
+
+    const modal = await this.modalController.create({
+      component: SwapRequestModalComponent,
+      componentProps: {
+        initialOriginalDate: lockedDate.toISOString(),
+        lockOriginalDate: true
+      }
+    });
+
+    await modal.present();
+    const { data, role } = await modal.onWillDismiss();
+    if (role === 'confirm' && data) {
+      try {
+        await this.swapRequestService.createSwapRequest({
+          originalDate: data.originalDate,
+          proposedDate: data.proposedDate,
+          reason: data.reason,
+          requestType: data.requestType
+        });
+        await this.presentToast('בקשת ההחלפה נשלחה', 'success');
+      } catch (error: any) {
+        console.error('Failed to submit swap request', error);
+        await this.presentToast('לא ניתן לשלוח בקשה ליום הזה', 'danger');
+      }
+    }
   }
 
   async openEventForm(event?: CalendarEvent, selectedDate?: Date) {
@@ -214,8 +281,44 @@ export class CalendarPage implements OnInit, OnDestroy {
   async deleteEvent(eventId: string) {
     try {
       await this.calendarService.deleteEvent(eventId);
+      // Optimistic UI update so the event disappears immediately
+      const normalize = (date: Date) => {
+        const copy = new Date(date);
+        copy.setHours(0, 0, 0, 0);
+        return copy.getTime();
+      };
+
+      if (this.selectedDay) {
+        this.selectedDay = {
+          ...this.selectedDay,
+          events: this.selectedDay.events.filter(event => event.id !== eventId)
+        };
+      }
+
+      this.calendarDays = this.calendarDays.map(day =>
+        normalize(day.date) === (this.selectedDay ? normalize(this.selectedDay.date) : NaN)
+          ? { ...day, events: day.events.filter(event => event.id !== eventId) }
+          : day
+      );
+
+      // Refresh to stay in sync with Firestore updates
+      this.updateCalendar();
     } catch (error) {
       console.error('Failed to delete event', error);
+      await this.presentToast('מחיקת האירוע נכשלה', 'danger');
+      return;
     }
+
+    await this.presentToast('האירוע נמחק', 'success');
+  }
+
+  private async presentToast(message: string, color: 'success' | 'danger' = 'success') {
+    const toast = await this.toastCtrl.create({
+      message,
+      duration: 2000,
+      color,
+      position: 'bottom'
+    });
+    await toast.present();
   }
 }

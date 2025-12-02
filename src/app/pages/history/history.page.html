@@ -1,6 +1,11 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
     <ion-title>היסטוריה</ion-title>
+    <ion-buttons slot="end">
+      <ion-button [routerLink]="['/tabs/home']" fill="clear">
+        <ion-icon slot="icon-only" name="close"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
@@ -14,8 +19,9 @@
       </div>
       <div class="filter-actions">
         <ion-select
-          interface="popover"
-          [value]="selectedMonth"
+          interface="alert"
+          [(ngModel)]="selectedMonth"
+          name="selectedMonth"
           placeholder="בחרו חודש"
           (ionChange)="onMonthChange($event.detail.value)">
           <ion-select-option
@@ -38,6 +44,7 @@
 
     @if (!isLoading) {
       <ion-accordion-group multiple="true" class="history-accordion">
+        @if (showExpenses()) {
         <div class="accordion-shell">
           <ion-accordion value="expenses" class="history-accordion-card">
             <div slot="header" class="accordion-header">
@@ -63,7 +70,13 @@
                       @if (expense.notes) {
                         <p class="note">{{ expense.notes }}</p>
                       }
-                      <p class="meta">נוצרה ב־{{ formatDate(expense.createdAt) }}</p>
+                      @if (expense.id.startsWith('fixed-')) {
+                        <p class="meta">הוצאה קבועה</p>
+                      }
+                      <p class="meta">
+                        נוצרה ב־{{ formatDate(expense.createdAt) }}
+                        • על ידי {{ expense.createdByName || expense.createdBy || 'לא ידוע' }}
+                      </p>
                     </ion-label>
                     <div class="amount-pill">{{ formatCurrency(expense.amount) }}</div>
                     <ion-badge
@@ -82,7 +95,9 @@
             </div>
           </ion-accordion>
         </div>
+        }
 
+        @if (showTasks()) {
         <div class="accordion-shell">
           <ion-accordion value="tasks" class="history-accordion-card">
             <div slot="header" class="accordion-header">
@@ -126,12 +141,54 @@
             </div>
           </ion-accordion>
         </div>
+        }
+
+        @if (showCalendar()) {
+        <div class="accordion-shell">
+          <ion-accordion value="events" class="history-accordion-card">
+            <div slot="header" class="accordion-header">
+              <div>
+                <p class="eyebrow">לוח שנה</p>
+                <h3>אירועים</h3>
+              </div>
+              <ion-chip color="tertiary">
+                <ion-icon name="calendar-outline"></ion-icon>
+                <ion-label>{{ filteredEvents.length }}</ion-label>
+              </ion-chip>
+            </div>
+            <div slot="content" class="accordion-body">
+              @if (filteredEvents.length) {
+                <ion-list class="history-list" lines="none">
+                  <ion-item *ngFor="let event of filteredEvents" class="history-item" detail="false">
+                    <ion-icon slot="start" name="calendar-outline"></ion-icon>
+                    <ion-label>
+                      <div class="item-row">
+                        <strong>{{ event.title }}</strong>
+                        <span class="date">{{ formatDate(event.startDate) }}</span>
+                      </div>
+                      <p class="meta">
+                        {{ formatDate(event.startDate) }}
+                        <span *ngIf="!event.isAllDay">• {{ formatTime(event.startDate) }} - {{ formatTime(event.endDate) }}</span>
+                      </p>
+                      <p class="meta">סוג: {{ getEventTypeLabel(event.type) }}</p>
+                    </ion-label>
+                  </ion-item>
+                </ion-list>
+              } @else {
+                <div class="empty-row">
+                  <ion-icon name="calendar-outline"></ion-icon>
+                  <p>אין אירועים עבור החודש</p>
+                </div>
+              }
+            </div>
+          </ion-accordion>
+        </div>
 
         <div class="accordion-shell">
           <ion-accordion value="swap" class="history-accordion-card">
             <div slot="header" class="accordion-header">
               <div>
-                <p class="eyebrow">משמורת</p>
+                <p class="eyebrow">לוח שנה</p>
                 <h3>בקשות החלפה</h3>
               </div>
               <ion-chip color="success">
@@ -140,6 +197,7 @@
               </ion-chip>
             </div>
             <div slot="content" class="accordion-body">
+
               @if (filteredSwapRequests.length) {
                 <ion-list class="history-list" lines="none">
                   <ion-item *ngFor="let request of filteredSwapRequests" class="history-item" detail="false">
@@ -150,6 +208,9 @@
                         <ion-icon name="chevron-back"></ion-icon>
                         <strong>{{ request.requestedToName }}</strong>
                       </div>
+                      <ion-chip size="small" color="tertiary">
+                        {{ getRequestTypeLabel(request) }}
+                      </ion-chip>
                       <p class="meta">הוגשה ב־{{ formatDate(request.createdAt) }}</p>
                       @if (request.reason) {
                         <p class="note">{{ request.reason }}</p>
@@ -159,11 +220,18 @@
                           <span class="label">תאריך מקורי</span>
                           <strong>{{ formatDate(request.originalDate) }}</strong>
                         </div>
-                        <ion-icon name="swap-horizontal-outline"></ion-icon>
-                        <div>
-                          <span class="label">תאריך מוצע</span>
-                          <strong>{{ formatDate(request.proposedDate) }}</strong>
-                        </div>
+                        @if (request.proposedDate) {
+                          <ion-icon name="swap-horizontal-outline"></ion-icon>
+                          <div>
+                            <span class="label">תאריך מוצע</span>
+                            <strong>{{ formatDate(request.proposedDate) }}</strong>
+                          </div>
+                        } @else {
+                          <div class="no-return">
+                            <ion-icon name="arrow-forward-circle"></ion-icon>
+                            <span>ללא תאריך חלופי</span>
+                          </div>
+                        }
                       </div>
                     </ion-label>
                     <ion-badge
@@ -182,6 +250,7 @@
             </div>
           </ion-accordion>
         </div>
+        }
       </ion-accordion-group>
     } @else {
       <div class="empty-row">

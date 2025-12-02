@@ -191,6 +191,23 @@ export class CalendarService implements OnDestroy {
       this.fetchMemberProfile(parent2Uid)
     ]);
 
+    const resolveName = (uid?: string, profile?: UserProfile | null): string => {
+      if (uid && this.currentProfile?.uid === uid) {
+        return (
+          this.currentProfile.fullName ||
+          (this.currentProfile as any)?.displayName ||
+          this.currentProfile.email ||
+          'הורה'
+        );
+      }
+      return (
+        profile?.fullName ||
+        (profile as any)?.displayName ||
+        profile?.email ||
+        'הורה'
+      );
+    };
+
     if (requestId !== this.parentMetadataRequestId) {
       return;
     }
@@ -198,11 +215,11 @@ export class CalendarService implements OnDestroy {
     this.parentMetadataSubject.next({
       parent1: {
         uid: parent1Uid,
-        name: parent1Profile?.fullName || parent1Profile?.email || 'הורה 1'
+        name: resolveName(parent1Uid, parent1Profile) || 'הורה 1'
       },
       parent2: {
         uid: parent2Uid,
-        name: parent2Profile?.fullName || parent2Profile?.email || 'הורה 2'
+        name: resolveName(parent2Uid, parent2Profile) || 'הורה 2'
       }
     });
   }
@@ -504,8 +521,10 @@ export class CalendarService implements OnDestroy {
     const familyId = this.requireFamilyId();
     const eventsRef = collection(this.firestore, 'families', familyId, 'calendarEvents');
 
+    const targetUids = this.resolveEventTargetUids(event.parentId);
+
     return addDoc(eventsRef, {
-      ...this.serializeEvent(event),
+      ...this.serializeEvent({ ...event, targetUids }),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     }).then(() => undefined);
@@ -515,8 +534,10 @@ export class CalendarService implements OnDestroy {
     const familyId = this.requireFamilyId();
     const eventRef = doc(this.firestore, 'families', familyId, 'calendarEvents', id);
 
+    const targetUids = updates.parentId ? this.resolveEventTargetUids(updates.parentId) : undefined;
+
     return updateDoc(eventRef, {
-      ...this.serializeEvent(updates),
+      ...this.serializeEvent({ ...updates, ...(targetUids ? { targetUids } : {}) }),
       updatedAt: serverTimestamp()
     });
   }
@@ -655,19 +676,39 @@ export class CalendarService implements OnDestroy {
   async applySwapRequestApproval(request: SwapRequest): Promise<void> {
     const familyId = this.requireFamilyId();
     const originalParent = this.getParentForDate(request.originalDate);
-    const proposedParent = this.getParentForDate(request.proposedDate);
+    const proposedParent = request.proposedDate ? this.getParentForDate(request.proposedDate) : undefined;
+    const requestedToParent = this.getParentRoleForUser(request.requestedTo);
 
-    if (!originalParent || !proposedParent) {
+    if (!originalParent) {
       return;
     }
 
     await this.removeSwapRequestOverrides(request.id);
+    await this.removeSwapOverridesForDates([
+      request.originalDate,
+      ...(request.proposedDate ? [request.proposedDate] : [])
+    ]);
 
     const eventsRef = collection(this.firestore, 'families', familyId, 'calendarEvents');
-    const overrides: Array<Omit<CalendarEvent, 'id'>> = [
-      this.buildSwapOverrideEvent(request, request.originalDate, proposedParent, 'יום שהועבר'),
-      this.buildSwapOverrideEvent(request, request.proposedDate, originalParent, 'יום שהתקבל')
-    ];
+    const overrides: Array<Omit<CalendarEvent, 'id'>> = [];
+
+    if (request.requestType === 'one-way' || !request.proposedDate) {
+      const targetParent = requestedToParent ?? (originalParent === 'parent1' ? 'parent2' : 'parent1');
+      if (!targetParent) {
+        return;
+      }
+      overrides.push(
+        this.buildSwapOverrideEvent(request, request.originalDate, targetParent, 'יום שהועבר ללא החזרה')
+      );
+    } else {
+      if (!proposedParent) {
+        return;
+      }
+      overrides.push(
+        this.buildSwapOverrideEvent(request, request.originalDate, proposedParent, 'יום שהועבר'),
+        this.buildSwapOverrideEvent(request, request.proposedDate, originalParent, 'יום שהתקבל')
+      );
+    }
 
     const ops = overrides.map(event =>
       addDoc(eventsRef, {
@@ -692,6 +733,40 @@ export class CalendarService implements OnDestroy {
     }
 
     await Promise.all(snapshot.docs.map(docSnap => deleteDoc(docSnap.ref)));
+  }
+
+  private async removeSwapOverridesForDates(dates: Date[]): Promise<void> {
+    const familyId = this.requireFamilyId();
+    if (!dates.length) {
+      return;
+    }
+
+    const normalizedTargets = new Set(
+      dates.map(date => {
+        const d = new Date(date);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime();
+      })
+    );
+
+    const eventsRef = collection(this.firestore, 'families', familyId, 'calendarEvents');
+    const snapshot = await getDocs(query(eventsRef, where('swapRequestId', '!=', null)));
+
+    const deletes = snapshot.docs.filter(docSnap => {
+      const data = docSnap.data() as any;
+      if (!data.swapRequestId) {
+        return false;
+      }
+      const start = this.toDate((data as any).startDate);
+      start.setHours(0, 0, 0, 0);
+      return normalizedTargets.has(start.getTime());
+    });
+
+    if (!deletes.length) {
+      return;
+    }
+
+    await Promise.all(deletes.map(docSnap => deleteDoc(docSnap.ref)));
   }
 
   private buildSwapOverrideEvent(
@@ -745,6 +820,26 @@ export class CalendarService implements OnDestroy {
     };
   }
 
+  private resolveEventTargetUids(parentId: 'parent1' | 'parent2' | 'both'): string[] {
+    const metadata = this.parentMetadataSubject.value;
+    const targets: string[] = [];
+
+    if (parentId === 'both') {
+      if (metadata.parent1.uid) {
+        targets.push(metadata.parent1.uid);
+      }
+      if (metadata.parent2.uid && metadata.parent2.uid !== metadata.parent1.uid) {
+        targets.push(metadata.parent2.uid);
+      }
+    } else if (parentId === 'parent1' && metadata.parent1.uid) {
+      targets.push(metadata.parent1.uid);
+    } else if (parentId === 'parent2' && metadata.parent2.uid) {
+      targets.push(metadata.parent2.uid);
+    }
+
+    return targets;
+  }
+
   private serializeEvent(event: Partial<Omit<CalendarEvent, 'id'>>): Record<string, unknown> {
     const payload: Record<string, unknown> = { ...event };
 
@@ -761,6 +856,10 @@ export class CalendarService implements OnDestroy {
         ...event.recurring,
         endDate: event.recurring.endDate ? Timestamp.fromDate(new Date(event.recurring.endDate)) : null
       };
+    }
+
+    if (event.targetUids) {
+      payload['targetUids'] = [...event.targetUids];
     }
 
     return payload;

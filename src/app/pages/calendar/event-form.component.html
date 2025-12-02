@@ -91,35 +91,6 @@
         <ion-toggle formControlName="isAllDay" slot="end"></ion-toggle>
       </ion-item>
 
-      <div class="datetime-grid">
-        <ion-item class="datetime-item">
-          <ion-label position="stacked">תאריך התחלה *</ion-label>
-          <ion-datetime-button datetime="event-start-date"></ion-datetime-button>
-        </ion-item>
-        <ion-modal keepContentsMounted="true">
-          <ng-template>
-            <ion-datetime
-              id="event-start-date"
-              formControlName="startDate"
-              presentation="date">
-            </ion-datetime>
-          </ng-template>
-        </ion-modal>
-        <ion-item class="datetime-item">
-          <ion-label position="stacked">תאריך סיום</ion-label>
-          <ion-datetime-button datetime="event-end-date"></ion-datetime-button>
-        </ion-item>
-        <ion-modal keepContentsMounted="true">
-          <ng-template>
-            <ion-datetime
-              id="event-end-date"
-              formControlName="endDate"
-              presentation="date">
-            </ion-datetime>
-          </ng-template>
-        </ion-modal>
-      </div>
-
       <div class="datetime-grid" *ngIf="!eventForm.get('isAllDay')?.value">
         <ion-item class="datetime-item">
           <ion-label position="stacked">שעת התחלה</ion-label>
@@ -164,7 +135,15 @@
       <div class="inline-fields">
         <ion-item>
           <ion-label>תזכורת</ion-label>
-          <ion-select formControlName="reminderMinutes" interface="action-sheet">
+          <ion-toggle formControlName="reminderEnabled"></ion-toggle>
+        </ion-item>
+
+        <ion-item>
+          <ion-label>מתי</ion-label>
+          <ion-select
+            formControlName="reminderMinutes"
+            interface="action-sheet"
+            [disabled]="!eventForm.get('reminderEnabled')?.value">
             <ion-select-option
               *ngFor="let reminder of reminderOptions"
               [value]="reminder.value">
@@ -196,9 +175,9 @@
           </p>
         </div>
         <div class="preview-details">
-          <span *ngIf="eventForm.get('startDate')?.value">
+          <span *ngIf="getEventDay() as eventDay">
             <ion-icon name="calendar-outline"></ion-icon>
-            {{ eventForm.get('startDate')?.value | date:'dd/MM/yyyy' }}
+            {{ eventDay | date:'dd/MM/yyyy' }}
           </span>
           <span *ngIf="!eventForm.get('isAllDay')?.value && eventForm.get('startTime')?.value">
             <ion-icon name="time-outline"></ion-icon>

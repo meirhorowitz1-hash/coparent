@@ -7,8 +7,8 @@
       </ion-button>
     </ion-buttons>
     <ion-buttons slot="end">
-      <ion-button fill="clear" size="small" (click)="addNewEvent()">
-        <ion-icon slot="icon-only" name="add"></ion-icon>
+      <ion-button fill="clear" size="small" [routerLink]="['/tabs/history']" [queryParams]="{ section: 'calendar' }">
+        <ion-icon slot="icon-only" name="time-outline"></ion-icon>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
@@ -32,10 +32,6 @@
             <ion-icon slot="start" name="swap-horizontal-outline"></ion-icon>
             ניהול משמרות
             <span class="pending-dot" *ngIf="hasPendingCustodyApproval"></span>
-          </ion-button>
-          <ion-button size="small" (click)="addNewEvent()">
-            <ion-icon slot="start" name="add"></ion-icon>
-            אירוע חדש
           </ion-button>
         </div>
       </div>
@@ -144,13 +140,22 @@
               <ion-icon slot="start" name="add"></ion-icon>
               הוסף אירוע
             </ion-button>
+            <ion-button
+              expand="block"
+              color="tertiary"
+              *ngIf="canRequestSwap(selectedDay)"
+              (click)="requestSwapForSelectedDay()">
+              <ion-icon slot="start" name="swap-horizontal-outline"></ion-icon>
+              בקשת החלפת יום
+            </ion-button>
           </div>
 
           <div class="event-list" *ngIf="selectedDay.events.length > 0">
             <article
               class="event-row"
               *ngFor="let event of selectedDay.events"
-              (click)="openEventForm(event)">
+              [class.swap-override]="isSwapOverride(event)"
+              (click)="isSwapOverride(event) ? null : openEventForm(event)">
               <div class="event-badge" [style.background]="event.color"></div>
               <div class="event-body">
                 <strong>{{ event.title }}</strong>
@@ -163,8 +168,12 @@
                   <ion-icon name="location-outline"></ion-icon>
                   {{ event.location }}
                 </p>
+                <ion-chip color="tertiary" size="small" *ngIf="isSwapOverride(event)">
+                  החלפת משמרת מאושרת
+                </ion-chip>
               </div>
               <ion-button
+                *ngIf="!isSwapOverride(event)"
                 fill="clear"
                 color="medium"
                 (click)="deleteEvent(event.id); $event.stopPropagation()">
@@ -180,6 +189,14 @@
             (click)="addNewEvent()">
             <ion-icon slot="start" name="add"></ion-icon>
             הוסף אירוע נוסף
+          </ion-button>
+          <ion-button
+            expand="block"
+            color="tertiary"
+            *ngIf="selectedDay.events.length > 0 && canRequestSwap(selectedDay)"
+            (click)="requestSwapForSelectedDay()">
+            <ion-icon slot="start" name="swap-horizontal-outline"></ion-icon>
+            בקשת החלפת יום
           </ion-button>
         </div>
       </ion-content>

@@ -15,7 +15,7 @@ import {
 import { BehaviorSubject, Observable, Subscription, of } from 'rxjs';
 import { distinctUntilChanged, map, switchMap } from 'rxjs/operators';
 
-import { SwapRequest, SwapRequestStatus } from '../models/swap-request.model';
+import { SwapRequest, SwapRequestStatus, SwapRequestType } from '../models/swap-request.model';
 import { AuthService } from './auth.service';
 import { UserProfileService } from './user-profile.service';
 import { UserProfile } from '../models/user-profile.model';
@@ -27,9 +27,10 @@ type FirestoreSwapRequest = Omit<
   'originalDate' | 'proposedDate' | 'createdAt' | 'respondedAt'
 > & {
   originalDate: Timestamp;
-  proposedDate: Timestamp;
+  proposedDate?: Timestamp | null;
   createdAt: Timestamp | Date | null;
   respondedAt?: Timestamp | Date | null;
+  requestType?: SwapRequestType;
 };
 
 @Injectable({
@@ -77,8 +78,9 @@ export class SwapRequestService implements OnDestroy {
    */
   async createSwapRequest(payload: {
     originalDate: Date;
-    proposedDate: Date;
+    proposedDate?: Date | null;
     reason?: string;
+    requestType?: SwapRequestType;
   }): Promise<void> {
     const familyId = this.requireFamilyId();
     const requestedBy = this.currentProfile?.uid;
@@ -90,7 +92,15 @@ export class SwapRequestService implements OnDestroy {
     const { requestedTo, requestedToName } = await this.resolveCounterparty(familyId, requestedBy);
 
     const originalDate = this.toDate(payload.originalDate);
-    const proposedDate = this.toDate(payload.proposedDate);
+    const proposedDate = payload.proposedDate ? this.toDate(payload.proposedDate) : null;
+    const requestType: SwapRequestType = payload.requestType ?? (proposedDate ? 'swap' : 'one-way');
+
+    this.validateSwapDates({
+      requesterUid: requestedBy,
+      requestType,
+      originalDate,
+      proposedDate
+    });
 
     await addDoc(collection(this.firestore, 'families', familyId, 'swapRequests'), {
       requestedBy,
@@ -98,7 +108,8 @@ export class SwapRequestService implements OnDestroy {
       requestedTo: requestedTo ?? 'family',
       requestedToName: requestedToName ?? 'הורה שותף',
       originalDate: Timestamp.fromDate(originalDate),
-      proposedDate: Timestamp.fromDate(proposedDate),
+      proposedDate: proposedDate ? Timestamp.fromDate(proposedDate) : null,
+      requestType,
       reason: payload.reason?.trim() || null,
       status: SwapRequestStatus.PENDING,
       createdAt: serverTimestamp(),
@@ -190,7 +201,8 @@ export class SwapRequestService implements OnDestroy {
     return {
       ...data,
       originalDate: this.toDate(data.originalDate),
-      proposedDate: this.toDate(data.proposedDate),
+      proposedDate: data.proposedDate ? this.toDate(data.proposedDate) : null,
+      requestType: data.requestType ?? (data.proposedDate ? 'swap' : 'one-way'),
       createdAt: this.toDate(data.createdAt),
       respondedAt: data.respondedAt ? this.toDate(data.respondedAt) : undefined,
       reason: data.reason || undefined,
@@ -259,5 +271,30 @@ export class SwapRequestService implements OnDestroy {
 
   getCurrentUserId(): string | null {
     return this.currentUserId;
+  }
+
+  private validateSwapDates(params: {
+    requesterUid: string;
+    requestType: SwapRequestType;
+    originalDate: Date;
+    proposedDate: Date | null;
+  }): void {
+    const requesterParent = this.calendarService.getParentRoleForUser(params.requesterUid);
+    const originalParent = this.calendarService.getParentForDate(params.originalDate);
+
+    if (!requesterParent || !originalParent || requesterParent !== originalParent) {
+      throw new Error('swap-invalid-original-day');
+    }
+
+    if (params.requestType === 'swap') {
+      if (!params.proposedDate) {
+        throw new Error('swap-missing-proposed-day');
+      }
+      // אם יש תבנית משמורת ברורה והיום אצל ההורה השני – נוודא זאת; אחרת נאפשר שליחה
+      const proposedParent = this.calendarService.getParentForDate(params.proposedDate);
+      if (proposedParent && proposedParent === requesterParent) {
+        throw new Error('swap-proposed-same-parent');
+      }
+    }
   }
 }
