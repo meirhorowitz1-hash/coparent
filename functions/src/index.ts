@@ -29,7 +29,7 @@ interface CalendarEventDoc {
   parentId: 'parent1' | 'parent2' | 'both';
   isAllDay?: boolean;
   targetUids?: string[];
-   reminderMinutes?: number | null;
+  reminderMinutes?: number | null;
 }
 
 type ExpenseStatus = 'pending' | 'approved' | 'rejected';
@@ -42,6 +42,12 @@ interface ExpenseDoc {
   createdByName?: string;
   updatedBy?: string | null;
   updatedByName?: string | null;
+}
+
+interface CustodyPendingApproval {
+  requestedBy?: string;
+  requestedByName?: string;
+  startDate: admin.firestore.Timestamp;
 }
 
 export const onSwapRequestCreated = functions.firestore
@@ -61,6 +67,57 @@ export const onSwapRequestCreated = functions.firestore
       familyId: context.params.familyId,
       requestId: context.params.swapRequestId
     });
+  });
+
+export const onCustodyScheduleChanged = functions.firestore
+  .document('families/{familyId}/settings/custodySchedule')
+  .onWrite(async (change, context) => {
+    const before = change.before.data() as { pendingApproval?: CustodyPendingApproval | null } | undefined;
+    const after = change.after.data() as { pendingApproval?: CustodyPendingApproval | null } | undefined;
+
+    const beforePending = before?.pendingApproval ?? null;
+    const afterPending = after?.pendingApproval ?? null;
+
+    // new request
+    if (!beforePending && afterPending) {
+      const targets = await getFamilyMembers(context.params.familyId);
+      const requestor = afterPending.requestedBy;
+      const notifyUids = targets.filter(uid => uid && uid !== requestor);
+
+      const body = `${afterPending.requestedByName || 'הורה אחר'} ביקש לאשר תבנית משמורת חדשה מ־${formatDate(
+        afterPending.startDate
+      )}`;
+
+      for (const uid of notifyUids) {
+        await sendPushToUser(
+          uid,
+          { title: 'בקשת משמרות חדשה', body },
+          {
+            type: 'custody-approval-request',
+            familyId: context.params.familyId
+          }
+        );
+      }
+      return;
+    }
+
+    // approval/decline
+    if (beforePending && !afterPending) {
+      const requester = beforePending.requestedBy;
+      if (requester) {
+        await sendPushToUser(
+          requester,
+          {
+            title: 'בקשת המשמרות אושרה/טופלה',
+            body: 'הבקשה לסידור המשמרות עודכנה על ידי ההורה השני.'
+          },
+          {
+            type: 'custody-approval-updated',
+            familyId: context.params.familyId
+          }
+        );
+      }
+    }
   });
 
 export const onSwapRequestStatusChanged = functions.firestore
@@ -163,33 +220,49 @@ export const onCalendarEventDeleted = functions.firestore
     await deleteReminder(context.params.familyId, context.params.eventId);
   });
 
+// Scheduled dispatcher for due event reminders (runs every minute)
+export const dispatchEventReminders = functions.pubsub
+  .schedule('every 1 minutes')
+  .onRun(async (context) => {
+    functions.logger.info('[dispatchEventReminders] start', { ts: context.timestamp });
+    console.log('[dispatchEventReminders] start', context.timestamp);
+    try {
+      await dispatchDueReminders();
+      functions.logger.info('[dispatchEventReminders] done');
+      console.log('[dispatchEventReminders] done');
+    } catch (error) {
+      functions.logger.error('[dispatchEventReminders] error', error as any);
+      console.error('[dispatchEventReminders] error', error);
+      throw error;
+    }
+    return null;
+  });
+
 export const onExpenseCreated = functions.firestore
   .document('families/{familyId}/expenses/{expenseId}')
   .onCreate(async (snapshot, context) => {
     const expense = snapshot.data() as ExpenseDoc;
     const familyId = context.params.familyId;
     const members = await getFamilyMembers(familyId);
-    const targets = members.filter(uid => uid && uid !== expense.createdBy);
+    const targetUid = resolveOtherParent(members, expense.createdBy);
 
-    if (!targets.length) {
+    if (!targetUid) {
       return;
     }
 
     const body = `${expense.createdByName || 'ההורה השני'} הוסיף/הוסיפה: ${expense.title} (${formatCurrency(expense.amount)})`;
-    for (const uid of targets) {
-      await sendPushToUser(
-        uid,
-        {
-          title: 'הוצאה חדשה',
-          body
-        },
-        {
-          type: 'expense-created',
-          familyId,
-          expenseId: context.params.expenseId
-        }
-      );
-    }
+    await sendPushToUser(
+      targetUid,
+      {
+        title: 'הוצאה חדשה',
+        body
+      },
+      {
+        type: 'expense-created',
+        familyId,
+        expenseId: context.params.expenseId
+      }
+    );
   });
 
 export const onExpenseStatusChanged = functions.firestore
@@ -228,13 +301,7 @@ export const onExpenseStatusChanged = functions.firestore
         expenseId: context.params.expenseId
       }
     );
-  });
-
-export const dispatchEventReminders = functions.pubsub
-  .schedule('every 1 minutes')
-  .onRun(async () => {
-    await dispatchDueReminders();
-  });
+});
 
 async function sendPushToUser(
   uid: string | undefined,
@@ -377,6 +444,18 @@ async function getFamilyMembers(familyId: string): Promise<string[]> {
     functions.logger.error('[getFamilyMembers] failed', { familyId, error });
     return [];
   }
+}
+
+function resolveOtherParent(members: string[], actorUid?: string): string | null {
+  const unique = Array.from(new Set(members.filter(Boolean)));
+  if (!unique.length) {
+    return null;
+  }
+  if (!actorUid) {
+    return unique[0] ?? null;
+  }
+  const other = unique.find(uid => uid !== actorUid);
+  return other ?? null;
 }
 
 function formatCurrency(amount: number | undefined): string {

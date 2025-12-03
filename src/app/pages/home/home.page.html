@@ -267,8 +267,8 @@
               <h2>משימות קרובות</h2>
             </div>
             <div class="accordion-meta">
-              <ion-chip class="accordion-chip" [color]="overview.summary.hasUrgentTasks ? 'danger' : 'warning'">
-                {{ overview.summary.tasksCount || 0 }}
+              <ion-chip class="accordion-chip" color="medium">
+                {{ overview.upcomingTasks.length }}
               </ion-chip>
               <ion-icon class="accordion-chevron" name="chevron-down-outline"></ion-icon>
             </div>
@@ -279,26 +279,22 @@
                 <ion-item
                   button
                   detail="false"
-                  class="stack-item"
+                  class="stack-item compact"
                   *ngFor="let task of overview.upcomingTasks.slice(0, 5)"
                   (click)="navigateToTask(task.id)">
                   <ion-checkbox
                     slot="start"
-                    [checked]="task.status === 'completed'"
+                    [checked]="task.status === TaskStatus.COMPLETED"
                     (click)="$event.stopPropagation()"
-                    (ionChange)="$event.stopPropagation()">
+                    (ionChange)="completeTask(task, $event.detail.checked); $event.stopPropagation()">
                   </ion-checkbox>
                   <ion-label class="stack-body">
                     <strong>{{ task.title }}</strong>
-                    <p>
-                      <ion-icon [name]="getCategoryIcon(task.category || 'other')" size="small"></ion-icon>
-                      {{ formatDate(task.dueDate) }}
-                    </p>
+                    <p class="muted">{{ formatDate(task.dueDate) }}</p>
                   </ion-label>
-                  <ion-badge slot="end" [color]="getTaskPriorityColor(task.priority)">
-                    {{ task.priority }}
-                  </ion-badge>
-                  <ion-icon slot="end" class="chevron" name="chevron-forward-outline"></ion-icon>
+                  <ion-chip slot="end" [color]="getTaskPriorityColor(task.priority)" outline>
+                    {{ getPriorityLabel(task.priority) }}
+                  </ion-chip>
                 </ion-item>
               </ion-list>
 
@@ -335,7 +331,6 @@
             @if (overview.pendingExpenses.length > 0) {
               <ion-list class="stack-list" lines="none">
                 <ion-item
-                  button
                   detail="false"
                   class="stack-item"
                   *ngFor="let expense of overview.pendingExpenses.slice(0, 3)"
@@ -343,15 +338,36 @@
                   <div slot="start" class="stack-icon positive">
                     <ion-icon [name]="getCategoryIcon(expense.category)"></ion-icon>
                   </div>
-                  <ion-label class="stack-body">
-                    <strong>{{ expense.title }}</strong>
-                    <p>{{ formatDate(expense.date) }}</p>
-                  </ion-label>
-                  <div class="amount" slot="end">
-                    <strong>{{ formatCurrency(expense.amount) }}</strong>
-                    <ion-badge color="warning">ממתין</ion-badge>
+                  <div class="stack-body">
+                    <div class="stack-main">
+                      <strong>{{ expense.title }}</strong>
+                      <p>{{ formatDate(expense.date) }}</p>
+                    </div>
+                    <div class="stack-meta">
+                      <div class="amount">
+                        <strong>{{ formatCurrency(expense.amount) }}</strong>
+                        <ion-badge color="warning">ממתין</ion-badge>
+                      </div>
+                      @if (canApproveExpense(expense)) {
+                        <div class="stack-actions" (click)="$event.stopPropagation()">
+                          <ion-button
+                            size="small"
+                            fill="clear"
+                            color="success"
+                            (click)="handleExpenseApproval(expense.id, true, $event)">
+                            אשר
+                          </ion-button>
+                          <ion-button
+                            size="small"
+                            fill="clear"
+                            color="medium"
+                            (click)="handleExpenseApproval(expense.id, false, $event)">
+                            דחה
+                          </ion-button>
+                        </div>
+                      }
+                    </div>
                   </div>
-                  <ion-icon slot="end" class="chevron" name="chevron-forward-outline"></ion-icon>
                 </ion-item>
               </ion-list>
 

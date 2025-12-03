@@ -8,6 +8,7 @@ import { CalendarService } from './calendar.service';
 import { SwapRequest, SwapRequestStatus } from '../models/swap-request.model';
 import { SwapRequestService } from './swap-request.service';
 import { ExpenseStoreService, ExpenseRecord } from './expense-store.service';
+import { TaskHistoryService } from './task-history.service';
 
 @Injectable({
   providedIn: 'root'
@@ -22,7 +23,8 @@ export class HomeService implements OnDestroy {
   constructor(
     private calendarService: CalendarService,
     private swapRequestService: SwapRequestService,
-    private expenseStore: ExpenseStoreService
+    private expenseStore: ExpenseStoreService,
+    private taskHistoryService: TaskHistoryService
   ) {
     this.subscriptions.add(
       this.calendarService.events$.subscribe(() => {
@@ -58,6 +60,12 @@ export class HomeService implements OnDestroy {
 
     this.subscriptions.add(
       this.expenseStore.expenses$.subscribe(() => {
+        this.loadDailyOverview(this.currentDate);
+      })
+    );
+
+    this.subscriptions.add(
+      this.taskHistoryService.tasks$.subscribe(() => {
         this.loadDailyOverview(this.currentDate);
       })
     );
@@ -119,11 +127,34 @@ export class HomeService implements OnDestroy {
   }
 
   /**
-   * מחזיר משימות קרובות (הבא עד 7 ימים)
+   * מחזיר משימות פתוחות (לא הושלמו/בוטלו) עבור ההורה הנוכחי
    */
   private getUpcomingTasks(): Task[] {
-    // כאן תהיה קריאה ל-Firebase
-    return [];
+    const tasks = this.taskHistoryService.getAll();
+    const uid = this.calendarService.getCurrentUserId();
+    const role = this.calendarService.getParentRoleForUser(uid);
+
+    return tasks
+      .filter(task => {
+        if (task.status === TaskStatus.COMPLETED || task.status === TaskStatus.CANCELLED) {
+          return false;
+        }
+        if ((task as any).createdBy === 'system') {
+          return false;
+        }
+        if (task.assignedTo === 'both') {
+          return true;
+        }
+        if (!role) {
+          return true;
+        }
+        return task.assignedTo === role;
+      })
+      .sort((a, b) => {
+        const ad = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+        const bd = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+        return ad - bd;
+      });
   }
 
   /**

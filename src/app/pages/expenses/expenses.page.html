@@ -2,42 +2,51 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
     <ion-title>הוצאות</ion-title>
+    <ion-buttons slot="end">
+      <ion-button
+        fill="clear"
+        size="small"
+        [routerLink]="['/tabs/history']"
+        [queryParams]="{ section: 'expenses' }">
+        <ion-icon slot="icon-only" name="time-outline"></ion-icon>
+      </ion-button>
+      <ion-button fill="clear" size="small" (click)="openSettingsModal()">
+        <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <section class="summary-card" (click)="openSummaryModal()">
+  <section class="summary-card" >
     <div>
       <p class="eyebrow">סה״כ הוצאות מאושרות</p>
       <h1>{{ totalAmount | currency:'ILS':'symbol':'1.0-0':'he-IL' }}</h1>
       <p class="meta">מאושרות בלבד</p>
-      <p class="pending-link" (click)="openPendingModal(); $event.stopPropagation()">
+      <p class="pending-link">
         ממתינות לאישור: {{ pendingExpenses.length }}
         <span *ngIf="pendingExpenses.length">({{ formatCurrency(pendingTotal) }})</span>
       </p>
+  
     </div>
-    <ion-icon name="wallet-outline"></ion-icon>
+       <ion-button color="warning" size="small" (click)="openSummaryModal()">
+      פירוט הוצאות 
+    </ion-button>
   </section>
 
-  <ion-button
-    expand="block"
-    fill="outline"
-    color="medium"
-    class="ion-margin"
-    [routerLink]="['/tabs/history']"
-    [queryParams]="{ section: 'expenses' }">
-    <ion-icon slot="start" name="time-outline"></ion-icon>
-    היסטוריית הוצאות
-  </ion-button>
-  <ion-button
-    expand="block"
-    fill="outline"
-    color="medium"
-    class="ion-margin"
-    (click)="openSettingsModal()">
-    <ion-icon slot="start" name="settings-outline"></ion-icon>
-    הגדרות הוצאות
-  </ion-button>
+  <!-- <div class="pending-alert" *ngIf="pendingExpenses.length">
+    <div class="alert-body">
+      <ion-icon name="alert-circle-outline"></ion-icon>
+      <div>
+        <strong>יש {{ pendingExpenses.length }} הוצאות שממתינות לאישור</strong>
+        <p>סה״כ {{ formatCurrency(pendingTotal) }}</p>
+      </div>
+    </div>
+    <ion-button color="warning" size="small" (click)="openSummaryModal(true)">
+      פירוט הוצאות ממתינות
+    </ion-button>
+  </div> -->
+
   <ion-button
     expand="block"
     fill="outline"
@@ -137,6 +146,15 @@
           @if (pendingReceiptPreview) {
             <div class="receipt-preview">
               <img [src]="pendingReceiptPreview" alt="קבלה" />
+              @if (pendingReceiptPreview) {
+                <ion-button
+                  fill="clear"
+                  color="primary"
+                  size="small"
+                  (click)="openReceiptPreview()">
+                  הצג קבלה
+                </ion-button>
+              }
               <ion-button fill="clear" color="danger" size="small" (click)="removePendingReceipt()">
                 הסר
               </ion-button>
@@ -209,7 +227,7 @@
               <div slot="end">
                 <strong>{{ formatCurrency(item.report.alimonyAmount) }}</strong>
                 <p class="byline" *ngIf="item.report.alimonyPayer">
-                  משלם: {{ parentNames[item.report.alimonyPayer] }}
+                  משלם: {{ getParentDisplayName(item.report.alimonyPayer) }}
                 </p>
               </div>
             </ion-item>

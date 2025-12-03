@@ -10,7 +10,152 @@
     </ion-toolbar>
   </ion-header>
 
-  <ion-content [fullscreen]="true" class="ion-padding">
-    <p>כאן ניתן לנהל משימות משותפות הקשורות לילדים.</p>
+  <ion-content [fullscreen]="true">
+    <div class="tasks-shell">
+  
+
+      <section class="form-card" *ngIf="showForm" [formGroup]="newTaskForm">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">משימה חדשה</p>
+            <strong>הוספת משימה משותפת</strong>
+          </div>
+          <div class="form-actions">
+            <ion-button size="small" fill="clear" color="medium" (click)="toggleForm()">
+              סגור
+            </ion-button>
+            <ion-button size="small" fill="solid" color="primary" (click)="addTask()">
+              שמור
+            </ion-button>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <ion-item [class.invalid]="newTaskForm.get('title')?.invalid && newTaskForm.get('title')?.touched">
+            <ion-label position="stacked">שם המשימה *</ion-label>
+            <ion-input formControlName="title" placeholder="לדוגמה: חיסון שנתי"></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">תיאור</ion-label>
+            <ion-textarea formControlName="description" rows="2" placeholder="פרטים, תזכורות או קבצים"></ion-textarea>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">תאריך יעד</ion-label>
+            <ion-datetime-button datetime="task-date"></ion-datetime-button>
+          </ion-item>
+          <ion-modal keepContentsMounted="true">
+            <ng-template>
+              <ion-datetime id="task-date" formControlName="dueDate" presentation="date" locale="he-IL"></ion-datetime>
+            </ng-template>
+          </ion-modal>
+
+          <ion-item>
+            <ion-label position="stacked">עדיפות</ion-label>
+            <ion-select interface="popover" formControlName="priority">
+              <ion-select-option [value]="TaskPriority.URGENT">דחוף</ion-select-option>
+              <ion-select-option [value]="TaskPriority.HIGH">גבוה</ion-select-option>
+              <ion-select-option [value]="TaskPriority.MEDIUM">בינוני</ion-select-option>
+              <ion-select-option [value]="TaskPriority.LOW">נמוך</ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">אחריות</ion-label>
+            <ion-segment formControlName="assignedTo">
+              <ion-segment-button value="parent1">
+                <ion-label>הורה 1</ion-label>
+              </ion-segment-button>
+              <ion-segment-button value="parent2">
+                <ion-label>הורה 2</ion-label>
+              </ion-segment-button>
+              <ion-segment-button value="both">
+                <ion-label>ביחד</ion-label>
+              </ion-segment-button>
+            </ion-segment>
+          </ion-item>
+        </div>
+      </section>
+
+      <ion-button
+        expand="block"
+        class="toggle-task-button"
+        (click)="toggleForm()">
+        <ion-icon slot="start" [name]="showForm ? 'close' : 'add-circle-outline'"></ion-icon>
+        {{ showForm ? 'סגור משימה חדשה' : 'הוסף משימה חדשה' }}
+      </ion-button>
+
+      <section class="list-card">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">משימות</p>
+            <strong>רשימת משימות</strong>
+          </div>
+          <ion-badge color="medium">{{ tasks.length }}</ion-badge>
+        </div>
+
+        <div *ngIf="!tasks.length" class="empty-state">
+          <ion-icon name="checkbox-outline"></ion-icon>
+          <p>אין משימות להצגה כרגע</p>
+          <small>הוסיפו משימה חדשה</small>
+        </div>
+
+        <ion-list lines="none" *ngIf="openTasks.length">
+          <ion-list-header>פתוחות</ion-list-header>
+          <ion-item class="task-item" *ngFor="let task of openTasks">
+            <ion-label>
+              <div class="title-row">
+                <ion-checkbox
+                  [checked]="task.status === TaskStatus.COMPLETED"
+                  (ionChange)="toggleCompletion(task, $event.detail.checked)">
+                </ion-checkbox>
+                <div class="title-block">
+                  <strong>{{ task.title }}</strong>
+                  <p class="description" *ngIf="task.description">{{ task.description }}</p>
+                  <div class="meta-row">
+                    <span class="meta-chip">
+                      <ion-icon name="calendar-outline"></ion-icon>
+                      {{ formatDate(task.dueDate) }}
+                    </span>
+                    <ion-badge [color]="getPriorityColor(task.priority)">{{ getPriorityLabel(task.priority) }}</ion-badge>
+                  </div>
+                </div>
+              </div>
+            </ion-label>
+          </ion-item>
+        </ion-list>
+
+        <ion-list lines="none" *ngIf="doneTasks.length">
+          <ion-list-header>הושלמו</ion-list-header>
+          <ion-item class="task-item done" *ngFor="let task of doneTasks">
+            <ion-label>
+              <div class="title-row">
+                <ion-checkbox
+                  [checked]="true"
+                  (ionChange)="toggleCompletion(task, $event.detail.checked)">
+                </ion-checkbox>
+                <div class="title-block">
+                  <strong>{{ task.title }}</strong>
+                  <p class="description" *ngIf="task.description">{{ task.description }}</p>
+                  <div class="meta-row">
+                    <span class="meta-chip">
+                      <ion-icon name="calendar-outline"></ion-icon>
+                      {{ formatDate(task.dueDate) }}
+                    </span>
+                    <span class="meta-chip" *ngIf="task.assignedTo">
+                      <ion-icon name="people-outline"></ion-icon>
+                      {{ task.assignedTo === 'both' ? 'שניכם' : task.assignedTo === 'parent1' ? 'הורה 1' : 'הורה 2' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </ion-label>
+            <ion-badge [color]="getPriorityColor(task.priority)" slot="end">{{ getPriorityLabel(task.priority) }}</ion-badge>
+          </ion-item>
+        </ion-list>
+      </section>
+
+    </div>
   </ion-content>
 </ion-page>

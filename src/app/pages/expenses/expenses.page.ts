@@ -44,6 +44,7 @@ export class ExpensesPage implements OnInit, OnDestroy {
   showAddForm = false;
   pendingReceipt?: File;
   pendingReceiptPreview?: string;
+  private readonly MAX_RECEIPT_PREVIEW_BYTES = 900_000; // keep below Firestore 1MB limit
   isSubmitting = false;
   isSavingSettings = false;
   private destroy$ = new Subject<void>();
@@ -53,6 +54,10 @@ export class ExpensesPage implements OnInit, OnDestroy {
   parentNames = {
     parent1: 'הורה 1',
     parent2: 'הורה 2'
+  };
+  parentUids: { parent1: string | null; parent2: string | null } = {
+    parent1: null,
+    parent2: null
   };
   financeSettings: FinanceSettings = {
     alimonyAmount: 0,
@@ -71,7 +76,6 @@ export class ExpensesPage implements OnInit, OnDestroy {
   pendingModalOpen = false;
   settingsModalOpen = false;
   summaryModalOpen = false;
-  private pendingOpenSummary = false;
 
   constructor(
     private formBuilder: FormBuilder,
@@ -102,10 +106,6 @@ export class ExpensesPage implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe((expenses) => {
         this.expenses = expenses;
-        if (this.pendingOpenSummary) {
-          this.pendingOpenSummary = false;
-          this.openSummaryModal();
-        }
       });
 
     this.expenseStore.financeSettings$
@@ -135,14 +135,14 @@ export class ExpensesPage implements OnInit, OnDestroy {
           parent1: metadata.parent1.name || 'הורה 1',
           parent2: metadata.parent2.name || 'הורה 2'
         };
+        this.parentUids = {
+          parent1: metadata.parent1.uid || null,
+          parent2: metadata.parent2.uid || null
+        };
       });
 
-    this.route.queryParamMap.pipe(takeUntil(this.destroy$)).subscribe(params => {
-      const openSummary = params.get('openSummary');
-      if (openSummary === 'true' || openSummary === '') {
-        this.pendingOpenSummary = true;
-      }
-    });
+    // לא פותחים מודל אוטומטית דרך query params; המשתמש יפתח ידנית דרך המסכים
+    this.route.queryParamMap.pipe(takeUntil(this.destroy$)).subscribe(() => {});
   }
 
   ngOnDestroy() {
@@ -229,24 +229,38 @@ export class ExpensesPage implements OnInit, OnDestroy {
   }
 
   getMonthlyReport(expenses: ExpenseRecord[]): MonthlyReport {
-    // This method may need to be updated depending on the final data structure from Firebase
     const total = expenses.reduce((sum, e) => sum + e.amount, 0);
-    const approved = expenses.filter((e) => e.status === 'approved');
-    const pending = expenses.filter((e) => e.status === 'pending');
-    
-    // The split calculation needs to be consistent with the model
-    const parent1Share = approved.reduce((sum, e) => sum + this.calculateShare(e.amount, e.splitParent1), 0);
-    const parent2Share = approved.reduce(
-      (sum, e) => sum + this.calculateShare(e.amount, 100 - e.splitParent1),
-      0
-    );
+    const approved = expenses.filter(e => e.status === 'approved');
+    const pending = expenses.filter(e => e.status === 'pending');
+
+    let parent1Share = 0;
+    let parent2Share = 0;
+    let balance = 0; // חיובי = הורה 1 צריך להעביר להורה 2
+
+    approved.forEach(expense => {
+      const share1 = this.calculateShare(expense.amount, expense.splitParent1);
+      const share2 = expense.amount - share1;
+      parent1Share += share1;
+      parent2Share += share2;
+
+      const payer = this.resolvePayerRole(expense);
+      if (payer === 'parent1') {
+        // הורה 1 שילם את כל ההוצאה, הורה 2 צריך להחזיר לו את החלק שלו
+        balance -= share2;
+      } else if (payer === 'parent2') {
+        // הורה 2 שילם את כל ההוצאה, הורה 1 צריך להחזיר לו את החלק שלו
+        balance += share1;
+      }
+      // אם לא ידוע מי שילם, מניחים שכל אחד כיסה את חלקו - ללא שינוי
+    });
 
     const alimonyAmount = this.financeSettings.alimonyAmount || 0;
     const alimonyPayer = this.financeSettings.alimonyPayer;
-    const alimonyEffect =
-      alimonyPayer === 'parent1' ? alimonyAmount : alimonyPayer === 'parent2' ? -alimonyAmount : 0;
-
-    const balance = parent1Share - parent2Share + alimonyEffect;
+    if (alimonyPayer === 'parent1') {
+      balance += alimonyAmount;
+    } else if (alimonyPayer === 'parent2') {
+      balance -= alimonyAmount;
+    }
 
     return {
       total,
@@ -260,7 +274,7 @@ export class ExpensesPage implements OnInit, OnDestroy {
     };
   }
 
-  onReceiptSelected(event: Event) {
+  async onReceiptSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) {
       this.pendingReceipt = undefined;
@@ -268,17 +282,31 @@ export class ExpensesPage implements OnInit, OnDestroy {
     }
     const file = input.files[0];
     this.pendingReceipt = file;
-    this.generatePreview(file);
+    await this.generatePreview(file);
     input.value = '';
   }
 
-  private generatePreview(file: File) {
-    const reader = new FileReader();
-    reader.onload = () => {
-      this.pendingReceiptPreview =
-        typeof reader.result === 'string' ? reader.result : undefined;
-    };
-    reader.readAsDataURL(file);
+  private async generatePreview(file: File) {
+    if (!file.type.startsWith('image/')) {
+      this.pendingReceiptPreview = undefined;
+      return;
+    }
+
+    try {
+      const compressed = await this.compressImage(file, 1400, 0.72);
+      if (compressed && this.getDataUrlSize(compressed) <= this.MAX_RECEIPT_PREVIEW_BYTES) {
+        this.pendingReceiptPreview = compressed;
+      } else {
+        this.pendingReceiptPreview = undefined;
+        this.pendingReceipt = undefined;
+        await this.showReceiptTooLargeToast();
+      }
+    } catch (error) {
+      console.error('Failed to generate receipt preview', error);
+      this.pendingReceiptPreview = undefined;
+      this.pendingReceipt = undefined;
+      await this.showReceiptTooLargeToast(true);
+    }
   }
 
   removePendingReceipt() {
@@ -415,7 +443,49 @@ export class ExpensesPage implements OnInit, OnDestroy {
 
   openReceipt(expense: ExpenseRecord) {
     if (expense.receiptPreview) {
-      window.open(expense.receiptPreview, '_blank');
+      this.openReceiptUrl(expense.receiptPreview);
+    }
+  }
+
+  openReceiptPreview() {
+    if (this.pendingReceiptPreview) {
+      this.openReceiptUrl(this.pendingReceiptPreview);
+    }
+  }
+
+  private openReceiptUrl(url: string) {
+    const objectUrl = this.dataUrlToObjectUrl(url) || url;
+    const win = window.open(objectUrl, '_blank');
+    if (!win) {
+      this.toastCtrl.create({
+        message: 'לא הצלחנו לפתוח את הקבלה, בדקו חוסם פופ אפים',
+        duration: 2500,
+        color: 'warning'
+      }).then(t => t.present());
+    }
+  }
+
+  private dataUrlToObjectUrl(dataUrl: string): string | null {
+    if (!dataUrl.startsWith('data:')) {
+      return null;
+    }
+    const parts = dataUrl.split(',');
+    if (parts.length < 2) {
+      return null;
+    }
+    try {
+      const mime = parts[0].split(':')[1].split(';')[0] || 'application/octet-stream';
+      const byteString = atob(parts[1]);
+      const arrayBuffer = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(arrayBuffer);
+      for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+      }
+      const blob = new Blob([arrayBuffer], { type: mime });
+      return URL.createObjectURL(blob);
+    } catch (error) {
+      console.error('Failed to convert data URL', error);
+      return null;
     }
   }
 
@@ -452,6 +522,24 @@ export class ExpensesPage implements OnInit, OnDestroy {
 
   calculateShare(amount: number, percent: number): number {
     return (amount * percent) / 100;
+  }
+
+  private resolvePayerRole(expense: ExpenseRecord): 'parent1' | 'parent2' | null {
+    const { parent1, parent2 } = this.parentUids;
+    if (parent1 && expense.createdBy === parent1) {
+      return 'parent1';
+    }
+    if (parent2 && expense.createdBy === parent2) {
+      return 'parent2';
+    }
+    return null;
+  }
+
+  getParentDisplayName(role: 'parent1' | 'parent2' | null | undefined): string {
+    if (role === 'parent1' || role === 'parent2') {
+      return this.parentNames[role];
+    }
+    return 'הורה';
   }
 
   async saveFinanceSettings() {
@@ -528,11 +616,30 @@ export class ExpensesPage implements OnInit, OnDestroy {
   }
 
   openPaymentModal() {
-    this.paymentBreakdowns = this.groupedExpenses.map(bucket => ({
-      label: bucket.label,
-      report: this.getMonthlyReport(bucket.expenses),
-      expenses: bucket.expenses
-    }));
+    const buckets = this.groupedExpenses;
+
+    // כשיש רק מזונות ללא הוצאות, עדיין נציג כרטיס חישוב עבור החודש הנוכחי
+    if (!buckets.length && (this.financeSettings.alimonyAmount || 0) > 0) {
+      const now = new Date();
+      const label = now.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+      this.paymentBreakdowns = [
+        {
+          label,
+          report: this.getMonthlyReport([]),
+          expenses: []
+        }
+      ];
+    } else {
+      this.paymentBreakdowns = buckets.map(bucket => {
+        const approvedExpenses = bucket.expenses.filter(expense => expense.status === 'approved');
+        return {
+          label: bucket.label,
+          report: this.getMonthlyReport(approvedExpenses),
+          expenses: approvedExpenses
+        };
+      });
+    }
+
     this.paymentModalOpen = true;
   }
 
@@ -544,10 +651,35 @@ export class ExpensesPage implements OnInit, OnDestroy {
     this.pendingModalOpen = false;
   }
 
-  openSummaryModal() {
+  openSummaryModal(showPendingOnly: boolean = false) {
     if (!this.groupedExpenses.length) {
       return;
     }
+
+    if (showPendingOnly) {
+      const pending = this.pendingExpenses;
+      if (!pending.length) {
+        return;
+      }
+      const pendingByMonth = this.groupedExpenses.map(bucket => ({
+        ...bucket,
+        expenses: bucket.expenses.filter(expense => expense.status === 'pending')
+      })).filter(bucket => bucket.expenses.length > 0);
+
+      if (!pendingByMonth.length) {
+        return;
+      }
+
+      // מחליפים תצוגה זמנית לפנדינג בלבד
+      this.paymentBreakdowns = pendingByMonth.map(bucket => ({
+        label: bucket.label,
+        report: this.getMonthlyReport(bucket.expenses),
+        expenses: bucket.expenses
+      }));
+    } else {
+      this.paymentBreakdowns = null;
+    }
+
     this.summaryModalOpen = true;
   }
 
@@ -641,5 +773,56 @@ export class ExpensesPage implements OnInit, OnDestroy {
 
   isFixedExpense(expense: ExpenseRecord): boolean {
     return expense.id.startsWith('fixed-');
+  }
+
+  private async showReceiptTooLargeToast(includeError: boolean = false) {
+    const toast = await this.toastCtrl.create({
+      message: includeError
+        ? 'התמונה של הקבלה גדולה מדי, נסו לצלם מחדש בגודל קטן יותר'
+        : 'הקטנו את התמונה, אך היא עדיין גדולה מדי. נסו להעלות צילום קטן יותר',
+      duration: 3000,
+      color: 'warning'
+    });
+    toast.present();
+  }
+
+  private getDataUrlSize(dataUrl: string): number {
+    const base64 = dataUrl.split(',')[1] || '';
+    return Math.ceil((base64.length * 3) / 4); // approximate bytes
+  }
+
+  private compressImage(file: File, maxDimension: number, quality: number): Promise<string | undefined> {
+    return new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result !== 'string') {
+          resolve(undefined);
+          return;
+        }
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          const scale = Math.min(1, maxDimension / Math.max(width, height));
+          width *= scale;
+          height *= scale;
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(typeof reader.result === 'string' ? reader.result : undefined);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', quality);
+          resolve(dataUrl);
+        };
+        img.onerror = () => resolve(undefined);
+        img.src = reader.result;
+      };
+      reader.onerror = () => resolve(undefined);
+      reader.readAsDataURL(file);
+    });
   }
 }

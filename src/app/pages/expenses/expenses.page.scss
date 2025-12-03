@@ -144,9 +144,105 @@ ion-item.invalid {
   ion-icon {
     font-size: 48px;
     color: var(--ion-color-medium);
-    margin-bottom: var(--space-2);
+    // margin-bottom: var(--space-2);
   }
 }
+
+.pending-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(246, 173, 85, 0.3);
+  background: rgba(246, 173, 85, 0.08);
+  box-shadow: var(--shadow-sm);
+
+  .alert-body {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+
+    ion-icon {
+      font-size: 26px;
+      color: var(--ion-color-warning);
+    }
+
+    p {
+      margin: 0;
+      color: var(--app-text-secondary);
+    }
+  }
+}
+
+.dark {
+  ion-content {
+    --background: var(--app-background);
+  }
+
+  .summary-card,
+  .form-card,
+  .list-card,
+  .month-card {
+    background: var(--app-surface);
+    color: var(--app-text-primary);
+    box-shadow: none;
+    border-color: var(--app-border);
+  }
+
+  ion-item {
+    --background: transparent;
+    color: var(--app-text-primary);
+  }
+
+  .month-totals strong,
+  .month-header h3,
+  .report-row span,
+  .amount-chip {
+    color: var(--app-text-primary);
+  }
+
+  .status-chip {
+    color: var(--app-text-secondary);
+  }
+
+  ion-modal {
+    --background: var(--app-surface-elevated);
+  }
+}
+
+// :host-context(.dark) {
+//   ion-modal {
+//     --background: var(--app-surface-elevated);
+//   }
+
+//   .summary-card,
+//   .form-card,
+//   .list-card,
+//   .month-card {
+//     background: var(--app-surface);
+//     color: var(--app-text-primary);
+//     box-shadow: none;
+//     border-color: var(--app-border);
+//   }
+
+//   ion-item {
+//     --background: transparent;
+//     color: var(--app-text-primary);
+//   }
+
+//   .month-totals strong,
+//   .month-header h3,
+//   .report-row span,
+//   .amount-chip {
+//     color: var(--app-text-primary);
+//   }
+
+//   .status-chip {
+//     color: var(--app-text-secondary);
+//   }
+// }
 
 .month-card {
   margin-top: var(--space-5);
