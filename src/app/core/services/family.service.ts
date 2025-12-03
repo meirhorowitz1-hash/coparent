@@ -188,7 +188,7 @@ export class FamilyService {
       updatedAt: serverTimestamp()
     });
 
-    await firstValueFrom(this.userProfileService.addFamily(uid, familyId, makeActive));
+    await firstValueFrom(this.userProfileService.addFamily(uid, familyId, makeActive || true));
 
     return familyId;
   }
@@ -210,6 +210,26 @@ export class FamilyService {
     });
 
     return newCode;
+  }
+
+  async leaveFamily(familyId: string, uid: string): Promise<void> {
+    if (!familyId || !uid) {
+      return;
+    }
+
+    const familyRef = doc(this.firestore, 'families', familyId);
+    const snapshot = await getDoc(familyRef);
+
+    if (snapshot.exists()) {
+      const data = snapshot.data() as Family;
+      const members = (data.members ?? []).filter(member => member !== uid);
+      await updateDoc(familyRef, {
+        members,
+        updatedAt: serverTimestamp()
+      });
+    }
+
+    await firstValueFrom(this.userProfileService.removeFamily(uid, familyId));
   }
 
   private async createUniqueShareCode(currentFamilyId?: string): Promise<string> {

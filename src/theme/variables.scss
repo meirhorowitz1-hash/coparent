@@ -3,6 +3,7 @@
 
 /** Modern Neutral Palette - Crisp, Minimal, Professional **/
 :root {
+  color-scheme: light;
   // Primary - iOS Blue
   --ion-color-primary: #0f7878; // Teal from reference
   --ion-color-primary-rgb: 15, 120, 120;
@@ -147,34 +148,4 @@
   --accent-gold: #f7b731;
   --accent-silver: #94a3b8;
   --accent-turquoise: #0fc5c5;
-}
-
-// Dark Mode - Apple HIG Inspired
-@media (prefers-color-scheme: dark) {
-  :root {
-    --ion-color-primary: #0A84FF;
-    --ion-color-secondary: #5856D6;
-    --ion-color-tertiary: #FF9500;
-    --ion-color-success: #34C759;
-    --ion-color-warning: #FFCC00;
-    --ion-color-danger: #FF3B30;
-    
-    --app-background: #000000;
-    --app-background-secondary: #1C1C1E;
-    --app-surface: rgba(28, 28, 30, 0.85);
-    --app-surface-elevated: rgba(44, 44, 46, 0.9);
-    
-    --app-text-primary: #f8fafc;
-    --app-text-secondary: #c7d1f5;
-    --app-text-tertiary: #94a3b8;
-    
-    --app-border: rgba(148, 163, 184, 0.2);
-    --app-border-light: rgba(148, 163, 184, 0.08);
-    --app-divider: rgba(148, 163, 184, 0.22);
-    
-    --ion-background-color: #000000;
-    --ion-text-color: #f8fafc;
-    --ion-color-light: #1C1C1E;
-    --app-hero-gradient: radial-gradient(circle at top, rgba(10, 132, 255, 0.25), transparent 65%);
-  }
 }

@@ -57,6 +57,17 @@ export class UserProfileService {
     );
   }
 
+  removeFamily(uid: string, familyId: string): Observable<void> {
+    const ref = doc(this.firestore, 'users', uid);
+    return from(
+      updateDoc(ref, {
+        families: arrayRemove(familyId),
+        activeFamilyId: null,
+        updatedAt: serverTimestamp()
+      })
+    );
+  }
+
   setActiveFamily(uid: string, familyId: string | null): Observable<void> {
     const ref = doc(this.firestore, 'users', uid);
     return from(

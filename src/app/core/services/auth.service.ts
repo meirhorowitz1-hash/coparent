@@ -2,6 +2,8 @@ import { Injectable, inject } from '@angular/core';
 import {
   Auth,
   createUserWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
@@ -35,6 +37,12 @@ export class AuthService {
 
   logout(): Observable<void> {
     return from(signOut(this.auth));
+  }
+
+  loginWithGoogle(): Observable<UserCredential> {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    return from(signInWithPopup(this.auth, provider));
   }
 
   getFriendlyErrorMessage(errorCode?: string): string {

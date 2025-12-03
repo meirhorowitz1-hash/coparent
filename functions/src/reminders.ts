@@ -1,4 +1,5 @@
 import * as admin from 'firebase-admin';
+import * as functions from 'firebase-functions/v1';
 
 // Ensure default app is initialized even if this module is loaded before index.ts runs initializeApp()
 if (!admin.apps.length) {
@@ -69,24 +70,39 @@ export async function deleteReminder(familyId: string, eventId: string): Promise
 
 export async function dispatchDueReminders(limit = 50): Promise<void> {
   const now = admin.firestore.Timestamp.now();
+  functions.logger.info('[dispatchDueReminders] run', { now: now.toDate().toISOString(), limit });
 
   try {
     const snapshot = await db
       .collectionGroup('reminders')
       .where('sent', '==', false)
       .where('sendAt', '<=', now)
+      .orderBy('sendAt')
       .limit(limit)
       .get();
 
-    console.info('[dispatchDueReminders] reminders to send', snapshot.size);
+    functions.logger.info('[dispatchDueReminders] reminders to send', snapshot.size);
+    console.log('[dispatchDueReminders] reminders to send', snapshot.size);
 
     if (snapshot.empty) {
+      functions.logger.info('[dispatchDueReminders] no reminders ready to send');
+      console.log('[dispatchDueReminders] no reminders ready to send');
       return;
     }
 
     for (const doc of snapshot.docs) {
       const data = doc.data() as ReminderDoc;
       try {
+        functions.logger.info('[dispatchDueReminders] sending reminder', {
+          id: doc.id,
+          sendAt: data.sendAt.toDate(),
+          targets: data.targetUids?.length || 0
+        });
+        console.log('[dispatchDueReminders] sending reminder', {
+          id: doc.id,
+          sendAt: data.sendAt.toDate(),
+          targets: data.targetUids?.length || 0
+        });
         await sendReminder(data);
         await doc.ref.update({
           sent: true,
@@ -94,12 +110,12 @@ export async function dispatchDueReminders(limit = 50): Promise<void> {
           updatedAt: admin.firestore.Timestamp.now()
         });
       } catch (error) {
-        console.error('[dispatchDueReminders] failed to send reminder', { id: doc.id, error });
+        functions.logger.error('[dispatchDueReminders] failed to send reminder', { id: doc.id, error });
         // לא מסמנים כשליחה כדי לנסות שוב בריצה הבאה
       }
     }
   } catch (error) {
-    console.error('[dispatchDueReminders] query failed', error);
+    functions.logger.error('[dispatchDueReminders] query failed', error);
   }
 }
 
@@ -117,7 +133,8 @@ async function sendReminder(reminder: ReminderDoc): Promise<void> {
 
   const tokens = Array.from(tokenSet);
   if (!tokens.length) {
-    console.warn('[sendReminder] no tokens for reminder', { eventId: reminder.eventId });
+    functions.logger.warn('[sendReminder] no tokens for reminder', { eventId: reminder.eventId, targetUids: reminder.targetUids });
+    console.warn('[sendReminder] no tokens for reminder', { eventId: reminder.eventId, targetUids: reminder.targetUids });
     return;
   }
 
@@ -141,6 +158,10 @@ async function sendReminder(reminder: ReminderDoc): Promise<void> {
     }
   });
 
+  functions.logger.info('[sendReminder] sent', {
+    eventId: reminder.eventId,
+    tokenCount: tokens.length
+  });
   console.info('[sendReminder] sent', {
     eventId: reminder.eventId,
     tokenCount: tokens.length

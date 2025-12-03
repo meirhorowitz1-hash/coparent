@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.dispatchEventReminders = exports.onExpenseStatusChanged = exports.onExpenseCreated = exports.onCalendarEventDeleted = exports.onCalendarEventUpdated = exports.onCalendarEventCreated = exports.onSwapRequestStatusChanged = exports.onSwapRequestCreated = void 0;
+exports.onExpenseStatusChanged = exports.onExpenseCreated = exports.dispatchEventReminders = exports.onCalendarEventDeleted = exports.onCalendarEventUpdated = exports.onCalendarEventCreated = exports.onSwapRequestStatusChanged = exports.onCustodyScheduleChanged = exports.onSwapRequestCreated = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 const reminders_1 = require("./reminders");
@@ -58,6 +58,41 @@ exports.onSwapRequestCreated = functions.firestore
         familyId: context.params.familyId,
         requestId: context.params.swapRequestId
     });
+});
+exports.onCustodyScheduleChanged = functions.firestore
+    .document('families/{familyId}/settings/custodySchedule')
+    .onWrite(async (change, context) => {
+    const before = change.before.data();
+    const after = change.after.data();
+    const beforePending = before?.pendingApproval ?? null;
+    const afterPending = after?.pendingApproval ?? null;
+    // new request
+    if (!beforePending && afterPending) {
+        const targets = await getFamilyMembers(context.params.familyId);
+        const requestor = afterPending.requestedBy;
+        const notifyUids = targets.filter(uid => uid && uid !== requestor);
+        const body = `${afterPending.requestedByName || 'הורה אחר'} ביקש לאשר תבנית משמורת חדשה מ־${formatDate(afterPending.startDate)}`;
+        for (const uid of notifyUids) {
+            await sendPushToUser(uid, { title: 'בקשת משמרות חדשה', body }, {
+                type: 'custody-approval-request',
+                familyId: context.params.familyId
+            });
+        }
+        return;
+    }
+    // approval/decline
+    if (beforePending && !afterPending) {
+        const requester = beforePending.requestedBy;
+        if (requester) {
+            await sendPushToUser(requester, {
+                title: 'בקשת המשמרות אושרה/טופלה',
+                body: 'הבקשה לסידור המשמרות עודכנה על ידי ההורה השני.'
+            }, {
+                type: 'custody-approval-updated',
+                familyId: context.params.familyId
+            });
+        }
+    }
 });
 exports.onSwapRequestStatusChanged = functions.firestore
     .document('families/{familyId}/swapRequests/{swapRequestId}')
@@ -141,27 +176,43 @@ exports.onCalendarEventDeleted = functions.firestore
     .onDelete(async (_, context) => {
     await (0, reminders_1.deleteReminder)(context.params.familyId, context.params.eventId);
 });
+// Scheduled dispatcher for due event reminders (runs every minute)
+exports.dispatchEventReminders = functions.pubsub
+    .schedule('every 1 minutes')
+    .onRun(async (context) => {
+    functions.logger.info('[dispatchEventReminders] start', { ts: context.timestamp });
+    console.log('[dispatchEventReminders] start', context.timestamp);
+    try {
+        await (0, reminders_1.dispatchDueReminders)();
+        functions.logger.info('[dispatchEventReminders] done');
+        console.log('[dispatchEventReminders] done');
+    }
+    catch (error) {
+        functions.logger.error('[dispatchEventReminders] error', error);
+        console.error('[dispatchEventReminders] error', error);
+        throw error;
+    }
+    return null;
+});
 exports.onExpenseCreated = functions.firestore
     .document('families/{familyId}/expenses/{expenseId}')
     .onCreate(async (snapshot, context) => {
     const expense = snapshot.data();
     const familyId = context.params.familyId;
     const members = await getFamilyMembers(familyId);
-    const targets = members.filter(uid => uid && uid !== expense.createdBy);
-    if (!targets.length) {
+    const targetUid = resolveOtherParent(members, expense.createdBy);
+    if (!targetUid) {
         return;
     }
     const body = `${expense.createdByName || 'ההורה השני'} הוסיף/הוסיפה: ${expense.title} (${formatCurrency(expense.amount)})`;
-    for (const uid of targets) {
-        await sendPushToUser(uid, {
-            title: 'הוצאה חדשה',
-            body
-        }, {
-            type: 'expense-created',
-            familyId,
-            expenseId: context.params.expenseId
-        });
-    }
+    await sendPushToUser(targetUid, {
+        title: 'הוצאה חדשה',
+        body
+    }, {
+        type: 'expense-created',
+        familyId,
+        expenseId: context.params.expenseId
+    });
 });
 exports.onExpenseStatusChanged = functions.firestore
     .document('families/{familyId}/expenses/{expenseId}')
@@ -189,11 +240,6 @@ exports.onExpenseStatusChanged = functions.firestore
         familyId,
         expenseId: context.params.expenseId
     });
-});
-exports.dispatchEventReminders = functions.pubsub
-    .schedule('every 1 minutes')
-    .onRun(async () => {
-    await (0, reminders_1.dispatchDueReminders)();
 });
 async function sendPushToUser(uid, notification, data) {
     if (!uid) {
@@ -310,6 +356,17 @@ async function getFamilyMembers(familyId) {
         functions.logger.error('[getFamilyMembers] failed', { familyId, error });
         return [];
     }
+}
+function resolveOtherParent(members, actorUid) {
+    const unique = Array.from(new Set(members.filter(Boolean)));
+    if (!unique.length) {
+        return null;
+    }
+    if (!actorUid) {
+        return unique[0] ?? null;
+    }
+    const other = unique.find(uid => uid !== actorUid);
+    return other ?? null;
 }
 function formatCurrency(amount) {
     const safeAmount = typeof amount === 'number' ? amount : 0;

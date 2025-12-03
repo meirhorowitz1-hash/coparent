@@ -7,6 +7,21 @@
   gap: var(--space-5);
 }
 
+.custody-button {
+  position: relative;
+
+  .pending-dot {
+    position: absolute;
+    top: 4px;
+    inset-inline-start: 8px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--ion-color-danger);
+    box-shadow: 0 0 0 2px #fff;
+  }
+}
+
 .calendar-hero {
   border-radius: 24px;
   padding: var(--space-6);
@@ -66,8 +81,8 @@
   align-items: center;
 
   ion-button {
-    width: 44px;
-    height: 44px;
+   
+    height: auto;
     border-radius: var(--radius-full);
     --color: var(--app-text-primary);
     --background: var(--app-background-secondary);
@@ -123,6 +138,44 @@
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 1px;
   background: var(--app-border-light);
+}
+
+.modal-content {
+  --padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 40px);
+  padding-bottom: var(--padding-bottom);
+}
+
+.modal-shell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+
+  ion-button {
+    --border-radius: 16px;
+    height: 48px;
+    font-weight: var(--font-semibold);
+  }
+
+  .modal-actions-spacer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+  }
+
+  .action-btn {
+    justify-content: center;
+    --padding-start: 14px;
+    --padding-end: 14px;
+    gap: 8px;
+
+    ion-icon {
+      color: #fff;
+      font-size: 18px;
+      transform: translateY(1px);
+    }
+  }
 }
 
 .calendar-day {
@@ -284,7 +337,7 @@
   ion-icon {
     font-size: 36px;
     color: var(--app-text-tertiary);
-    margin-bottom: var(--space-3);
+    // margin-bottom: var(--space-3);
   }
 }
 

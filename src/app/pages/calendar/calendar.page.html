@@ -2,8 +2,9 @@
   <ion-toolbar>
     <ion-title>לוח שנה משותף</ion-title>
     <ion-buttons slot="start">
-      <ion-button fill="clear" size="small" (click)="openCustodySetup()">
+      <ion-button fill="clear" size="small" class="custody-button" (click)="openCustodySetup()">
         <ion-icon slot="icon-only" name="calendar-clear-outline"></ion-icon>
+        <span class="pending-dot" *ngIf="hasPendingCustodyApproval"></span>
       </ion-button>
     </ion-buttons>
     <ion-buttons slot="end">
@@ -23,17 +24,7 @@
           <h1>{{ monthName }} {{ yearNumber }}</h1>
           <p class="hero-subtitle">מסנכרן בין כל בני המשפחה</p>
         </div>
-        <div class="hero-actions">
-          <ion-button
-            fill="clear"
-            size="small"
-            class="custody-manage-button"
-            (click)="openCustodySetup()">
-            <ion-icon slot="start" name="swap-horizontal-outline"></ion-icon>
-            ניהול משמרות
-            <span class="pending-dot" *ngIf="hasPendingCustodyApproval"></span>
-          </ion-button>
-        </div>
+     
       </div>
 
       <div class="month-controls">
@@ -107,8 +98,8 @@
   <ion-modal
     [isOpen]="showEventModal"
     (didDismiss)="closeModal()"
-    [breakpoints]="[0, 0.45, 0.85]"
-    [initialBreakpoint]="0.45">
+    [breakpoints]="[0, 0.6, 0.9]"
+    [initialBreakpoint]="0.6">
     <ng-template>
       <ion-header translucent="true">
         <ion-toolbar>
@@ -136,18 +127,21 @@
           <div class="empty-state" *ngIf="selectedDay.events.length === 0">
             <ion-icon name="calendar-outline"></ion-icon>
             <p>אין אירועים ליום זה</p>
-            <ion-button expand="block" (click)="addNewEvent()">
-              <ion-icon slot="start" name="add"></ion-icon>
-              הוסף אירוע
-            </ion-button>
-            <ion-button
-              expand="block"
-              color="tertiary"
-              *ngIf="canRequestSwap(selectedDay)"
-              (click)="requestSwapForSelectedDay()">
-              <ion-icon slot="start" name="swap-horizontal-outline"></ion-icon>
-              בקשת החלפת יום
-            </ion-button>
+            <div class="modal-actions-spacer">
+              <ion-button expand="block" class="action-btn" (click)="addNewEvent()">
+                <ion-icon slot="start" name="add"></ion-icon>
+                הוסף אירוע
+              </ion-button>
+              <ion-button
+                expand="block"
+                color="tertiary"
+                class="action-btn"
+                *ngIf="canRequestSwap(selectedDay)"
+                (click)="requestSwapForSelectedDay()">
+                <ion-icon slot="start" name="swap-horizontal-outline"></ion-icon>
+                בקשת החלפת יום
+              </ion-button>
+            </div>
           </div>
 
           <div class="event-list" *ngIf="selectedDay.events.length > 0">
@@ -182,22 +176,24 @@
             </article>
           </div>
 
-          <ion-button
-            expand="block"
-            class="ion-margin-top"
-            *ngIf="selectedDay.events.length > 0"
-            (click)="addNewEvent()">
-            <ion-icon slot="start" name="add"></ion-icon>
-            הוסף אירוע נוסף
-          </ion-button>
-          <ion-button
-            expand="block"
-            color="tertiary"
-            *ngIf="selectedDay.events.length > 0 && canRequestSwap(selectedDay)"
-            (click)="requestSwapForSelectedDay()">
-            <ion-icon slot="start" name="swap-horizontal-outline"></ion-icon>
-            בקשת החלפת יום
-          </ion-button>
+          <div class="modal-actions-spacer" *ngIf="selectedDay.events.length > 0">
+            <ion-button
+              class="action-btn"
+              expand="block"
+              (click)="addNewEvent()">
+              <ion-icon slot="start" name="add"></ion-icon>
+              הוסף אירוע נוסף
+            </ion-button>
+            <ion-button
+              expand="block"
+              color="tertiary"
+              class="action-btn"
+              *ngIf="selectedDay.events.length > 0 && canRequestSwap(selectedDay)"
+              (click)="requestSwapForSelectedDay()">
+              <ion-icon slot="start" name="swap-horizontal-outline"></ion-icon>
+              בקשת החלפת יום
+            </ion-button>
+          </div>
         </div>
       </ion-content>
     </ng-template>

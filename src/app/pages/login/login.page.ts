@@ -94,4 +94,23 @@ export class LoginPage implements OnInit {
     // TODO: Navigate to forgot password page
     console.log('Navigate to forgot password');
   }
+
+  async signInWithGoogle() {
+    if (this.isLoading) {
+      return;
+    }
+
+    this.isLoading = true;
+    this.authError = null;
+    this.authService.loginWithGoogle().pipe(take(1)).subscribe({
+      next: () => {
+        this.isLoading = false;
+        this.router.navigate(['/tabs/home']);
+      },
+      error: (error) => {
+        this.isLoading = false;
+        this.authError = this.authService.getFriendlyErrorMessage(error?.code);
+      }
+    });
+  }
 }

@@ -4,9 +4,14 @@ import { Router } from '@angular/router';
 import { Subject, takeUntil, firstValueFrom } from 'rxjs';
 
 import { HomeService } from '../../core/services/home.service';
+import { Expense, ExpenseStatus } from '../../core/models/expense.model';
+import { ExpenseStoreService } from '../../core/services/expense-store.service';
+import { CalendarService } from '../../core/services/calendar.service';
 import { DailyOverview, QuickAction } from '../../core/models/daily-overview.model';
 import { SwapRequestModalComponent } from '../../components/swap-request-modal/swap-request-modal.component';
 import { SwapRequest, SwapRequestStatus } from '../../core/models/swap-request.model';
+import { TaskHistoryService } from '../../core/services/task-history.service';
+import { Task, TaskStatus } from '../../core/models/task.model';
 
 @Component({
   selector: 'app-home',
@@ -22,8 +27,10 @@ export class HomePage implements OnInit, OnDestroy {
   swapRequests: SwapRequest[] = [];
   requestNotes: Record<string, string> = {};
   SwapRequestStatus = SwapRequestStatus;
+  TaskStatus = TaskStatus;
   currentUserId: string | null = null;
   openAccordions: string[] = [];
+  currentParentRole: 'parent1' | 'parent2' | null = null;
 
   private destroy$ = new Subject<void>();
 
@@ -31,7 +38,10 @@ export class HomePage implements OnInit, OnDestroy {
     private homeService: HomeService,
     private router: Router,
     private modalCtrl: ModalController,
-    private toastCtrl: ToastController
+    private toastCtrl: ToastController,
+    private expenseStore: ExpenseStoreService,
+    private calendarService: CalendarService,
+    private taskHistoryService: TaskHistoryService
   ) {}
 
   ngOnInit() {
@@ -67,6 +77,13 @@ export class HomePage implements OnInit, OnDestroy {
         if (overview) {
           this.syncOpenAccordions(overview);
         }
+      });
+
+    this.calendarService.parentMetadata$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        const uid = this.calendarService.getCurrentUserId();
+        this.currentParentRole = this.calendarService.getParentRoleForUser(uid);
       });
   }
 
@@ -165,8 +182,15 @@ export class HomePage implements OnInit, OnDestroy {
   /**
    * פורמט תאריך
    */
-  formatDate(date: Date): string {
-    return new Date(date).toLocaleDateString('he-IL', { 
+  formatDate(date: Date | string | null | undefined): string {
+    if (!date) {
+      return 'ללא תאריך יעד';
+    }
+    const d = new Date(date);
+    if (isNaN(d.getTime())) {
+      return 'ללא תאריך יעד';
+    }
+    return d.toLocaleDateString('he-IL', { 
       weekday: 'long', 
       year: 'numeric', 
       month: 'long', 
@@ -205,6 +229,32 @@ export class HomePage implements OnInit, OnDestroy {
       'low': 'medium'
     };
     return colors[priority] || 'medium';
+  }
+
+  getPriorityLabel(priority: string): string {
+    const labels: { [key: string]: string } = {
+      urgent: 'דחוף',
+      high: 'גבוה',
+      medium: 'בינוני',
+      low: 'נמוך'
+    };
+    return labels[priority] || priority;
+  }
+
+  async completeTask(task: Task, checked: boolean) {
+    if (!checked) {
+      return;
+    }
+    try {
+      await this.taskHistoryService.updateStatus(task.id, TaskStatus.COMPLETED);
+    } catch (error) {
+      const toast = await this.toastCtrl.create({
+        message: 'לא הצלחנו לעדכן משימה',
+        duration: 2000,
+        color: 'danger'
+      });
+      toast.present();
+    }
   }
 
   /**
@@ -343,6 +393,29 @@ export class HomePage implements OnInit, OnDestroy {
 
   getRequestTypeLabel(request: SwapRequest): string {
     return request.requestType === 'one-way' ? 'בקשה ללא החזרה' : 'בקשת החלפה';
+  }
+
+  canApproveExpense(expense: Expense): boolean {
+    return (
+      !!this.currentUserId &&
+      expense.status === ExpenseStatus.PENDING &&
+      expense.paidBy !== this.currentUserId
+    );
+  }
+
+  async handleExpenseApproval(expenseId: string, approved: boolean, event?: Event) {
+    event?.stopPropagation();
+    const expense = this.dailyOverview?.pendingExpenses.find(e => e.id === expenseId);
+    if (!expense || !this.canApproveExpense(expense)) {
+      return;
+    }
+    try {
+      await this.expenseStore.setStatus(expenseId, approved ? 'approved' : 'rejected');
+      await this.presentToast(approved ? 'ההוצאה אושרה' : 'ההוצאה נדחתה');
+    } catch (error) {
+      console.error('Failed to update expense from home', error);
+      await this.presentToast('לא הצלחנו לעדכן את ההוצאה', 'danger');
+    }
   }
 
   private mapSwapErrorMessage(code?: string): string {

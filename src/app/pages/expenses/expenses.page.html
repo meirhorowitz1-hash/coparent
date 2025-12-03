@@ -1,4 +1,3 @@
-
 <ion-header [translucent]="true">
   <ion-toolbar>
     <ion-title>הוצאות</ion-title>
@@ -18,242 +17,503 @@
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <section class="summary-card" >
-    <div>
-      <p class="eyebrow">סה״כ הוצאות מאושרות</p>
-      <h1>{{ totalAmount | currency:'ILS':'symbol':'1.0-0':'he-IL' }}</h1>
-      <p class="meta">מאושרות בלבד</p>
-      <p class="pending-link">
-        ממתינות לאישור: {{ pendingExpenses.length }}
-        <span *ngIf="pendingExpenses.length">({{ formatCurrency(pendingTotal) }})</span>
-      </p>
-  
-    </div>
-       <ion-button color="warning" size="small" (click)="openSummaryModal()">
-      פירוט הוצאות 
-    </ion-button>
-  </section>
-
-  <!-- <div class="pending-alert" *ngIf="pendingExpenses.length">
-    <div class="alert-body">
-      <ion-icon name="alert-circle-outline"></ion-icon>
-      <div>
-        <strong>יש {{ pendingExpenses.length }} הוצאות שממתינות לאישור</strong>
-        <p>סה״כ {{ formatCurrency(pendingTotal) }}</p>
+  <!-- כרטיסי סיכום -->
+  <div class="summary-cards">
+    <!-- כרטיס הוצאות מאושרות -->
+    <div class="stat-card approved">
+      <div class="stat-icon">
+        <ion-icon name="checkmark-circle"></ion-icon>
+      </div>
+      <div class="stat-content">
+        <p class="stat-label">הוצאות מאושרות</p>
+        <h2 class="stat-value">{{ formatCurrency(totalAmount) }}</h2>
+        <p class="stat-meta">{{ approvedExpenses.length }} הוצאות</p>
       </div>
     </div>
-    <ion-button color="warning" size="small" (click)="openSummaryModal(true)">
-      פירוט הוצאות ממתינות
-    </ion-button>
-  </div> -->
 
-  <ion-button
-    expand="block"
-    fill="outline"
-    color="primary"
-    class="ion-margin-horizontal"
-    (click)="openPaymentModal()">
+    <!-- כרטיס הוצאות ממתינות -->
+    <div class="stat-card pending" (click)="scrollToExpenses()">
+      <div class="stat-icon">
+        <ion-icon name="time"></ion-icon>
+      </div>
+      <div class="stat-content">
+        <p class="stat-label">ממתינות לאישור</p>
+        <h2 class="stat-value">{{ formatCurrency(pendingTotal) }}</h2>
+        <p class="stat-meta">{{ pendingExpenses.length }} הוצאות</p>
+      </div>
+    </div>
+
+    <!-- כרטיס תשלום חודשי -->
+    <div class="stat-card payment" *ngIf="currentMonthReport">
+      <div class="stat-icon">
+        <ion-icon [name]="currentMonthReport.balance === 0 ? 'checkmark-circle' : 'swap-horizontal'"></ion-icon>
+      </div>
+      <div class="stat-content">
+        <p class="stat-label">תשלום חודשי</p>
+        <h2 class="stat-value" [class.positive]="currentMonthReport.balance < 0" [class.negative]="currentMonthReport.balance > 0">
+          {{ formatCurrency(Math.abs(currentMonthReport.balance)) }}
+        </h2>
+        <p class="stat-meta">{{ getPaymentMessage(currentMonthReport) }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- כפתור חישוב מפורט -->
+  <ion-button expand="block" fill="outline" class="calculate-btn ion-margin" (click)="openPaymentModal()">
     <ion-icon slot="start" name="calculator-outline"></ion-icon>
-    חישוב תשלומים
+    חישוב מפורט
   </ion-button>
 
-  @if (!showAddForm && !editingExpenseId) {
-    <ion-button expand="block" fill="solid" color="primary" class="ion-margin" (click)="showAddForm = true">
-      <ion-icon slot="start" name="add-circle-outline"></ion-icon>
-      הוסף הוצאה חדשה
-    </ion-button>
-  }
-
-  @if (showAddForm || editingExpenseId) {
-    <section class="form-card">
-      <div class="section-heading">
-        <h2>{{ editingExpenseId ? 'עריכת הוצאה' : 'הוספת הוצאה חדשה' }}</h2>
-        <p>הכניסו שם, סכום וצרפו קבלה במידת הצורך</p>
+  <!-- הוצאות החודש הנוכחי -->
+  <section class="expenses-section" #expensesSection>
+    @if (currentMonthExpenses.length) {
+      <div class="section-heading ion-margin-start ion-margin-end">
+        <h2>{{ currentMonthLabel }}</h2>
       </div>
 
-      <form [formGroup]="expenseForm" (ngSubmit)="addExpense()">
-        <ion-item [class.invalid]="expenseForm.get('title')?.invalid && expenseForm.get('title')?.touched">
-          <ion-label position="stacked">שם ההוצאה *</ion-label>
-          <ion-input formControlName="title" type="text" placeholder="לדוגמה: ציוד לבית ספר"></ion-input>
-        </ion-item>
+      <ion-accordion-group class="expenses-accordion">
+        @for (expense of currentMonthExpenses; track expense.id) {
+          <ion-accordion [value]="expense.id" class="expense-accordion" [class.pending]="expense.status === 'pending'">
+            <ion-item slot="header" lines="none" class="accordion-header">
+              <div class="avatar-circle">
+                {{ expense.title?.charAt(0) || 'ה' }}
+                <span class="status-indicator" [class]="expense.status"></span>
+              </div>
+              <ion-label>
+                <h3>{{ expense.title }}</h3>
+                <p>{{ expense.createdByName || 'הורה' }}</p>
+              </ion-label>
+              <div slot="end" class="header-end-section">
+                @if (expense.receiptPreview) {
+                  <ion-button 
+                    fill="clear" 
+                    size="small" 
+                    class="receipt-icon-btn"
+                    (click)="openReceipt(expense); $event.stopPropagation()">
+                    <ion-icon slot="icon-only" name="document-attach" color="primary"></ion-icon>
+                  </ion-button>
+                }
+                <div class="amount-display">
+                  <strong>{{ formatCurrency(expense.amount) }}</strong>
+                </div>
+              </div>
+            </ion-item>
 
-        <ion-item [class.invalid]="expenseForm.get('amount')?.invalid && expenseForm.get('amount')?.touched">
-          <ion-label position="stacked">סכום (₪) *</ion-label>
-          <ion-input formControlName="amount" type="number" min="1" inputmode="decimal" placeholder="0.00"></ion-input>
-        </ion-item>
+            <div slot="content" class="accordion-content">
+              <div class="shares-section">
+                <div class="share-item" 
+                     [class.highlighted]="currentParentRole === 'parent1'"
+                     [class.paid-by-this]="expense.createdBy === getParentUidByRole('parent1')"
+                     [class.owes-to-this]="expense.createdBy !== getParentUidByRole('parent1') && expense.splitParent1 > 0">
+                  <div class="share-icon">
+                    <ion-icon name="person-circle-outline"></ion-icon>
+                  </div>
+                  <div class="share-details">
+                    <p class="share-label">
+                      {{ currentParentRole === 'parent1' ? 'My share' : 'Share of ' + parentNames.parent1 }}
+                      <span class="payment-badge" *ngIf="expense.createdBy === getParentUidByRole('parent1')">שילם</span>
+                      <span class="owes-badge" *ngIf="expense.createdBy !== getParentUidByRole('parent1') && expense.splitParent1 > 0">צריך להעביר</span>
+                    </p>
+                    <strong class="share-amount">{{ formatCurrency(calculateShare(expense.amount, expense.splitParent1)) }}</strong>
+                    <span class="share-percent">{{ expense.splitParent1 }}%</span>
+                  </div>
+                </div>
 
-        <ion-item>
-          <ion-label position="stacked">תאריך ההוצאה *</ion-label>
-          <ion-datetime-button
-            datetime="expense-date-picker">
-          </ion-datetime-button>
-        </ion-item>
-        <ion-modal keepContentsMounted="true">
-          <ng-template>
-            <ion-datetime
-              id="expense-date-picker"
-              presentation="date"
-              formControlName="date"
-              locale="he-IL">
-            </ion-datetime>
-          </ng-template>
-        </ion-modal>
+                <div class="share-item" 
+                     [class.highlighted]="currentParentRole === 'parent2'"
+                     [class.paid-by-this]="expense.createdBy === getParentUidByRole('parent2')"
+                     [class.owes-to-this]="expense.createdBy !== getParentUidByRole('parent2') && (100 - expense.splitParent1) > 0">
+                  <div class="share-icon">
+                    <ion-icon name="person-circle"></ion-icon>
+                  </div>
+                  <div class="share-details">
+                    <p class="share-label">
+                      {{ currentParentRole === 'parent2' ? 'My share' : 'Share of ' + parentNames.parent2 }}
+                      <span class="payment-badge" *ngIf="expense.createdBy === getParentUidByRole('parent2')">שילם</span>
+                      <span class="owes-badge" *ngIf="expense.createdBy !== getParentUidByRole('parent2') && (100 - expense.splitParent1) > 0">צריך להעביר</span>
+                    </p>
+                    <strong class="share-amount">{{ formatCurrency(calculateShare(expense.amount, 100 - expense.splitParent1)) }}</strong>
+                    <span class="share-percent">{{ 100 - expense.splitParent1 }}%</span>
+                  </div>
+                </div>
+              </div>
 
-        <ion-item>
-          <ion-label position="stacked">מסמך / הערות</ion-label>
-          <ion-textarea formControlName="notes" rows="3" placeholder="הקלידו תיאור קצר או תיעוד נוסף"></ion-textarea>
-        </ion-item>
-
-        <div class="split-card">
-          <div class="split-header">
-            <div>
-              <p class="eyebrow">חלוקת הוצאה</p>
-              <strong>{{ getCurrentUserShareLabel() }}</strong>
-            </div>
-            <div class="split-legend">
-              <span>{{ parentNames.parent1 }} • {{ expenseForm.value.splitParent1 || 0 }}%</span>
-              <span>{{ parentNames.parent2 }} • {{ 100 - (expenseForm.value.splitParent1 || 0) }}%</span>
-            </div>
-          </div>
-          <ion-range
-            formControlName="splitParent1"
-            min="0"
-            max="100"
-            step="5"
-            pin="true">
-            <ion-icon size="small" slot="start" name="person-circle-outline"></ion-icon>
-            <ion-icon size="small" slot="end" name="person-circle"></ion-icon>
-          </ion-range>
-        </div>
-
-        <div class="receipt-upload">
-          <div class="upload-row" (click)="receiptInput.click()">
-            <ion-icon name="cloud-upload-outline"></ion-icon>
-            <div>
-              <strong>{{ pendingReceipt?.name || 'צרפו קבלה (PDF/JPG)' }}</strong>
-              @if (!pendingReceipt) {
-                <p>לא חובה, אך עוזר לשקיפות</p>
+              <!-- Actions for creator: Edit/Delete -->
+              @if (expense.status === 'pending' && isExpenseCreator(expense)) {
+                <div class="card-actions">
+                  <ion-button expand="block" fill="outline" color="danger" (click)="deleteExpense(expense)">
+                    <ion-icon slot="start" name="trash-outline"></ion-icon>
+                    מחק
+                  </ion-button>
+                  <ion-button expand="block" fill="outline" color="medium" (click)="editExpense(expense)">
+                    <ion-icon slot="start" name="create-outline"></ion-icon>
+                    ערוך
+                  </ion-button>
+                </div>
               }
-              @if (pendingReceipt) {
-                <p>{{ (pendingReceipt.size / 1024) | number:'1.0-0' }}KB</p>
-              }
-            </div>
-            <ion-button fill="clear" size="small">
-              בחר קובץ
-            </ion-button>
-          </div>
 
-          @if (pendingReceiptPreview) {
-            <div class="receipt-preview">
-              <img [src]="pendingReceiptPreview" alt="קבלה" />
-              @if (pendingReceiptPreview) {
-                <ion-button
-                  fill="clear"
-                  color="primary"
-                  size="small"
-                  (click)="openReceiptPreview()">
-                  הצג קבלה
+              <!-- Actions for non-creator: Approve/Reject -->
+              @if (expense.status === 'pending' && !isExpenseCreator(expense)) {
+                <div class="card-actions">
+                  <ion-button expand="block" fill="outline" color="danger" (click)="approveExpense(expense, false)">
+                    דחה
+                  </ion-button>
+                  <ion-button expand="block" color="primary" (click)="approveExpense(expense, true)">
+                    אשר
+                  </ion-button>
+                </div>
+              }
+
+              @if (expense.status === 'approved' && !expense.isPaid) {
+                <ion-button 
+                  expand="block" 
+                  fill="outline" 
+                  color="tertiary" 
+                  class="ion-margin-top"
+                  (click)="markPaid(expense)">
+                  סמן כשולם
                 </ion-button>
               }
-              <ion-button fill="clear" color="danger" size="small" (click)="removePendingReceipt()">
-                הסר
+
+              @if (expense.status === 'approved' && expense.isPaid) {
+                <ion-badge color="success" class="paid-badge">
+                  <ion-icon name="checkmark-circle"></ion-icon>
+                  שולם
+                </ion-badge>
+              }
+            </div>
+          </ion-accordion>
+        }
+      </ion-accordion-group>
+    } @else {
+      <div class="empty-state">
+        <ion-icon name="receipt-outline"></ion-icon>
+        <p>אין הוצאות לחודש הנוכחי</p>
+      </div>
+    }
+  </section>
+
+  <!-- כפתור מרחף להוספת הוצאה -->
+  <ion-fab vertical="bottom" horizontal="end" slot="fixed">
+    <ion-fab-button (click)="openAddExpenseModal()" color="primary">
+      <ion-icon name="add"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+
+  <!-- Add/Edit Expense Modal -->
+  <ion-modal [isOpen]="addExpenseModalOpen" (didDismiss)="closeAddExpenseModal()">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>{{ editingExpenseId ? 'עריכת הוצאה' : 'הוספת הוצאה חדשה' }}</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="closeAddExpenseModal()">
+              <ion-icon slot="icon-only" name="close"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+        <form [formGroup]="expenseForm" (ngSubmit)="addExpense()">
+          <ion-item [class.invalid]="expenseForm.get('title')?.invalid && expenseForm.get('title')?.touched">
+            <ion-label position="stacked">שם ההוצאה *</ion-label>
+            <ion-input formControlName="title" type="text" placeholder="לדוגמה: ציוד לבית ספר"></ion-input>
+          </ion-item>
+
+          <ion-item [class.invalid]="expenseForm.get('amount')?.invalid && expenseForm.get('amount')?.touched">
+            <ion-label position="stacked">סכום (₪) *</ion-label>
+            <ion-input formControlName="amount" type="number" min="1" inputmode="decimal" placeholder="0.00"></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">תאריך ההוצאה *</ion-label>
+            <ion-datetime-button datetime="expense-date-picker"></ion-datetime-button>
+          </ion-item>
+          <ion-modal keepContentsMounted="true">
+            <ng-template>
+              <ion-datetime
+                id="expense-date-picker"
+                presentation="date"
+                formControlName="date"
+                locale="he-IL">
+              </ion-datetime>
+            </ng-template>
+          </ion-modal>
+
+          <ion-item>
+            <ion-label position="stacked">מסמך / הערות</ion-label>
+            <ion-textarea formControlName="notes" rows="3" placeholder="הקלידו תיאור קצר או תיעוד נוסף"></ion-textarea>
+          </ion-item>
+
+          <div class="split-card">
+            <div class="split-header">
+              <div>
+                <p class="eyebrow">חלוקת הוצאה</p>
+                <strong>{{ getCurrentUserShareLabel() }}</strong>
+              </div>
+              <div class="split-legend">
+                <span>{{ parentNames.parent1 }} • {{ expenseForm.value.splitParent1 || 0 }}%</span>
+                <span>{{ parentNames.parent2 }} • {{ 100 - (expenseForm.value.splitParent1 || 0) }}%</span>
+              </div>
+            </div>
+            <ion-range
+              formControlName="splitParent1"
+              min="0"
+              max="100"
+              step="5"
+              pin="true">
+              <ion-icon size="small" slot="start" name="person-circle-outline"></ion-icon>
+              <ion-icon size="small" slot="end" name="person-circle"></ion-icon>
+            </ion-range>
+          </div>
+
+          <div class="receipt-upload">
+            <div class="upload-row" (click)="receiptInput.click()">
+              <ion-icon name="cloud-upload-outline"></ion-icon>
+              <div>
+                <strong>{{ pendingReceipt?.name || 'צרפו קבלה (PDF/JPG)' }}</strong>
+                @if (!pendingReceipt) {
+                  <p>לא חובה, אך עוזר לשקיפות</p>
+                }
+                @if (pendingReceipt) {
+                  <p>{{ (pendingReceipt.size / 1024) | number:'1.0-0' }}KB</p>
+                }
+              </div>
+              <ion-button fill="clear" size="small">
+                בחר קובץ
               </ion-button>
             </div>
-          }
 
-          <input
-            type="file"
-            accept="image/*,application/pdf"
-            hidden
-            #receiptInput
-            (change)="onReceiptSelected($event)" />
-        </div>
+            @if (pendingReceiptPreview) {
+              <div class="receipt-preview">
+                <img [src]="pendingReceiptPreview" alt="קבלה" />
+                @if (pendingReceiptPreview) {
+                  <ion-button
+                    fill="clear"
+                    color="primary"
+                    size="small"
+                    (click)="openReceiptPreview()">
+                    הצג קבלה
+                  </ion-button>
+                }
+                <ion-button fill="clear" color="danger" size="small" (click)="removePendingReceipt()">
+                  הסר
+                </ion-button>
+              </div>
+            }
 
-        <ion-button expand="block" type="submit" [disabled]="expenseForm.invalid || isSubmitting">
-          <ion-icon slot="start" name="add-circle-outline"></ion-icon>
-          {{ editingExpenseId ? 'עדכן הוצאה' : 'הוסף הוצאה' }}
-        </ion-button>
-        @if (editingExpenseId) {
-          <ion-button expand="block" fill="clear" color="medium" (click)="cancelEdit()">
-            בטל עריכה
+            <input
+              type="file"
+              accept="image/*,application/pdf"
+              hidden
+              #receiptInput
+              (change)="onReceiptSelected($event)" />
+          </div>
+
+          <ion-button expand="block" type="submit" [disabled]="expenseForm.invalid || isSubmitting" class="ion-margin-top">
+            <ion-icon slot="start" name="add-circle-outline"></ion-icon>
+            {{ editingExpenseId ? 'עדכן הוצאה' : 'הוסף הוצאה' }}
           </ion-button>
-        }
-      </form>
-    </section>
-  }
+          @if (editingExpenseId) {
+            <ion-button expand="block" fill="clear" color="medium" (click)="cancelEdit()">
+              בטל עריכה
+            </ion-button>
+          }
+        </form>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
 
-  @if (!groupedExpenses.length) {
-    <div class="empty-state">
-      <ion-icon name="receipt-outline"></ion-icon>
-      <p>עדיין לא נוספו הוצאות. התחילו כדי לשמור על שקיפות.</p>
-    </div>
-  }
-
+  <!-- Payment Modal - Receipt Style -->
   <ion-modal [isOpen]="paymentModalOpen" (didDismiss)="closePaymentModal()">
     <ng-template>
       <ion-header>
         <ion-toolbar>
-          <ion-title>חישוב תשלומים</ion-title>
+          <ion-title>סיכום חודשי</ion-title>
           <ion-buttons slot="end">
+            <ion-button (click)="downloadReceipt()" fill="clear">
+              <ion-icon slot="icon-only" name="download-outline"></ion-icon>
+            </ion-button>
             <ion-button (click)="closePaymentModal()">
               <ion-icon slot="icon-only" name="close"></ion-icon>
             </ion-button>
           </ion-buttons>
         </ion-toolbar>
       </ion-header>
-      <ion-content class="ion-padding" *ngIf="paymentBreakdowns">
-        <div *ngFor="let item of paymentBreakdowns" class="payment-block">
-          <div class="payment-header">
-            <div>
-              <p class="eyebrow">{{ item.label }}</p>
-              <strong>{{ formatCurrency(item.report.approvedTotal) }} סה״כ מאושר</strong>
+      <ion-content class="ion-padding receipt-modal" *ngIf="paymentBreakdowns">
+        <div *ngFor="let item of paymentBreakdowns" class="receipt-container" #receiptContent>
+          <!-- Receipt Header -->
+          <div class="receipt-header">
+            <div class="receipt-logo">
+              <ion-icon name="receipt-outline"></ion-icon>
             </div>
-            <p class="balance" [class.positive]="item.report.balance < 0" [class.negative]="item.report.balance > 0">
-              {{ getPaymentMessage(item.report) }}
-            </p>
+            <h2>סיכום הוצאות</h2>
+            <p class="receipt-period">{{ item.label }}</p>
+            <p class="receipt-date">תאריך: {{ getCurrentDate() }}</p>
           </div>
 
-          <ion-list lines="none">
-            <ion-item>
-              <ion-label>{{ parentNames.parent1 }}</ion-label>
-              <strong slot="end">{{ formatCurrency(item.report.parent1Share) }}</strong>
-            </ion-item>
-            <ion-item>
-              <ion-label>{{ parentNames.parent2 }}</ion-label>
-              <strong slot="end">{{ formatCurrency(item.report.parent2Share) }}</strong>
-            </ion-item>
-            <ion-item>
-              <ion-label>מזונות</ion-label>
-              <div slot="end">
-                <strong>{{ formatCurrency(item.report.alimonyAmount) }}</strong>
-                <p class="byline" *ngIf="item.report.alimonyPayer">
-                  משלם: {{ getParentDisplayName(item.report.alimonyPayer) }}
-                </p>
+          <!-- Expenses List -->
+          <div class="receipt-section">
+            <div class="receipt-section-title">
+              <ion-icon name="list-outline"></ion-icon>
+              <span>פירוט הוצאות</span>
+            </div>
+            
+            <div class="receipt-table">
+              <div class="receipt-table-header">
+                <div class="col-description">תיאור</div>
+                <div class="col-paid-by">שולם ע"י</div>
+                <div class="col-amount">סכום</div>
+                <div class="col-parent1">{{ parentNames.parent1 }}</div>
+                <div class="col-parent2">{{ parentNames.parent2 }}</div>
               </div>
-            </ion-item>
-          </ion-list>
 
-          <div class="mini-list">
-            <p class="eyebrow">פירוט הוצאות מאושרות</p>
-            <ion-list lines="none">
-              <ion-item *ngFor="let expense of item.expenses">
-                <ion-label>
+              <div class="receipt-table-row" *ngFor="let expense of item.expenses">
+                <div class="col-description">
                   <strong>{{ expense.title }}</strong>
-                  <p class="byline">{{ formatCurrency(expense.amount) }}</p>
-                </ion-label>
-                <div slot="end" class="split-row">
-                  <span>{{ parentNames.parent1 }}: {{ formatCurrency(calculateShare(expense.amount, expense.splitParent1)) }}</span>
-                  <br />
-                  <span>{{ parentNames.parent2 }}: {{ formatCurrency(calculateShare(expense.amount, 100 - expense.splitParent1)) }}</span>
+                  <p *ngIf="expense.notes" class="expense-note">{{ expense.notes }}</p>
                 </div>
-              </ion-item>
-            </ion-list>
+                <div class="col-paid-by">
+                  <span class="paid-by-badge">{{ getExpensePaidByName(expense) }}</span>
+                </div>
+                <div class="col-amount">{{ formatCurrency(expense.amount) }}</div>
+                <div class="col-parent1" 
+                     [class.paid-amount]="expense.createdBy === getParentUidByRole('parent1')"
+                     [class.owes-amount]="expense.createdBy !== getParentUidByRole('parent1')">
+                  {{ formatCurrency(calculateShare(expense.amount, expense.splitParent1)) }}
+                </div>
+                <div class="col-parent2" 
+                     [class.paid-amount]="expense.createdBy === getParentUidByRole('parent2')"
+                     [class.owes-amount]="expense.createdBy !== getParentUidByRole('parent2')">
+                  {{ formatCurrency(calculateShare(expense.amount, 100 - expense.splitParent1)) }}
+                </div>
+              </div>
+
+              <!-- Subtotal -->
+              <div class="receipt-table-row subtotal-row">
+                <div class="col-description"><strong>סה"כ הוצאות</strong></div>
+                <div class="col-paid-by"></div>
+                <div class="col-amount"><strong>{{ formatCurrency(item.report.approvedTotal) }}</strong></div>
+                <div class="col-parent1"><strong>{{ formatCurrency(item.report.parent1Share) }}</strong></div>
+                <div class="col-parent2"><strong>{{ formatCurrency(item.report.parent2Share) }}</strong></div>
+              </div>
+
+              <!-- Alimony if applicable -->
+
+            </div>
           </div>
+
+          <!-- Final Settlement -->
+          <div class="receipt-section final-section">
+            <div class="receipt-section-title">
+              <ion-icon name="calculator-outline"></ion-icon>
+              <span>חישוב סופי</span>
+            </div>
+
+            <div class="final-settlement">
+              <!-- Detailed Calculation Breakdown -->
+              <div class="calculation-breakdown">
+                <!-- Parent 1 Calculation -->
+                <div class="parent-calculation">
+                  <div class="parent-calc-header">
+                    <ion-icon name="person-circle-outline"></ion-icon>
+                    <h4>{{ parentNames.parent1 }}</h4>
+                  </div>
+                  
+                  <div class="calc-details">
+                    <div class="calc-row paid-row">
+                      <span class="calc-label">שילם בפועל</span>
+                      <span class="calc-value paid">{{ formatCurrency(getDetailedCalculation(item.expenses).parent1.totalPaid) }}</span>
+                    </div>
+                    <div class="calc-row owes-row">
+                      <span class="calc-label">צריך לשלם</span>
+                      <span class="calc-value owes">{{ formatCurrency(item.report.parent1Share) }}</span>
+                    </div>
+                    <div class="calc-row balance-row" 
+                         [class.credit]="getDetailedCalculation(item.expenses).parent1.balance > 0"
+                         [class.debit]="getDetailedCalculation(item.expenses).parent1.balance < 0">
+                      <span class="calc-label">{{ getDetailedCalculation(item.expenses).parent1.balance > 0 ? 'חייבים לו' : 'חייב' }}</span>
+                      <span class="calc-value">{{ formatCurrency(Math.abs(getDetailedCalculation(item.expenses).parent1.balance)) }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Parent 2 Calculation -->
+                <div class="parent-calculation">
+                  <div class="parent-calc-header">
+                    <ion-icon name="person-circle"></ion-icon>
+                    <h4>{{ parentNames.parent2 }}</h4>
+                  </div>
+                  
+                  <div class="calc-details">
+                    <div class="calc-row paid-row">
+                      <span class="calc-label">שילם בפועל</span>
+                      <span class="calc-value paid">{{ formatCurrency(getDetailedCalculation(item.expenses).parent2.totalPaid) }}</span>
+                    </div>
+                    <div class="calc-row owes-row">
+                      <span class="calc-label">צריך לשלם</span>
+                      <span class="calc-value owes">{{ formatCurrency(item.report.parent2Share) }}</span>
+                    </div>
+                    <div class="calc-row balance-row"
+                         [class.credit]="getDetailedCalculation(item.expenses).parent2.balance > 0"
+                         [class.debit]="getDetailedCalculation(item.expenses).parent2.balance < 0">
+                      <span class="calc-label">{{ getDetailedCalculation(item.expenses).parent2.balance > 0 ? 'חייבים לו' : 'חייב' }}</span>
+                      <span class="calc-value">{{ formatCurrency(Math.abs(getDetailedCalculation(item.expenses).parent2.balance)) }}</span>
+                    </div>
+                  </div>
+                </div>
+                  <div class="alimony-calculation" *ngIf="item.report.alimonyAmount > 0">
+                  <div class="alimony-header">
+                    <ion-icon name="cash-outline"></ion-icon>
+                    <h4>מזונות חודשיים</h4>
+                  </div>
+                  <div class="alimony-details">
+                    <div class="alimony-row">
+                      <span class="alimony-label">משלם: {{ getParentDisplayName(item.report.alimonyPayer) }}</span>
+                      <span class="alimony-value">{{ formatCurrency(item.report.alimonyAmount) }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="final-balance" [class.balanced]="item.report.balance === 0">
+                <div class="balance-icon">
+                  <ion-icon [name]="item.report.balance === 0 ? 'checkmark-circle' : 'swap-horizontal'"></ion-icon>
+                </div>
+                <div class="balance-content">
+                  <p class="balance-label">סכום להעברה</p>
+                  <h3 class="balance-amount" [class.positive]="item.report.balance < 0" [class.negative]="item.report.balance > 0">
+                    {{ formatCurrency(Math.abs(item.report.balance)) }}
+                  </h3>
+                  <p class="balance-description">{{ getPaymentMessage(item.report) }}</p>
+                </div>
+              </div>
+              
+            </div>
+          </div>
+
+          <!-- Receipt Footer -->
+          <div class="receipt-footer">
+            <p class="footer-note">
+              <ion-icon name="information-circle-outline"></ion-icon>
+              מסמך זה נוצר אוטומטית על ידי מערכת ניהול הוצאות משותפות
+            </p>
+            <p class="footer-timestamp">{{ getCurrentDateTime() }}</p>
+          </div>
+        </div>
+
+        <!-- Download Button (Fixed) -->
+        <div class="download-button-container">
+          <ion-button expand="block" (click)="downloadReceipt()" color="primary" size="large">
+            <ion-icon slot="start" name="download-outline"></ion-icon>
+            הורד כ-PDF
+          </ion-button>
         </div>
       </ion-content>
     </ng-template>
   </ion-modal>
 
+  <!-- Settings Modal -->
   <ion-modal [isOpen]="settingsModalOpen" (didDismiss)="closeSettingsModal()">
     <ng-template>
       <ion-header>
@@ -335,130 +595,6 @@
             שמור הגדרות
           </ion-button>
         </form>
-      </ion-content>
-    </ng-template>
-  </ion-modal>
-
-  <ion-modal [isOpen]="summaryModalOpen" (didDismiss)="closeSummaryModal()">
-    <ng-template>
-      <ion-header>
-        <ion-toolbar>
-          <ion-title>פירוט חודשי</ion-title>
-          <ion-buttons slot="end">
-            <ion-button (click)="closeSummaryModal()">
-              <ion-icon slot="icon-only" name="close"></ion-icon>
-            </ion-button>
-          </ion-buttons>
-        </ion-toolbar>
-      </ion-header>
-      <ion-content class="ion-padding">
-        @if (groupedExpenses.length) {
-          <div class="month-card" *ngFor="let bucket of groupedExpenses">
-            @if (getMonthlyReport(bucket.expenses); as report) {
-              <div class="month-header">
-                <div>
-                  <h3>{{ bucket.label }}</h3>
-                  <p>{{ bucket.expenses.length }} הוצאות</p>
-                </div>
-                <div class="month-totals">
-                  <strong>{{ formatCurrency(report.total) }}</strong>
-                  <span>סה״כ</span>
-                </div>
-              </div>
-
-              <div class="report-row">
-                <div>
-                  <label>ממתין</label>
-                  <span>{{ formatCurrency(report.pendingTotal) }}</span>
-                </div>
-                <div>
-                  <label>מאושר</label>
-                  <span>{{ formatCurrency(report.approvedTotal) }}</span>
-                </div>
-              </div>
-
-              <ion-list lines="none">
-                <ion-item *ngFor="let expense of bucket.expenses">
-                  <ion-avatar slot="start">
-                    <div class="avatar">{{ expense.title.charAt(0) }}</div>
-                  </ion-avatar>
-                  <ion-label>
-                    <div class="item-header">
-                      <h3>{{ expense.title }}</h3>
-                      <span class="status-chip" [class]="expense.status">
-                        {{ expense.status === 'pending' ? 'ממתין לאישור' : expense.status === 'approved' ? 'מאושר' : 'נדחה' }}
-                      </span>
-                    </div>
-                    <p>
-                      {{ expense.date | date:'dd/MM/yyyy' }}
-                      <span class="byline">• הוסף ע"י {{ expense.createdByName || expense.createdBy || 'לא ידוע' }}</span>
-                    </p>
-                    @if (expense.notes) {
-                      <p>{{ expense.notes }}</p>
-                    }
-                    @if (isFixedExpense(expense)) {
-                      <p class="meta">הוצאה קבועה</p>
-                    }
-                  </ion-label>
-                  <div class="amount-chip">
-                    {{ formatCurrency(expense.amount) }}
-                  </div>
-            <div class="item-actions">
-              @if (expense.status === 'pending') {
-                <ion-button
-                  size="small"
-                  fill="clear"
-                  color="dark"
-                  (click)="editExpense(expense)">
-                  ערוך
-                </ion-button>
-                <ion-button
-                  size="small"
-                  fill="clear"
-                  color="danger"
-                  (click)="deleteExpense(expense)">
-                  מחק
-                </ion-button>
-              }
-              @if (expense.status === 'pending' && canApproveExpenses) {
-                <ion-button
-                  size="small"
-                  fill="clear"
-                  color="success"
-                  (click)="approveExpense(expense, true)">
-                        אשר
-                      </ion-button>
-                      <ion-button
-                        size="small"
-                        fill="clear"
-                        color="medium"
-                        (click)="approveExpense(expense, false)">
-                        דחה
-                      </ion-button>
-                    }
-                    @if (expense.status === 'approved') {
-                      <ion-button
-                        size="small"
-                        fill="clear"
-                        color="tertiary"
-                        (click)="markPaid(expense)">
-                        {{ expense.isPaid ? 'שולם' : 'סמן כשולם' }}
-                      </ion-button>
-                    }
-                    @if (expense.receiptPreview) {
-                      <ion-button
-                        fill="clear"
-                        size="small"
-                        (click)="openReceipt(expense)">
-                        קבלה
-                      </ion-button>
-                    }
-                  </div>
-                </ion-item>
-              </ion-list>
-            }
-          </div>
-        }
       </ion-content>
     </ng-template>
   </ion-modal>

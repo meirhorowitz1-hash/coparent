@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { FormArray, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { ToastController } from '@ionic/angular';
 import { ActivatedRoute } from '@angular/router';
@@ -37,14 +37,18 @@ interface MonthlyReport {
   standalone: false,
 })
 export class ExpensesPage implements OnInit, OnDestroy {
+  @ViewChild('expensesSection', { read: ElementRef }) expensesSection?: ElementRef;
+
+  // הוספת Math לתבנית
+  Math = Math;
+
   expenses: ExpenseRecord[] = [];
   expenseForm: FormGroup;
   alimonyForm: FormGroup;
   editingExpenseId: string | null = null;
-  showAddForm = false;
   pendingReceipt?: File;
   pendingReceiptPreview?: string;
-  private readonly MAX_RECEIPT_PREVIEW_BYTES = 900_000; // keep below Firestore 1MB limit
+  private readonly MAX_RECEIPT_PREVIEW_BYTES = 900_000;
   isSubmitting = false;
   isSavingSettings = false;
   private destroy$ = new Subject<void>();
@@ -73,9 +77,8 @@ export class ExpensesPage implements OnInit, OnDestroy {
       }>
     | null = null;
   paymentModalOpen = false;
-  pendingModalOpen = false;
   settingsModalOpen = false;
-  summaryModalOpen = false;
+  addExpenseModalOpen = false;
 
   constructor(
     private formBuilder: FormBuilder,
@@ -141,13 +144,33 @@ export class ExpensesPage implements OnInit, OnDestroy {
         };
       });
 
-    // לא פותחים מודל אוטומטית דרך query params; המשתמש יפתח ידנית דרך המסכים
     this.route.queryParamMap.pipe(takeUntil(this.destroy$)).subscribe(() => {});
   }
 
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  scrollToExpenses() {
+    if (this.expensesSection) {
+      this.expensesSection.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  openAddExpenseModal() {
+    this.addExpenseModalOpen = true;
+  }
+
+  closeAddExpenseModal() {
+    this.addExpenseModalOpen = false;
+    if (!this.editingExpenseId) {
+      this.expenseForm.reset({
+        date: new Date().toISOString(),
+        splitParent1: this.financeSettings.defaultSplitParent1
+      });
+      this.removePendingReceipt();
+    }
   }
 
   get totalAmount(): number {
@@ -167,7 +190,6 @@ export class ExpensesPage implements OnInit, OnDestroy {
   }
 
   get canApproveExpenses(): boolean {
-    // This logic might need adjustment based on final User/Family model
     return this.currentParentRole === 'parent2';
   }
 
@@ -197,7 +219,6 @@ export class ExpensesPage implements OnInit, OnDestroy {
       addExpenseToBucket(expense, month, year);
     });
 
-    // אם אין הוצאות כלל אבל יש הוצאות קבועות, ניצור חודש נוכחי כדי להציגן
     if (buckets.size === 0 && this.financeSettings.fixedExpenses?.length) {
       const now = new Date();
       addExpenseToBucket(
@@ -235,7 +256,7 @@ export class ExpensesPage implements OnInit, OnDestroy {
 
     let parent1Share = 0;
     let parent2Share = 0;
-    let balance = 0; // חיובי = הורה 1 צריך להעביר להורה 2
+    let balance = 0;
 
     approved.forEach(expense => {
       const share1 = this.calculateShare(expense.amount, expense.splitParent1);
@@ -245,13 +266,10 @@ export class ExpensesPage implements OnInit, OnDestroy {
 
       const payer = this.resolvePayerRole(expense);
       if (payer === 'parent1') {
-        // הורה 1 שילם את כל ההוצאה, הורה 2 צריך להחזיר לו את החלק שלו
         balance -= share2;
       } else if (payer === 'parent2') {
-        // הורה 2 שילם את כל ההוצאה, הורה 1 צריך להחזיר לו את החלק שלו
         balance += share1;
       }
-      // אם לא ידוע מי שילם, מניחים שכל אחד כיסה את חלקו - ללא שינוי
     });
 
     const alimonyAmount = this.financeSettings.alimonyAmount || 0;
@@ -321,7 +339,7 @@ export class ExpensesPage implements OnInit, OnDestroy {
       splitParent1: this.financeSettings.defaultSplitParent1
     });
     this.removePendingReceipt();
-    this.showAddForm = false;
+    this.closeAddExpenseModal();
   }
 
   editExpense(expense: ExpenseRecord) {
@@ -338,6 +356,7 @@ export class ExpensesPage implements OnInit, OnDestroy {
     });
     this.pendingReceipt = undefined;
     this.pendingReceiptPreview = expense.receiptPreview;
+    this.openAddExpenseModal();
   }
 
   async deleteExpense(expense: ExpenseRecord) {
@@ -357,10 +376,7 @@ export class ExpensesPage implements OnInit, OnDestroy {
       });
       toast.present();
       if (this.editingExpenseId === expense.id) {
-        this.editingExpenseId = null;
-        this.expenseForm.reset({ date: new Date().toISOString(), splitParent1: this.financeSettings.defaultSplitParent1 });
-        this.pendingReceipt = undefined;
-        this.pendingReceiptPreview = undefined;
+        this.cancelEdit();
       }
     } catch (error) {
       console.error('Failed to delete expense', error);
@@ -408,9 +424,7 @@ export class ExpensesPage implements OnInit, OnDestroy {
       this.expenseForm.patchValue({ splitParent1: normalizedSplit });
       this.removePendingReceipt();
       this.editingExpenseId = null;
-      if (!isEdit) {
-        this.showAddForm = false;
-      }
+      this.closeAddExpenseModal();
 
       const toast = await this.toastCtrl.create({
         message: isEdit ? 'ההוצאה עודכנה' : 'ההוצאה נוספה בהצלחה',
@@ -490,9 +504,11 @@ export class ExpensesPage implements OnInit, OnDestroy {
   }
 
   async approveExpense(expense: ExpenseRecord, approved: boolean) {
-    if (!this.canApproveExpenses) {
+    // Only the non-creator can approve/reject
+    if (this.isExpenseCreator(expense)) {
       return;
     }
+    
     try {
       await this.expenseStore.setStatus(expense.id, approved ? 'approved' : 'rejected');
     } catch (error) {
@@ -504,6 +520,10 @@ export class ExpensesPage implements OnInit, OnDestroy {
       });
       toast.present();
     }
+  }
+
+  isExpenseCreator(expense: ExpenseRecord): boolean {
+    return expense.createdBy === this.currentUserId;
   }
 
   async markPaid(expense: ExpenseRecord) {
@@ -618,7 +638,6 @@ export class ExpensesPage implements OnInit, OnDestroy {
   openPaymentModal() {
     const buckets = this.groupedExpenses;
 
-    // כשיש רק מזונות ללא הוצאות, עדיין נציג כרטיס חישוב עבור החודש הנוכחי
     if (!buckets.length && (this.financeSettings.alimonyAmount || 0) > 0) {
       const now = new Date();
       const label = now.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
@@ -643,53 +662,36 @@ export class ExpensesPage implements OnInit, OnDestroy {
     this.paymentModalOpen = true;
   }
 
-  openPendingModal() {
-    this.pendingModalOpen = true;
-  }
-
-  closePendingModal() {
-    this.pendingModalOpen = false;
-  }
-
-  openSummaryModal(showPendingOnly: boolean = false) {
-    if (!this.groupedExpenses.length) {
-      return;
-    }
-
-    if (showPendingOnly) {
-      const pending = this.pendingExpenses;
-      if (!pending.length) {
-        return;
-      }
-      const pendingByMonth = this.groupedExpenses.map(bucket => ({
-        ...bucket,
-        expenses: bucket.expenses.filter(expense => expense.status === 'pending')
-      })).filter(bucket => bucket.expenses.length > 0);
-
-      if (!pendingByMonth.length) {
-        return;
-      }
-
-      // מחליפים תצוגה זמנית לפנדינג בלבד
-      this.paymentBreakdowns = pendingByMonth.map(bucket => ({
-        label: bucket.label,
-        report: this.getMonthlyReport(bucket.expenses),
-        expenses: bucket.expenses
-      }));
-    } else {
-      this.paymentBreakdowns = null;
-    }
-
-    this.summaryModalOpen = true;
-  }
-
-  closeSummaryModal() {
-    this.summaryModalOpen = false;
-  }
-
   closePaymentModal() {
     this.paymentModalOpen = false;
     this.paymentBreakdowns = null;
+  }
+
+  get currentMonthBucket() {
+    const now = new Date();
+    const month = now.getMonth();
+    const year = now.getFullYear();
+    return this.groupedExpenses.find(bucket => bucket.monthIndex === month && bucket.year === year);
+  }
+
+  get currentMonthExpenses(): ExpenseRecord[] {
+    return this.currentMonthBucket?.expenses ?? [];
+  }
+
+  get currentMonthLabel(): string {
+    if (this.currentMonthBucket?.label) {
+      return this.currentMonthBucket.label;
+    }
+    const now = new Date();
+    return now.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+  }
+
+  get currentMonthReport(): MonthlyReport | null {
+    const expenses = this.currentMonthExpenses;
+    if (!expenses.length) {
+      return null;
+    }
+    return this.getMonthlyReport(expenses);
   }
 
   getPaymentMessage(report: MonthlyReport): string {
@@ -788,7 +790,7 @@ export class ExpensesPage implements OnInit, OnDestroy {
 
   private getDataUrlSize(dataUrl: string): number {
     const base64 = dataUrl.split(',')[1] || '';
-    return Math.ceil((base64.length * 3) / 4); // approximate bytes
+    return Math.ceil((base64.length * 3) / 4);
   }
 
   private compressImage(file: File, maxDimension: number, quality: number): Promise<string | undefined> {
@@ -824,5 +826,131 @@ export class ExpensesPage implements OnInit, OnDestroy {
       reader.onerror = () => resolve(undefined);
       reader.readAsDataURL(file);
     });
+  }
+
+  getCurrentDate(): string {
+    const now = new Date();
+    return now.toLocaleDateString('he-IL', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric' 
+    });
+  }
+
+  getCurrentDateTime(): string {
+    const now = new Date();
+    return now.toLocaleString('he-IL', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  getCategorizedExpenses(expenses: ExpenseRecord[]): Array<{ name: string; total: number; parent1Share: number; parent2Share: number }> {
+    // קבוצת הוצאות לפי שם (קטגוריה)
+    const categories = new Map<string, { total: number; parent1Share: number; parent2Share: number }>();
+
+    expenses.forEach(expense => {
+      const categoryName = expense.title;
+      const share1 = this.calculateShare(expense.amount, expense.splitParent1);
+      const share2 = expense.amount - share1;
+
+      if (categories.has(categoryName)) {
+        const existing = categories.get(categoryName)!;
+        existing.total += expense.amount;
+        existing.parent1Share += share1;
+        existing.parent2Share += share2;
+      } else {
+        categories.set(categoryName, {
+          total: expense.amount,
+          parent1Share: share1,
+          parent2Share: share2
+        });
+      }
+    });
+
+    // המרה למערך
+    return Array.from(categories.entries()).map(([name, data]) => ({
+      name,
+      ...data
+    }));
+  }
+
+  getExpensePaidByName(expense: ExpenseRecord): string {
+    const { parent1, parent2 } = this.parentUids;
+    
+    if (expense.createdBy === parent1) {
+      return this.parentNames.parent1;
+    }
+    
+    if (expense.createdBy === parent2) {
+      return this.parentNames.parent2;
+    }
+    
+    return expense.createdByName || 'לא ידוע';
+  }
+
+  getParentUidByRole(role: 'parent1' | 'parent2'): string | null {
+    return this.parentUids[role];
+  }
+
+  getDetailedCalculation(expenses: ExpenseRecord[]): {
+    parent1: { totalPaid: number; balance: number };
+    parent2: { totalPaid: number; balance: number };
+  } {
+    let parent1Paid = 0;
+    let parent2Paid = 0;
+    let parent1Share = 0;
+    let parent2Share = 0;
+
+    const parent1Uid = this.parentUids.parent1;
+    const parent2Uid = this.parentUids.parent2;
+
+    expenses.forEach(expense => {
+      const share1 = this.calculateShare(expense.amount, expense.splitParent1);
+      const share2 = expense.amount - share1;
+
+      parent1Share += share1;
+      parent2Share += share2;
+
+      // מי שילם בפועל
+      if (expense.createdBy === parent1Uid) {
+        parent1Paid += expense.amount;
+      } else if (expense.createdBy === parent2Uid) {
+        parent2Paid += expense.amount;
+      }
+    });
+
+    // חישוב היתרה: שילם פחות צריך לשלם
+    // אם חיובי - חייבים לו
+    // אם שלילי - הוא חייב
+    const parent1Balance = parent1Paid - parent1Share;
+    const parent2Balance = parent2Paid - parent2Share;
+
+    return {
+      parent1: {
+        totalPaid: parent1Paid,
+        balance: parent1Balance
+      },
+      parent2: {
+        totalPaid: parent2Paid,
+        balance: parent2Balance
+      }
+    };
+  }
+
+  async downloadReceipt() {
+    const toast = await this.toastCtrl.create({
+      message: 'הורדת PDF תהיה זמינה בקרוב',
+      duration: 2000,
+      color: 'primary'
+    });
+    toast.present();
+    
+    // TODO: Implement PDF generation using jsPDF or similar library
+    // For now, this is a placeholder
+    console.log('Download receipt requested');
   }
 }

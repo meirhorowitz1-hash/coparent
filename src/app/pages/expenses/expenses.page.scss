@@ -2,72 +2,145 @@
   ion-content {
     --background: transparent;
     padding: clamp(16px, 4vw, 32px);
+    padding-bottom: 100px;
     display: flex;
     flex-direction: column;
     gap: var(--space-5);
   }
 }
 
-.summary-card,
-.form-card,
-.list-card {
-  border-radius: 18px;
-  background: var(--app-surface, #fff);
-  padding: var(--space-5);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--app-border);
+/* Summary Cards Grid */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
-.summary-card {
+.stat-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 20px;
+  padding: 20px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 16px;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  transition: all 0.3s ease;
 
-  .eyebrow {
-    margin: 0;
-    text-transform: uppercase;
-    font-size: var(--text-xs);
-    color: var(--app-text-tertiary);
-    letter-spacing: 0.08em;
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
   }
 
-  h1 {
-    margin: var(--space-2) 0 0;
-    font-size: clamp(28px, 6vw, 40px);
+  &.approved {
+    .stat-icon {
+      background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+      
+      ion-icon {
+        color: #059669;
+      }
+    }
   }
 
-  ion-icon {
-    font-size: 48px;
-    color: var(--ion-color-primary);
-  }
-
-  .pending-link {
-    margin-top: var(--space-2);
-    color: var(--ion-color-warning);
-    font-weight: var(--font-semibold);
+  &.pending {
     cursor: pointer;
-    text-decoration: underline;
-    text-decoration-thickness: 2px;
-    text-decoration-color: rgba(246, 173, 85, 0.4);
+    
+    .stat-icon {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      
+      ion-icon {
+        color: #d97706;
+      }
+    }
+  }
+
+  &.payment {
+    .stat-icon {
+      background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
+      
+      ion-icon {
+        color: #7c3aed;
+      }
+    }
+
+    .stat-value {
+      &.positive {
+        color: #059669;
+      }
+
+      &.negative {
+        color: #dc2626;
+      }
+    }
+  }
+
+  .stat-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    ion-icon {
+      font-size: 28px;
+    }
+  }
+
+  .stat-content {
+    flex: 1;
+    min-width: 0;
+
+    .stat-label {
+      margin: 0 0 4px;
+      font-size: 13px;
+      color: #64748b;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-value {
+      margin: 0 0 4px;
+      font-size: 24px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .stat-meta {
+      margin: 0;
+      font-size: 13px;
+      color: #94a3b8;
+    }
   }
 }
 
-.form-card form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+.calculate-btn {
+  margin-top: 8px;
+  --border-width: 2px;
+  --border-color: rgba(99, 102, 241, 0.2);
+  --color: #6366f1;
+  font-weight: 600;
+  height: 44px;
 }
 
 .section-heading {
   margin-bottom: var(--space-4);
+  margin-top: 24px;
 
   h2 {
     margin: 0;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--app-text-primary, #0f172a);
   }
 
   p {
     margin: var(--space-1) 0 0;
-    color: var(--app-text-secondary);
+    font-size: 14px;
+    color: var(--app-text-secondary, #64748b);
   }
 }
 
@@ -119,21 +192,43 @@ ion-item.invalid {
   }
 }
 
-.avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: rgba(10, 132, 255, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: var(--font-semibold);
-  color: var(--ion-color-primary);
-}
+.split-card {
+  border-radius: 16px;
+  padding: 16px;
+  background: rgba(99, 102, 241, 0.04);
+  border: 1px solid rgba(99, 102, 241, 0.1);
 
-.amount-chip {
-  font-weight: var(--font-semibold);
-  color: var(--app-text-primary);
+  .split-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+
+    .eyebrow {
+      margin: 0 0 4px;
+      text-transform: uppercase;
+      font-size: 11px;
+      color: #64748b;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+
+    strong {
+      font-size: 14px;
+      color: #0f172a;
+    }
+
+    .split-legend {
+      text-align: left;
+      font-size: 12px;
+      color: #64748b;
+
+      span {
+        display: block;
+        margin-bottom: 2px;
+      }
+    }
+  }
 }
 
 .empty-state {
@@ -144,67 +239,987 @@ ion-item.invalid {
   ion-icon {
     font-size: 48px;
     color: var(--ion-color-medium);
-    // margin-bottom: var(--space-2);
   }
 }
 
-.pending-alert {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-3);
-  border-radius: var(--radius-xl);
-  border: 1px solid rgba(246, 173, 85, 0.3);
-  background: rgba(246, 173, 85, 0.08);
-  box-shadow: var(--shadow-sm);
+/* Floating Action Button */
+ion-fab {
+  margin-bottom: 72px;
+  margin-inline-end: 16px;
 
-  .alert-body {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
+  ion-fab-button {
+    --box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+    width: 56px;
+    height: 56px;
+
+    &::part(native) {
+      border-radius: 16px;
+    }
+  }
+}
+
+/* Accordion Styles */
+.expenses-accordion {
+  ion-accordion {
+    margin-bottom: 12px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    overflow: hidden;
+
+    &.pending {
+      border-right: 4px solid #f59e0b;
+    }
+
+    &.accordion-expanded {
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    }
+  }
+
+  .accordion-header {
+    --background: transparent;
+    --padding-start: 16px;
+    --padding-end: 16px;
+    --inner-padding-end: 0;
+    --min-height: 72px;
+
+    .avatar-circle {
+      position: relative;
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: linear-gradient(140deg, #e8f1ff 0%, #f5f7fb 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 600;
+      color: #0f172a;
+      flex-shrink: 0;
+      margin-inline-end: 12px;
+
+      .status-indicator {
+        position: absolute;
+        bottom: 2px;
+        left: 2px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 2px solid #fff;
+
+        &.pending {
+          background: #f59e0b;
+        }
+
+        &.approved {
+          background: #10b981;
+        }
+
+        &.rejected {
+          background: #ef4444;
+        }
+      }
+    }
+
+    ion-label {
+      h3 {
+        margin: 0 0 4px;
+        font-size: 16px;
+        font-weight: 600;
+        color: #0f172a;
+      }
+
+      p {
+        margin: 0;
+        font-size: 13px;
+        color: #64748b;
+      }
+    }
+
+    .header-end-section {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .receipt-icon-btn {
+        --padding-start: 8px;
+        --padding-end: 8px;
+        margin: 0;
+        min-width: 36px;
+        height: 36px;
+
+        ion-icon {
+          font-size: 20px;
+        }
+      }
+
+      .amount-display {
+        strong {
+          font-size: 17px;
+          font-weight: 700;
+          color: #0f172a;
+        }
+      }
+    }
+  }
+
+  .accordion-content {
+    padding: 0 16px 16px;
+
+    .shares-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+
+      .share-item {
+        background: #ffffff;
+        border: 1px solid rgba(15, 23, 42, 0.06);
+        border-radius: 14px;
+        padding: 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.3s ease;
+
+        // &.highlighted {
+        //   background: linear-gradient(135deg, #fef2f2 0%, #fff5f5 100%);
+        //   border-color: rgba(239, 68, 68, 0.2);
+        //   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.08);
+        // }
+
+        // מי ששילם - רקע ירוק
+        // &.paid-by-this {
+        //   background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        //   border-color: rgba(5, 150, 105, 0.3);
+
+        //   .share-amount {
+        //     color: #047857 !important;
+        //   }
+
+        //   .share-icon {
+        //     background: rgba(5, 150, 105, 0.15);
+            
+        //     ion-icon {
+        //       color: #059669;
+        //     }
+        //   }
+        // }
+
+        // מי שחייב - רקע אדום
+        // &.owes-to-this {
+        //   background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        //   border-color: rgba(220, 38, 38, 0.3);
+
+        //   .share-amount {
+        //     color: #b91c1c !important;
+        //   }
+
+        //   .share-icon {
+        //     background: rgba(220, 38, 38, 0.15);
+            
+        //     ion-icon {
+        //       color: #dc2626;
+        //     }
+        //   }
+        // }
+
+        .share-icon {
+          width: 32px;
+          height: 32px;
+          border-radius: 10px;
+          background: rgba(99, 102, 241, 0.08);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          transition: all 0.3s ease;
+
+          ion-icon {
+            font-size: 18px;
+            color: #6366f1;
+            transition: color 0.3s ease;
+          }
+        }
+
+        .share-details {
+          flex: 1;
+          min-width: 0;
+
+          .share-label {
+            margin: 0 0 3px;
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+
+            .payment-badge,
+            .owes-badge {
+              font-size: 9px;
+              padding: 2px 6px;
+              border-radius: 6px;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.3px;
+            }
+
+            .payment-badge {
+              background: rgba(5, 150, 105, 0.15);
+              color: #047857;
+            }
+
+            .owes-badge {
+              background: rgba(220, 38, 38, 0.15);
+              color: #b91c1c;
+            }
+          }
+
+          .share-amount {
+            display: block;
+            font-size: 15px;
+            font-weight: 700;
+            color: #0f172a;
+            transition: color 0.3s ease;
+          }
+
+          .share-percent {
+            display: block;
+            font-size: 12px;
+            color: #94a3b8;
+            font-weight: 500;
+            margin-top: 2px;
+          }
+        }
+      }
+    }
+
+    .card-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 16px;
+
+      ion-button {
+        margin: 0;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 12px;
+        height: 40px;
+        --border-radius: 10px;
+
+        &[color='danger'] {
+          --background: transparent;
+          --background-hover: rgba(239, 68, 68, 0.08);
+          --background-focused: rgba(239, 68, 68, 0.08);
+          --color: #dc2626;
+          --border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        &[color='primary'] {
+          --background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+          --background-hover: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+          --color: #ffffff;
+        }
+      }
+    }
+
+    .paid-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-top: 12px;
+
+      ion-icon {
+        font-size: 16px;
+      }
+    }
+  }
+}
+
+/* Receipt Modal Styles */
+.receipt-modal {
+  --padding-bottom: 100px;
+}
+
+.receipt-container {
+  max-width: 800px;
+  margin: 0 auto;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.receipt-header {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: #ffffff;
+  padding: 32px 24px;
+  text-align: center;
+
+  .receipt-logo {
+    margin-bottom: 16px;
 
     ion-icon {
-      font-size: 26px;
-      color: var(--ion-color-warning);
+      font-size: 48px;
+      opacity: 0.9;
+    }
+  }
+
+  h2 {
+    margin: 0 0 8px;
+    font-size: 28px;
+    font-weight: 700;
+  }
+
+  .receipt-period {
+    margin: 0 0 4px;
+    font-size: 18px;
+    font-weight: 500;
+    opacity: 0.95;
+  }
+
+  .receipt-date {
+    margin: 0;
+    font-size: 14px;
+    opacity: 0.8;
+  }
+}
+
+.summary-table-section {
+  padding: 24px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 2px dashed #e2e8f0;
+}
+
+.summary-table {
+  width: 100%;
+  background: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+
+  .summary-table-header {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 12px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    font-size: 12px;
+    font-weight: 700;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .summary-table-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid #e2e8f0;
+    transition: background 0.2s;
+
+    &:hover {
+      background: #f8fafc;
     }
 
-    p {
-      margin: 0;
-      color: var(--app-text-secondary);
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &.total-row {
+      background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+      font-weight: 700;
+      border: none;
+      border-top: 2px solid #cbd5e1;
+
+      &:hover {
+        background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+      }
+    }
+
+    .col-category {
+      font-size: 14px;
+      color: #0f172a;
+    }
+
+    .col-total,
+    .col-parent1,
+    .col-parent2 {
+      text-align: right;
+      font-size: 14px;
+      color: #0f172a;
+      font-weight: 500;
     }
   }
 }
 
+.receipt-section {
+  padding: 24px;
+  border-bottom: 2px dashed #e2e8f0;
+
+  &.final-section {
+    border-bottom: none;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  }
+
+  .receipt-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    color: #475569;
+    font-weight: 600;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    ion-icon {
+      font-size: 20px;
+      color: #6366f1;
+    }
+  }
+}
+
+.receipt-table {
+  width: 100%;
+
+  .receipt-table-header {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+    gap: 12px;
+    padding: 12px;
+    background: #f1f5f9;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+
+  .receipt-table-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+    gap: 12px;
+    padding: 16px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    transition: background 0.2s;
+
+    &:hover {
+      background: #f8fafc;
+    }
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &.subtotal-row {
+      background: #f1f5f9;
+      font-weight: 700;
+      border: none;
+      border-radius: 8px;
+      margin-top: 8px;
+    }
+
+    &.alimony-row {
+      background: linear-gradient(135deg, #fef3c7 0%, #fef9c3 100%);
+      border-radius: 8px;
+      margin-top: 8px;
+      border: none;
+    }
+
+    .col-description {
+      strong {
+        display: block;
+        font-size: 15px;
+        color: #0f172a;
+        margin-bottom: 4px;
+      }
+
+      .expense-note {
+        font-size: 12px;
+        color: #64748b;
+        margin: 0;
+      }
+    }
+
+    .col-paid-by {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      .paid-by-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 600;
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        color: #1e40af;
+        text-align: center;
+      }
+    }
+
+    .col-amount,
+    .col-parent1,
+    .col-parent2 {
+      text-align: right;
+      font-size: 14px;
+      color: #0f172a;
+      font-weight: 500;
+
+      .payment-sign {
+        color: #6366f1;
+        font-weight: 700;
+        margin-inline-end: 4px;
+      }
+
+      // מי ששילם - טקסט ירוק מודגש
+      &.paid-amount {
+        color: #047857;
+        font-weight: 700;
+        background: linear-gradient(135deg, rgba(209, 250, 229, 0.3) 0%, rgba(167, 243, 208, 0.3) 100%);
+        border-radius: 6px;
+        padding: 4px 8px;
+      }
+
+      // מי שחייב - טקסט אדום
+      &.owes-amount {
+        color: #b91c1c;
+        font-weight: 600;
+        background: linear-gradient(135deg, rgba(254, 226, 226, 0.3) 0%, rgba(254, 202, 202, 0.3) 100%);
+        border-radius: 6px;
+        padding: 4px 8px;
+      }
+    }
+  }
+}
+
+.final-settlement {
+  .calculation-breakdown {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+
+    .parent-calculation {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 16px;
+      border: 2px solid #e2e8f0;
+
+      .parent-calc-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #e2e8f0;
+
+        ion-icon {
+          font-size: 24px;
+          color: #6366f1;
+        }
+
+        h4 {
+          margin: 0;
+          font-size: 16px;
+          font-weight: 700;
+          color: #0f172a;
+        }
+      }
+
+      .calc-details {
+        .calc-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 10px 0;
+          border-bottom: 1px solid #f1f5f9;
+
+          &:last-child {
+            border-bottom: none;
+            margin-top: 8px;
+            padding-top: 12px;
+            border-top: 2px solid #e2e8f0;
+          }
+
+          .calc-label {
+            font-size: 13px;
+            color: #64748b;
+            font-weight: 500;
+          }
+
+          .calc-value {
+            font-size: 15px;
+            font-weight: 700;
+            color: #0f172a;
+
+            &.paid {
+              color: #059669;
+            }
+
+            &.owes {
+              color: #64748b;
+            }
+          }
+
+          &.balance-row {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            margin: 0 -16px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: none;
+
+            &.credit {
+              background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+              
+              .calc-value {
+                color: #047857;
+                font-size: 18px;
+              }
+            }
+
+            &.debit {
+              background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+              
+              .calc-value {
+                color: #b91c1c;
+                font-size: 18px;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    .alimony-calculation {
+      grid-column: 1 / -1;
+      background: linear-gradient(135deg, #fef3c7 0%, #fef9c3 100%);
+      border-radius: 12px;
+      padding: 16px;
+      border: 2px solid #fbbf24;
+
+      .alimony-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+
+        ion-icon {
+          font-size: 24px;
+          color: #d97706;
+        }
+
+        h4 {
+          margin: 0;
+          font-size: 16px;
+          font-weight: 700;
+          color: #78350f;
+        }
+      }
+
+      .alimony-details {
+        .alimony-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+
+          .alimony-label {
+            font-size: 14px;
+            color: #78350f;
+            font-weight: 600;
+          }
+
+          .alimony-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #92400e;
+          }
+        }
+      }
+    }
+  }
+
+  .settlement-breakdown {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+
+    .settlement-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #e2e8f0;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      .settlement-label {
+        font-size: 15px;
+        color: #475569;
+        font-weight: 500;
+      }
+
+      .settlement-amount {
+        font-size: 16px;
+        color: #0f172a;
+        font-weight: 700;
+      }
+    }
+  }
+
+  .final-balance {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    border-radius: 16px;
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 8px 32px rgba(99, 102, 241, 0.3);
+
+    &.balanced {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+
+    .balance-icon {
+      width: 56px;
+      height: 56px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+
+      ion-icon {
+        font-size: 32px;
+        color: #ffffff;
+      }
+    }
+
+    .balance-content {
+      flex: 1;
+
+      .balance-label {
+        margin: 0 0 4px;
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.85);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+      }
+
+      .balance-amount {
+        margin: 0 0 8px;
+        font-size: 32px;
+        font-weight: 700;
+        color: #ffffff;
+
+        &.positive {
+          color: #d1fae5;
+        }
+
+        &.negative {
+          color: #fecaca;
+        }
+      }
+
+      .balance-description {
+        margin: 0;
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.9);
+        line-height: 1.4;
+      }
+    }
+  }
+}
+
+.receipt-footer {
+  padding: 20px 24px;
+  background: #f8fafc;
+  text-align: center;
+
+  .footer-note {
+    margin: 0 0 8px;
+    font-size: 13px;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+
+    ion-icon {
+      font-size: 16px;
+    }
+  }
+
+  .footer-timestamp {
+    margin: 0;
+    font-size: 11px;
+    color: #94a3b8;
+    font-weight: 500;
+  }
+}
+
+.download-button-container {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px;
+  background: linear-gradient(to top, #ffffff 80%, transparent);
+  z-index: 10;
+
+  ion-button {
+    --border-radius: 14px;
+    font-weight: 700;
+    height: 56px;
+    box-shadow: 0 8px 32px rgba(99, 102, 241, 0.3);
+  }
+}
+
+/* Dark Mode */
 .dark {
   ion-content {
     --background: var(--app-background);
   }
 
-  .summary-card,
-  .form-card,
-  .list-card,
-  .month-card {
+  .stat-card {
     background: var(--app-surface);
-    color: var(--app-text-primary);
-    box-shadow: none;
     border-color: var(--app-border);
+
+    .stat-content .stat-value {
+      color: var(--app-text-primary);
+    }
   }
 
-  ion-item {
-    --background: transparent;
-    color: var(--app-text-primary);
+  .expenses-accordion {
+    ion-accordion {
+      background: var(--app-surface);
+      border-color: var(--app-border);
+    }
+
+    .accordion-header {
+      ion-label {
+        h3 {
+          color: var(--app-text-primary);
+        }
+      }
+
+      .amount-display strong {
+        color: var(--app-text-primary);
+      }
+    }
+
+    .accordion-content {
+      .shares-section .share-item {
+        background: var(--app-surface-elevated);
+        border-color: var(--app-border);
+
+        .share-amount {
+          color: var(--app-text-primary);
+        }
+
+        // שמירת הצבעים גם ב-dark mode
+        &.paid-by-this {
+          background: rgba(16, 185, 129, 0.15);
+          border-color: rgba(16, 185, 129, 0.3);
+
+          .share-amount {
+            color: #34d399 !important;
+          }
+        }
+
+        &.owes-to-this {
+          background: rgba(239, 68, 68, 0.15);
+          border-color: rgba(239, 68, 68, 0.3);
+
+          .share-amount {
+            color: #f87171 !important;
+          }
+        }
+      }
+    }
   }
 
-  .month-totals strong,
-  .month-header h3,
-  .report-row span,
-  .amount-chip {
-    color: var(--app-text-primary);
+  .receipt-container {
+    background: var(--app-surface);
   }
 
-  .status-chip {
-    color: var(--app-text-secondary);
+  .summary-table-section {
+    background: var(--app-surface-elevated);
+  }
+
+  .summary-table {
+    background: var(--app-surface);
+
+    .summary-table-row {
+      border-color: var(--app-border);
+
+      &:hover {
+        background: var(--app-surface-elevated);
+      }
+
+      &.total-row {
+        background: var(--app-surface-elevated);
+        border-color: var(--app-border);
+
+        &:hover {
+          background: var(--app-surface-elevated);
+        }
+      }
+    }
+  }
+
+  .receipt-section {
+    background: var(--app-surface);
+
+    &.final-section {
+      background: var(--app-surface-elevated);
+    }
+  }
+
+  .receipt-table {
+    .receipt-table-header {
+      background: var(--app-surface-elevated);
+    }
+
+    .receipt-table-row {
+      border-color: var(--app-border);
+
+      &:hover {
+        background: var(--app-surface-elevated);
+      }
+
+      &.subtotal-row {
+        background: var(--app-surface-elevated);
+      }
+    }
+  }
+
+  .final-settlement .settlement-breakdown {
+    background: var(--app-surface-elevated);
+
+    .settlement-item {
+      border-color: var(--app-border);
+    }
+  }
+
+  .receipt-footer {
+    background: var(--app-surface-elevated);
   }
 
   ion-modal {
@@ -212,150 +1227,59 @@ ion-item.invalid {
   }
 }
 
-// :host-context(.dark) {
-//   ion-modal {
-//     --background: var(--app-surface-elevated);
-//   }
+/* Responsive Design */
+@media (max-width: 768px) {
+  .summary-cards {
+    grid-template-columns: 1fr;
+  }
 
-//   .summary-card,
-//   .form-card,
-//   .list-card,
-//   .month-card {
-//     background: var(--app-surface);
-//     color: var(--app-text-primary);
-//     box-shadow: none;
-//     border-color: var(--app-border);
-//   }
-
-//   ion-item {
-//     --background: transparent;
-//     color: var(--app-text-primary);
-//   }
-
-//   .month-totals strong,
-//   .month-header h3,
-//   .report-row span,
-//   .amount-chip {
-//     color: var(--app-text-primary);
-//   }
-
-//   .status-chip {
-//     color: var(--app-text-secondary);
-//   }
-// }
-
-.month-card {
-  margin-top: var(--space-5);
-  border-radius: var(--radius-xl);
-  background: var(--app-surface, #fff);
-  border: 1px solid var(--app-border);
-  padding: var(--space-4);
-  box-shadow: var(--shadow-sm);
-
-  .month-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    h3 {
-      margin: 0;
-    }
-
-    p {
-      margin: var(--space-1) 0 0;
-      color: var(--app-text-secondary);
-    }
-
-    .month-totals {
-      text-align: right;
-
-      strong {
-        display: block;
-        font-size: var(--text-xl);
-      }
-
-      span {
-        color: var(--app-text-secondary);
-        font-size: var(--text-sm);
-      }
+  .summary-table {
+    .summary-table-header,
+    .summary-table-row {
+      grid-template-columns: 1.5fr 1fr 0.8fr 0.8fr;
+      gap: 8px;
+      font-size: 11px;
+      padding: 10px 12px;
     }
   }
 
-  .report-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: var(--space-3);
-    margin: var(--space-4) 0;
-
-    label {
-      display: block;
-      color: var(--app-text-secondary);
-      font-size: var(--text-xs);
+  .receipt-table {
+    .receipt-table-header,
+    .receipt-table-row {
+      grid-template-columns: 1.5fr 0.7fr 0.8fr 0.8fr 0.8fr;
+      gap: 6px;
+      font-size: 11px;
+      padding: 12px 8px;
     }
 
-    span {
-      font-weight: var(--font-semibold);
-      &.positive {
-        color: var(--ion-color-success);
-      }
-      &.negative {
-        color: var(--ion-color-danger);
-      }
+    .col-description strong {
+      font-size: 12px;
+    }
+
+    .col-paid-by .paid-by-badge {
+      font-size: 9px;
+      padding: 3px 6px;
+    }
+
+    .col-amount,
+    .col-parent1,
+    .col-parent2 {
+      font-size: 11px;
     }
   }
 
-  ion-item {
-    border-radius: var(--radius-xl);
-    margin-bottom: var(--space-2);
-    --background: rgba(248, 250, 252, 0.8);
-    --padding-start: var(--space-3);
-    align-items: flex-start;
-  }
-}
+  .final-balance {
+    flex-direction: column;
+    text-align: center;
 
-.item-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-
-  h3 {
-    margin: 0;
-  }
-}
-
-p .byline {
-  color: var(--app-text-tertiary);
-  font-size: var(--text-xs);
-  margin-inline-start: 6px;
-}
-
-.status-chip {
-  border-radius: var(--radius-full);
-  padding: 2px 10px;
-  font-size: var(--text-xs);
-  text-transform: uppercase;
-
-  &.pending {
-    background: rgba(255, 193, 7, 0.15);
-    color: #b8860b;
+    .balance-amount {
+      font-size: 28px !important;
+    }
   }
 
-  &.approved {
-    background: rgba(52, 199, 89, 0.15);
-    color: #2f855a;
+  .calculation-breakdown {
+    grid-template-columns: 1fr !important;
   }
-
-  &.rejected {
-    background: rgba(255, 99, 71, 0.15);
-    color: #c53030;
-  }
-}
-
-.item-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-inline-start: var(--space-3);
 }
 
 @media (max-width: 640px) {
@@ -363,31 +1287,25 @@ p .byline {
     padding: var(--space-4);
   }
 
-  .item-actions {
-    width: 100%;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
-}
-.payment-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-
-  .balance {
-    font-size: 16px;
-    color: #0f172a;
-    font-weight: 700;
-    letter-spacing: 0.2px;
+  .expenses-accordion .accordion-content .shares-section {
+    grid-template-columns: 1fr;
   }
 
-  .balance.positive {
-    color: #16a34a;
+  .stat-card {
+    .stat-value {
+      font-size: 20px;
+    }
   }
 
-  .balance.negative {
-    color: #dc2626;
+  .receipt-section {
+    padding: 16px;
+  }
+
+  .receipt-header {
+    padding: 24px 16px;
+
+    h2 {
+      font-size: 24px;
+    }
   }
 }

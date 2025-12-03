@@ -99,9 +99,9 @@ export class EventFormComponent implements OnInit, OnDestroy {
       parentId: ['both', Validators.required],
       startTime: [now.toTimeString().slice(0, 5)],
       endTime: [oneHourLater.toTimeString().slice(0, 5)],
-      isAllDay: [false],
+      isAllDay: [true],
       location: [''],
-      reminderEnabled: [true],
+      reminderEnabled: [false],
       reminderMinutes: [15],
       color: ['#2196F3']
     });
@@ -201,7 +201,7 @@ export class EventFormComponent implements OnInit, OnDestroy {
       endDate: endDateTime,
       isAllDay: formValue.isAllDay,
       location: formValue.location,
-      reminderMinutes: formValue.reminderEnabled ? formValue.reminderMinutes : undefined,
+      reminderMinutes: formValue.reminderEnabled ? formValue.reminderMinutes : null,
       color: formValue.color
     };
 

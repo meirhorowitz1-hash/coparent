@@ -95,6 +95,6 @@ describe('EventFormComponent', () => {
     await component.save();
 
     const call = calendarServiceMock.addEvent.calls.mostRecent();
-    expect(call.args[0].reminderMinutes).toBeUndefined();
+    expect(call.args[0].reminderMinutes).toBeNull();
   });
 });

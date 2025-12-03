@@ -395,10 +395,3 @@ ion-content {
     }
   }
 }
-
-// Dark Mode
-@media (prefers-color-scheme: dark) {
-  .social-button.apple ion-icon {
-    color: white;
-  }
-}

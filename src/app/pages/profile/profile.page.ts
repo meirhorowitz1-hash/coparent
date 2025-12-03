@@ -24,6 +24,8 @@ export class ProfilePage implements OnInit, OnDestroy {
   isGeneratingShareCode = false;
   shareCodeCopied = false;
   shareCodeError: string | null = null;
+  isLeavingFamily = false;
+  leaveFamilyMessage: { type: 'success' | 'error'; text: string } | null = null;
   joinCodeMessage: { type: 'success' | 'error'; text: string } | null = null;
   isJoiningByCode = false;
   isSigningOut = false;
@@ -268,10 +270,9 @@ export class ProfilePage implements OnInit, OnDestroy {
 
     const code = (this.familyCodeForm.value.code as string).trim();
 
-    const makeActive = !profile.activeFamilyId;
-
     try {
-      await this.familyService.joinFamilyByCode(code, profile.uid, makeActive);
+      const joinedFamilyId = await this.familyService.joinFamilyByCode(code, profile.uid, true);
+      await firstValueFrom(this.userProfileService.setActiveFamily(profile.uid, joinedFamilyId));
       this.joinCodeMessage = { type: 'success', text: 'הצטרפת בהצלחה למקור נתונים נוסף' };
       this.familyCodeForm.reset();
     } catch (error: any) {
@@ -320,6 +321,39 @@ export class ProfilePage implements OnInit, OnDestroy {
       this.signOutError = 'יציאה נכשלה. נסו שוב בעוד רגע.';
     } finally {
       this.isSigningOut = false;
+    }
+  }
+
+  async leaveFamily() {
+    const profile = this.profileSubject.value;
+    const family = this.familySubject.value;
+
+    if (!profile?.uid || !family?.id) {
+      return;
+    }
+
+    if (this.isLeavingFamily) {
+      return;
+    }
+
+    this.leaveFamilyMessage = null;
+    this.isLeavingFamily = true;
+    try {
+      await this.familyService.leaveFamily(family.id, profile.uid);
+      // Clear local state
+      this.familySubject.next(null);
+      this.profileSubject.next({
+        ...profile,
+        activeFamilyId: null,
+        families: (profile.families ?? []).filter(id => id !== family.id)
+      });
+      this.shareCode = null;
+      this.leaveFamilyMessage = { type: 'success', text: 'התנתקת מהמשפחה' };
+    } catch (error) {
+      console.error(error);
+      this.leaveFamilyMessage = { type: 'error', text: 'לא הצלחנו להתנתק מהמשפחה. נסו שוב.' };
+    } finally {
+      this.isLeavingFamily = false;
     }
   }
 

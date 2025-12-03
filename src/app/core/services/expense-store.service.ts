@@ -4,6 +4,7 @@ import {
   Timestamp,
   collection,
   collectionData,
+  deleteDoc,
   doc,
   docSnapshots,
   orderBy,
@@ -308,22 +309,11 @@ export class ExpenseStoreService implements OnDestroy {
     this.expensesSubject.next(next);
     this.persist(next);
 
-    return updateDoc(doc(this.firestore, 'families', familyId, 'expenses', id), {
-      title: '__deleted__',
-      amount: 0,
-      status: 'rejected',
-      updatedAt: serverTimestamp()
-    })
-      .then(() => {
-        return updateDoc(doc(this.firestore, 'families', familyId, 'expenses', id), {
-          deleted: true
-        }).catch(() => undefined);
-      })
-      .catch(error => {
-        this.expensesSubject.next(current);
-        this.persist(current);
-        throw error;
-      });
+    return deleteDoc(doc(this.firestore, 'families', familyId, 'expenses', id)).catch(error => {
+      this.expensesSubject.next(current);
+      this.persist(current);
+      throw error;
+    });
   }
 
   getAll(): ExpenseRecord[] {

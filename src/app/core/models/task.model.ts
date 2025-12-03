@@ -2,7 +2,7 @@ export interface Task {
   id: string;
   title: string;
   description?: string;
-  dueDate: Date;
+  dueDate: Date | null;
   priority: TaskPriority;
   status: TaskStatus;
   assignedTo?: 'parent1' | 'parent2' | 'both';

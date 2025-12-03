@@ -51,6 +51,24 @@
             </div>
           </div>
 
+          <div class="leave-family" *ngIf="family?.id">
+            <button type="button" class="ghost danger" (click)="leaveFamily()" [disabled]="isLeavingFamily">
+              <ion-icon name="exit-outline"></ion-icon>
+              <span>{{ isLeavingFamily ? 'מתנתק...' : 'התנתק מהמשפחה הזו' }}</span>
+            </button>
+            <p class="helper">
+              פעולה זו תסיר את החשבון שלך מהמשפחה הפעילה. ניתן להצטרף מחדש בעזרת קוד חדש או הזמנה.
+            </p>
+            <div
+              class="leave-message"
+              *ngIf="leaveFamilyMessage"
+              [class.success]="leaveFamilyMessage.type === 'success'"
+              [class.error]="leaveFamilyMessage.type === 'error'">
+              <ion-icon [name]="leaveFamilyMessage.type === 'success' ? 'checkmark-circle-outline' : 'alert-circle-outline'"></ion-icon>
+              <span>{{ leaveFamilyMessage.text }}</span>
+            </div>
+          </div>
+
           <div class="pending" *ngIf="family?.pendingInvites?.length">
             <h3>הזמנות ממתינות</h3>
             <ul>

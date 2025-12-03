@@ -88,8 +88,28 @@
   gap: var(--space-3);
 }
 
+.date-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 ion-item.invalid {
   --border-color: var(--ion-color-danger);
+}
+
+.add-task-button {
+  margin-top: var(--space-3);
+  --border-radius: 999px;
+  --background: linear-gradient(120deg, #0f7878, #0b6a6a);
+  color: #fff;
+  font-weight: var(--font-semibold);
+  letter-spacing: -0.01em;
+  box-shadow: 0 14px 30px rgba(15, 120, 120, 0.28);
+
+  ion-icon {
+    margin-inline-start: 6px;
+  }
 }
 
 .list-card .empty-state {
