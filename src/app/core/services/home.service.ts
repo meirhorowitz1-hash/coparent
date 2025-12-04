@@ -227,7 +227,7 @@ export class HomeService implements OnDestroy {
         title: 'צ׳אט',
         icon: 'chatbubble-ellipses-outline',
         route: '/chat',
-        color: 'primary'
+        color: 'secondary'
       },
       {
         id: 'new-expense',

@@ -35,16 +35,25 @@ export class FamilyService {
   }
 
   async ensureFamilyForUser(profile: UserProfile): Promise<string> {
-    const existingFamilyId = profile.activeFamilyId || (profile as any)['familyId'];
-    if (existingFamilyId) {
-      const existingRef = doc(this.firestore, 'families', existingFamilyId);
+    const ownedFamilyId = profile.ownedFamilyId || profile.activeFamilyId || (profile as any)['familyId'] || null;
+
+    if (ownedFamilyId) {
+      const existingRef = doc(this.firestore, 'families', ownedFamilyId);
       const existingSnap = await getDoc(existingRef);
 
       if (existingSnap.exists()) {
         const existingData = existingSnap.data() as Family;
+        const members = new Set(existingData.members ?? []);
+        if (!members.has(profile.uid)) {
+          members.add(profile.uid);
+          await updateDoc(existingRef, {
+            members: Array.from(members),
+            updatedAt: serverTimestamp()
+          });
+        }
 
         if (!existingData.shareCode) {
-          const regeneratedCode = await this.createUniqueShareCode(existingFamilyId);
+          const regeneratedCode = await this.createUniqueShareCode(ownedFamilyId);
           await updateDoc(existingRef, {
             shareCode: regeneratedCode,
             shareCodeUpdatedAt: serverTimestamp(),
@@ -52,7 +61,15 @@ export class FamilyService {
           });
         }
 
-        return existingFamilyId;
+        await firstValueFrom(this.userProfileService.addFamily(profile.uid, ownedFamilyId, true));
+        await firstValueFrom(
+          this.userProfileService.updateProfile(profile.uid, {
+            ownedFamilyId,
+            activeFamilyId: ownedFamilyId
+          })
+        );
+
+        return ownedFamilyId;
       }
     }
 
@@ -70,6 +87,12 @@ export class FamilyService {
     });
 
     await firstValueFrom(this.userProfileService.addFamily(profile.uid, familyRef.id, true));
+    await firstValueFrom(
+      this.userProfileService.updateProfile(profile.uid, {
+        ownedFamilyId: familyRef.id,
+        activeFamilyId: familyRef.id
+      })
+    );
 
     return familyRef.id;
   }
@@ -103,6 +126,9 @@ export class FamilyService {
     }
 
     const data = snapshot.data() as Family | undefined;
+    if ((data?.members?.length ?? 0) >= 2) {
+      throw new Error('family-full');
+    }
     const pendingInviteEmails = data?.pendingInviteEmails ?? [];
 
     if (pendingInviteEmails.includes(normalizedEmail)) {
@@ -148,8 +174,15 @@ export class FamilyService {
     const data = familyDoc.data() as Family;
 
     const members = Array.from(new Set([...(data.members ?? []), uid]));
+    if (members.length > 2) {
+      throw new Error('family-full');
+    }
     const pendingInviteEmails = (data.pendingInviteEmails ?? []).filter(email => email !== normalizedEmail);
     const pendingInvites = (data.pendingInvites ?? []).filter(invite => invite.email !== normalizedEmail);
+
+    if (members.length > 2) {
+      throw new Error('family-full');
+    }
 
     await updateDoc(doc(this.firestore, 'families', familyId), {
       members,
@@ -181,6 +214,10 @@ export class FamilyService {
     const familyId = familyDoc.id;
     const data = familyDoc.data() as Family;
 
+    if ((data.members?.length ?? 0) >= 2 && !(data.members || []).includes(uid)) {
+      throw new Error('family-full');
+    }
+
     const members = Array.from(new Set([...(data.members ?? []), uid]));
 
     await updateDoc(doc(this.firestore, 'families', familyId), {
@@ -191,6 +228,50 @@ export class FamilyService {
     await firstValueFrom(this.userProfileService.addFamily(uid, familyId, makeActive || true));
 
     return familyId;
+  }
+
+  async listFamiliesForUser(uid: string): Promise<Family[]> {
+    const familiesRef = collection(this.firestore, 'families');
+    const snapshot = await getDocs(query(familiesRef, where('members', 'array-contains', uid)));
+
+    return snapshot.docs.map(docSnap => {
+      const data = docSnap.data() as Family;
+      return { ...data, id: docSnap.id };
+    });
+  }
+
+  async getMemberProfiles(memberIds: string[]): Promise<UserProfile[]> {
+    const uniqueIds = Array.from(new Set(memberIds.filter(Boolean)));
+    if (!uniqueIds.length) {
+      return [];
+    }
+
+    const profiles: UserProfile[] = [];
+    for (const uid of uniqueIds) {
+      try {
+        const snap = await getDoc(doc(this.firestore, 'users', uid));
+        if (snap.exists()) {
+                 profiles.push({ ...(snap.data() as UserProfile), uid });
+        }
+      } catch (error) {
+        console.error('Failed to fetch member profile', uid, error);
+      }
+    }
+    return profiles;
+  }
+
+  async getFamilyMeta(familyId: string): Promise<Family | null> {
+    const ref = doc(this.firestore, 'families', familyId);
+    const snapshot = await getDoc(ref);
+
+    if (!snapshot.exists()) {
+      return null;
+    }
+
+    return {
+      id: snapshot.id,
+      ...(snapshot.data() as Family)
+    };
   }
 
   async generateShareCode(familyId: string): Promise<string> {

@@ -256,7 +256,7 @@
   }
 
   &.today .day-number {
-    background: var(--ion-color-primary);
+    background: #e92020b0;
     color: #fff;
     border-radius: var(--radius-full);
     width: 32px;
@@ -292,13 +292,13 @@
     border-radius: var(--radius-full);
 
     &.parent1 {
-      background: #34c759;
+      background: var(--ion-color-secondary);
     }
     &.parent2 {
-      background: #0a84ff;
+      background: var(--ion-color-primary);
     }
     &.both {
-      background: linear-gradient(135deg, #34c759, #0a84ff);
+      background: linear-gradient(135deg, var(--ion-color-secondary), var(--ion-color-primary));
     }
   }
 }

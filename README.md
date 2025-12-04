@@ -1,4 +1,4 @@
-# CoParent App
+# CoNest App
 
 Ionic + Angular application for managing shared parenting logistics.
 
@@ -39,5 +39,5 @@ Ionic + Angular application for managing shared parenting logistics.
 | `npm start`    | Run the dev server           |
 | `npm run build`| Build the production bundle  |
 | `npm run test` | Execute unit tests           |
-# coparent
-# coparent
+# CoNest
+# CoNest

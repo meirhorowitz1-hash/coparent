@@ -34,7 +34,7 @@ export class PushNotificationService {
     } else if (this.messaging && this.isPushSupported()) {
       onMessage(this.messaging, payload => {
         this.presentForegroundToast(
-          payload.notification?.title || 'CoParent',
+          payload.notification?.title || 'CoNest',
           payload.notification?.body || ''
         );
       });
@@ -190,7 +190,7 @@ export class PushNotificationService {
 
     PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
       this.presentForegroundToast(
-        notification.title || notification.data?.title || 'CoParent',
+        notification.title || notification.data?.title || 'CoNest',
         notification.body || (notification.data as any)?.body || ''
       );
     });
@@ -204,7 +204,7 @@ export class PushNotificationService {
     });
 
     FirebaseMessaging.addListener('notificationReceived', async (event: NotificationReceivedEvent) => {
-      const title = event.notification?.title || 'CoParent';
+      const title = event.notification?.title || 'CoNest';
       const dataPayload = event.notification?.data as Record<string, unknown> | undefined;
       const fallbackBody = typeof dataPayload?.['body'] === 'string' ? (dataPayload['body'] as string) : '';
       const body = event.notification?.body || fallbackBody || '';

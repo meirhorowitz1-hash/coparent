@@ -16,7 +16,7 @@ console.log('[Firebase SW] Initialized');
 messaging.onBackgroundMessage(payload => {
   console.log('[Firebase SW] onBackgroundMessage', payload);
   const notification = payload.notification || {};
-  const title = notification.title || 'CoParent';
+  const title = notification.title || 'CoNest';
   const options = {
     body: notification.body,
     data: payload.data || {},

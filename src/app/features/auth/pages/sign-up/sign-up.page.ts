@@ -151,19 +151,8 @@ export class SignUpPage implements OnInit {
         joinedFamilyId = await this.familyService.acceptInviteByEmail(email, user.uid, true);
       }
 
-      if (!joinedFamilyId) {
-        await this.familyService.ensureFamilyForUser({
-          uid: user.uid,
-          fullName,
-          email,
-          phone: phone ?? null,
-          families: [],
-          activeFamilyId: null
-        });
-      }
-
       this.isLoading = false;
-      this.router.navigate(['/shell/home']);
+      this.router.navigate(['/tabs/profile']);
     } catch (error: any) {
       this.isLoading = false;
       if (error?.message === 'family-not-found') {

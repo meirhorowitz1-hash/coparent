@@ -1,5 +1,5 @@
 .home-content {
-  --background: linear-gradient(180deg, #eaf7f3 0%, #f6fcfa 60%, #ffffff 100%);
+  --background: linear-gradient(180deg, #fff4f1 0%, #fff9f6 55%, #f6fbf8 100%);
   background: var(--background);
   position: relative;
 }
@@ -10,35 +10,35 @@
   pointer-events: none;
   z-index: 0;
 
-  .blob {
-    position: absolute;
-    filter: blur(60px);
-    opacity: 0.6;
-  }
+  // .blob {
+  //   position: absolute;
+  //   filter: blur(60px);
+  //   opacity: 0.6;
+  // }
 
-  .blob-1 {
-    width: 360px;
-    height: 360px;
-    background: rgba(72, 191, 163, 0.24);
-    top: -40px;
-    left: 10%;
-  }
+  // .blob-1 {
+  //   width: 360px;
+  //   height: 360px;
+  //   background: rgba(240, 138, 122, 0.24);
+  //   top: -40px;
+  //   left: 10%;
+  // }
 
-  .blob-2 {
-    width: 320px;
-    height: 320px;
-    background: rgba(15, 120, 120, 0.28);
-    top: 120px;
-    right: 8%;
-  }
+  // .blob-2 {
+  //   width: 320px;
+  //   height: 320px;
+  //   background: rgba(74, 191, 165, 0.28);
+  //   top: 120px;
+  //   right: 8%;
+  // }
 
-  .blob-3 {
-    width: 280px;
-    height: 280px;
-    background: rgba(11, 106, 106, 0.18);
-    bottom: -20px;
-    left: 5%;
-  }
+  // .blob-3 {
+  //   width: 280px;
+  //   height: 280px;
+  //   background: rgba(47, 142, 124, 0.22);
+  //   bottom: -20px;
+  //   left: 5%;
+  // }
 }
 
 .screen-wrapper {
@@ -82,15 +82,13 @@
 
 .home-hero {
   position: relative;
-  background: linear-gradient(165deg, #0f7878 0%, #48bfa3 100%);
-  color: #fff;
-  border-radius: 32px;
-  padding: clamp(20px, 4vw, 28px);
-  box-shadow: 0 16px 36px rgba(12, 72, 72, 0.25);
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-
-
+    background: #f08a7ad1;
+    color: #fff;
+    border-radius: 32px;
+    padding: clamp(20px, 4vw, 28px);
+    /* box-shadow: 0 3px 19px rgba(240, 138, 122, 0.3); */
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.12);
 
 }
 

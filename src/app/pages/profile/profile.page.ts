@@ -5,6 +5,7 @@ import { takeUntil, switchMap } from 'rxjs/operators';
 import { AuthService } from '../../core/services/auth.service';
 import { UserProfileService } from '../../core/services/user-profile.service';
 import { FamilyService } from '../../core/services/family.service';
+import { CalendarService } from '../../core/services/calendar.service';
 import { UserProfile } from '../../core/models/user-profile.model';
 import { Family, FamilyInvite } from '../../core/models/family.model';
 import { Router } from '@angular/router';
@@ -24,6 +25,7 @@ export class ProfilePage implements OnInit, OnDestroy {
   isGeneratingShareCode = false;
   shareCodeCopied = false;
   shareCodeError: string | null = null;
+  isShareOwner = false;
   isLeavingFamily = false;
   leaveFamilyMessage: { type: 'success' | 'error'; text: string } | null = null;
   joinCodeMessage: { type: 'success' | 'error'; text: string } | null = null;
@@ -32,9 +34,20 @@ export class ProfilePage implements OnInit, OnDestroy {
   signOutError: string | null = null;
   familiesList: string[] = [];
   switchingFamilyId: string | null = null;
+  leavingFamilyId: string | null = null;
+  familyOptions: { id: string; name: string }[] = [];
+  isLoadingFamilyOptions = false;
   householdForm: FormGroup;
   householdChildren: string[] = [];
   isSavingHousehold = false;
+  isEditingFamilyMeta = false;
+  showMembersAccordion = false;
+  memberNames: string[] = [];
+  profileEditForm: FormGroup;
+  isEditingProfile = false;
+  isSavingProfile = false;
+  parentLabels = { parent1: 'הורה 1', parent2: 'הורה 2' };
+  readonly parentColors = { parent1: 'var(--ion-color-secondary)', parent2: 'var(--ion-color-primary)' };
 
   private readonly profileSubject = new BehaviorSubject<UserProfile | null>(null);
   readonly profile$ = this.profileSubject.asObservable();
@@ -50,6 +63,7 @@ export class ProfilePage implements OnInit, OnDestroy {
     private authService: AuthService,
     private userProfileService: UserProfileService,
     private familyService: FamilyService,
+    private calendarService: CalendarService,
     private formBuilder: FormBuilder,
     private router: Router
   ) {
@@ -63,10 +77,16 @@ export class ProfilePage implements OnInit, OnDestroy {
       name: ['', [Validators.minLength(2)]],
       childName: ['']
     });
+    this.householdForm.disable({ emitEvent: false });
+    this.profileEditForm = this.formBuilder.group({
+      fullName: ['', [Validators.required, Validators.minLength(2)]],
+      photoUrl: ['']
+    });
   }
 
   ngOnInit() {
     this.observeProfile();
+    this.observeParentMetadata();
   }
 
   private observeProfile() {
@@ -103,7 +123,11 @@ export class ProfilePage implements OnInit, OnDestroy {
 
         this.profileSubject.next(profile);
         const fallbackFamilyId = profile?.activeFamilyId || (profile as any)?.familyId || null;
-        this.familiesList = profile?.families ?? (fallbackFamilyId ? [fallbackFamilyId] : []);
+        this.refreshFamilyOptions(profile, fallbackFamilyId);
+        this.profileEditForm.patchValue({
+          fullName: profile?.fullName || '',
+          photoUrl: profile?.photoUrl || ''
+        });
 
         if (profile && !profile.activeFamilyId && fallbackFamilyId) {
           this.userProfileService.setActiveFamily(profile.uid, fallbackFamilyId).subscribe();
@@ -122,6 +146,17 @@ export class ProfilePage implements OnInit, OnDestroy {
       });
   }
 
+  private observeParentMetadata() {
+    this.calendarService.parentMetadata$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(metadata => {
+        this.parentLabels = {
+          parent1: metadata.parent1.name || 'הורה 1',
+          parent2: metadata.parent2.name || 'הורה 2'
+        };
+      });
+  }
+
   private subscribeToFamily(familyId: string) {
     if (this.familySubscription) {
       this.familySubscription.unsubscribe();
@@ -135,6 +170,12 @@ export class ProfilePage implements OnInit, OnDestroy {
         name: family?.name || '',
         childName: ''
       });
+      if (!this.isEditingFamilyMeta) {
+        this.householdForm.disable({ emitEvent: false });
+      }
+      this.loadMemberNames(family?.members ?? []);
+      const profile = this.profileSubject.value;
+      this.isShareOwner = !!(profile?.ownedFamilyId && family?.id === profile.ownedFamilyId);
     });
   }
 
@@ -143,10 +184,59 @@ export class ProfilePage implements OnInit, OnDestroy {
       this.familySubscription.unsubscribe();
       this.familySubscription = undefined;
     }
+    this.isShareOwner = false;
   }
 
   private updateShareCode(family: Family | null) {
     this.shareCode = family?.shareCode ?? null;
+  }
+
+  private async loadMemberNames(memberIds: string[]) {
+    if (!memberIds?.length) {
+      this.memberNames = [];
+      return;
+    }
+
+    try {
+      const profiles = await this.familyService.getMemberProfiles(memberIds);
+      this.memberNames = profiles.map(profile =>
+        profile.fullName || (profile as any)?.displayName || profile.email || 'הורה'
+      );
+    } catch (error) {
+      console.error('Failed to load member names', error);
+      this.memberNames = [];
+    }
+  }
+
+  private async refreshFamilyOptions(profile: UserProfile | null, fallbackFamilyId?: string | null) {
+    if (!profile?.uid) {
+      this.familyOptions = [];
+      this.familiesList = [];
+      return;
+    }
+
+    this.isLoadingFamilyOptions = true;
+
+    try {
+      const familiesFromQuery = await this.familyService.listFamiliesForUser(profile.uid);
+      const idsFromQuery = familiesFromQuery.map(f => f.id!).filter(Boolean);
+      const mergedIds = Array.from(
+        new Set([
+          ...(profile.families ?? []),
+          ...idsFromQuery,
+          fallbackFamilyId || null,
+          profile.activeFamilyId || null
+        ].filter(Boolean) as string[])
+      );
+
+      this.familiesList = mergedIds;
+      this.familyOptions = mergedIds.map(id => {
+        const found = familiesFromQuery.find(f => f.id === id);
+        return { id, name: found?.name || 'מרחב ללא שם' };
+      });
+    } finally {
+      this.isLoadingFamilyOptions = false;
+    }
   }
 
 
@@ -182,6 +272,7 @@ export class ProfilePage implements OnInit, OnDestroy {
         families: Array.from(new Set([...(profile.families ?? []), familyId]))
       };
       this.profileSubject.next(updatedProfile);
+      this.refreshFamilyOptions(updatedProfile, familyId);
       this.subscribeToFamily(familyId);
     } catch (error) {
       console.error(error);
@@ -224,6 +315,9 @@ export class ProfilePage implements OnInit, OnDestroy {
   }
 
   addChild() {
+    if (!this.isEditingFamilyMeta) {
+      return;
+    }
     const child = (this.householdForm.value.childName as string)?.trim();
     if (!child) {
       return;
@@ -233,10 +327,64 @@ export class ProfilePage implements OnInit, OnDestroy {
   }
 
   removeChild(name: string) {
+    if (!this.isEditingFamilyMeta) {
+      return;
+    }
     this.householdChildren = this.householdChildren.filter(c => c !== name);
   }
 
+  startProfileEdit() {
+    this.isEditingProfile = true;
+  }
+
+  cancelProfileEdit() {
+    const profile = this.profileSubject.value;
+    this.profileEditForm.patchValue({
+      fullName: profile?.fullName || '',
+      photoUrl: profile?.photoUrl || ''
+    });
+    this.isEditingProfile = false;
+  }
+
+  async saveProfile() {
+    const profile = this.profileSubject.value;
+    if (!profile) {
+      return;
+    }
+
+    if (this.profileEditForm.invalid) {
+      this.profileEditForm.markAllAsTouched();
+      return;
+    }
+
+    this.isSavingProfile = true;
+    const { fullName, photoUrl } = this.profileEditForm.value;
+    try {
+      await firstValueFrom(
+        this.userProfileService.updateProfile(profile.uid, {
+          fullName: (fullName as string).trim(),
+          photoUrl: (photoUrl as string)?.trim() || null
+        })
+      );
+      const updated: UserProfile = {
+        ...profile,
+        fullName: (fullName as string).trim(),
+        photoUrl: (photoUrl as string)?.trim() || null
+      };
+      this.profileSubject.next(updated);
+      this.isEditingProfile = false;
+    } catch (error) {
+      console.error('Failed to save profile', error);
+    } finally {
+      this.isSavingProfile = false;
+    }
+  }
+
   async saveHouseholdMeta() {
+    if (!this.isEditingFamilyMeta) {
+      return;
+    }
+
     const family = this.familySubject.value;
     if (!family?.id) {
       return;
@@ -261,6 +409,8 @@ export class ProfilePage implements OnInit, OnDestroy {
         name: (nameCtrl?.value as string)?.trim() || family.name || 'מרחב משותף',
         children: cleanedChildren
       });
+      this.isEditingFamilyMeta = false;
+      this.householdForm.disable({ emitEvent: false });
     } catch (error) {
       console.error('Failed to save household meta', error);
     } finally {
@@ -296,6 +446,7 @@ export class ProfilePage implements OnInit, OnDestroy {
             families: Array.from(new Set([...(profile.families ?? []), familyId]))
           };
           this.profileSubject.next(updatedProfile);
+          this.refreshFamilyOptions(updatedProfile, familyId);
           this.subscribeToFamily(familyId);
           this.shareCodeError = null;
         } catch (creationError) {
@@ -308,6 +459,33 @@ export class ProfilePage implements OnInit, OnDestroy {
     } finally {
       this.isGeneratingShareCode = false;
     }
+  }
+
+  scrollToJoinSection() {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    const joinSection = document.getElementById('join-by-code');
+    if (joinSection?.scrollIntoView) {
+      joinSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  startFamilyEdit() {
+    this.isEditingFamilyMeta = true;
+    this.householdForm.enable({ emitEvent: false });
+  }
+
+  cancelFamilyEdit() {
+    const family = this.familySubject.value;
+    this.isEditingFamilyMeta = false;
+    this.householdForm.disable({ emitEvent: false });
+    this.householdChildren = [...(family?.children ?? [])];
+    this.householdForm.patchValue({
+      name: family?.name || '',
+      childName: ''
+    });
   }
 
   async joinByCode() {
@@ -338,6 +516,8 @@ export class ProfilePage implements OnInit, OnDestroy {
         text = 'לא נמצא מקור נתונים עם הקוד הזה';
       } else if (error?.message === 'missing-family-code') {
         text = 'נא להזין קוד תקין';
+      } else if (error?.message === 'family-full') {
+        text = 'המשפחה הזו כבר מלאה (2 הורים מחוברים)';
       }
       this.joinCodeMessage = { type: 'error', text };
     } finally {
@@ -381,11 +561,12 @@ export class ProfilePage implements OnInit, OnDestroy {
     }
   }
 
-  async leaveFamily() {
+  async leaveFamily(familyId?: string) {
     const profile = this.profileSubject.value;
-    const family = this.familySubject.value;
+    const family = familyId ? null : this.familySubject.value;
+    const targetFamilyId = familyId || family?.id;
 
-    if (!profile?.uid || !family?.id) {
+    if (!profile?.uid || !targetFamilyId) {
       return;
     }
 
@@ -395,23 +576,35 @@ export class ProfilePage implements OnInit, OnDestroy {
 
     this.leaveFamilyMessage = null;
     this.isLeavingFamily = true;
+    this.leavingFamilyId = targetFamilyId;
     try {
-      await this.familyService.leaveFamily(family.id, profile.uid);
+      await this.familyService.leaveFamily(targetFamilyId, profile.uid);
       // Clear local state
-      this.familySubject.next(null);
-      this.profileSubject.next({
+      if (!familyId) {
+        this.familySubject.next(null);
+        this.shareCode = null;
+        this.isShareOwner = false;
+      }
+      const updatedProfile: UserProfile = {
         ...profile,
-        activeFamilyId: null,
-        families: (profile.families ?? []).filter(id => id !== family.id)
-      });
-      this.shareCode = null;
+        activeFamilyId: profile.activeFamilyId === targetFamilyId ? null : profile.activeFamilyId,
+        families: (profile.families ?? []).filter(id => id !== targetFamilyId)
+      };
+      this.profileSubject.next(updatedProfile);
+      this.refreshFamilyOptions(updatedProfile);
       this.leaveFamilyMessage = { type: 'success', text: 'התנתקת מהמשפחה' };
     } catch (error) {
       console.error(error);
       this.leaveFamilyMessage = { type: 'error', text: 'לא הצלחנו להתנתק מהמשפחה. נסו שוב.' };
     } finally {
       this.isLeavingFamily = false;
+      this.leavingFamilyId = null;
     }
+  }
+
+  onLeaveFamilyClick(event: Event, familyId: string) {
+    event.stopPropagation();
+    this.leaveFamily(familyId);
   }
 
   ngOnDestroy() {

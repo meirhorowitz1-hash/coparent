@@ -4,6 +4,8 @@ import { switchMap, takeUntil } from 'rxjs/operators';
 import { ChatMessage, ChatService } from '../../core/services/chat.service';
 import { CalendarService } from '../../core/services/calendar.service';
 import { AuthService } from '../../core/services/auth.service';
+import { FamilyService } from '../../core/services/family.service';
+import { Family } from '../../core/models/family.model';
 
 @Component({
   selector: 'app-chat',
@@ -19,13 +21,15 @@ export class ChatPage implements OnInit, OnDestroy {
   currentUserId: string | null = null;
   currentUserName = 'אני';
   otherParentName = 'הורה';
+  familyName = 'צ׳אט';
 
   private destroy$ = new Subject<void>();
 
   constructor(
     private chatService: ChatService,
     private calendarService: CalendarService,
-    private authService: AuthService
+    private authService: AuthService,
+    private familyService: FamilyService
   ) {}
 
   ngOnInit(): void {
@@ -46,6 +50,7 @@ export class ChatPage implements OnInit, OnDestroy {
         takeUntil(this.destroy$),
         switchMap(familyId => {
           this.familyId = familyId;
+          this.familyName = 'צ׳אט';
           if (!familyId) {
             return of<ChatMessage[]>([]);
           }
@@ -54,6 +59,20 @@ export class ChatPage implements OnInit, OnDestroy {
       )
       .subscribe(messages => {
         this.messages = messages;
+      });
+
+    this.calendarService.activeFamilyId$
+      .pipe(
+        takeUntil(this.destroy$),
+        switchMap(familyId => {
+          if (!familyId) {
+            return of<Family | null>(null);
+          }
+          return this.familyService.listenToFamily(familyId);
+        })
+      )
+      .subscribe(family => {
+        this.familyName = family?.name || 'צ׳אט';
       });
   }
 

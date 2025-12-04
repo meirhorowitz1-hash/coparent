@@ -27,7 +27,10 @@ export class UserProfileService {
           ...profile,
           phone: profile.phone ?? null,
           families: [],
+          ownedFamilyId: null,
           activeFamilyId: null,
+          photoUrl: null,
+          calendarColor: null,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         },

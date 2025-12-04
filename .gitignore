@@ -71,3 +71,6 @@ Thumbs.db
 
 # Firebase
 android/app/google-services.json
+
+resources/ios/**/*
+resources/android/**/*

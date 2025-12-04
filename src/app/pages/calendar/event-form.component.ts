@@ -29,9 +29,9 @@ export class EventFormComponent implements OnInit, OnDestroy {
   ];
 
   parentOptions = [
-    { value: 'parent1', label: 'הורה 1', color: '#4CAF50' },
-    { value: 'parent2', label: 'הורה 2', color: '#2196F3' },
-    { value: 'both', label: 'שניהם', color: '#FF9800' }
+    { value: 'parent1', label: 'הורה 1', color: '#4abfa5' }, // secondary
+    { value: 'parent2', label: 'הורה 2', color: '#f08a7a' }, // primary
+    { value: 'both', label: 'שניהם', color: '#ffa94d' }
   ];
 
   reminderOptions = [
