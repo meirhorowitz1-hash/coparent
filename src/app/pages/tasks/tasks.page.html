@@ -73,15 +73,11 @@
         </div>
       </section>
 
-      <ion-button
-        *ngIf="!showForm"
-        expand="block"
-        class="add-task-button"
-        color="primary"
-        (click)="openForm()">
-        <ion-icon slot="start" name="add-circle-outline"></ion-icon>
-        הוסף משימה חדשה
-      </ion-button>
+      <ion-fab vertical="bottom" horizontal="end" slot="fixed">
+        <ion-fab-button color="primary" (click)="openForm()">
+          <ion-icon name="add"></ion-icon>
+        </ion-fab-button>
+      </ion-fab>
 
       <section class="list-card">
         <div class="section-heading">
@@ -119,6 +115,14 @@
                 </div>
               </div>
             </ion-label>
+            <ion-button
+              slot="end"
+              fill="clear"
+              color="danger"
+              size="small"
+              (click)="deleteTask(task, $event)">
+              <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+            </ion-button>
           </ion-item>
         </ion-list>
       </section>

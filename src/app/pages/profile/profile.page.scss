@@ -2,6 +2,10 @@ ion-content {
   --background: var(--app-background);
 }
 
+ion-header {
+  padding-top: env(safe-area-inset-top);
+}
+
 .profile-layout {
   // padding: var(--space-6) var(--space-4);
   display: flex;
@@ -498,6 +502,37 @@ ion-content {
   .signout-error {
     color: var(--ion-color-danger);
     font-size: var(--text-sm);
+  }
+}
+
+.household-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-2xl);
+  background: var(--app-background-secondary);
+
+  .info-block h3 {
+    margin: 4px 0 4px;
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .inline-input {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+
+    ion-input {
+      flex: 1;
+    }
   }
 }
 

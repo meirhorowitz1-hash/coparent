@@ -342,65 +342,51 @@
       </ion-header>
       <ion-content class="ion-padding receipt-modal" *ngIf="paymentBreakdowns">
         <div *ngFor="let item of paymentBreakdowns" class="receipt-container" #receiptContent>
-          <!-- Receipt Header -->
           <div class="receipt-header">
-            <div class="receipt-logo">
-              <ion-icon name="receipt-outline"></ion-icon>
-            </div>
             <h2>סיכום הוצאות</h2>
             <p class="receipt-period">{{ item.label }}</p>
-            <p class="receipt-date">תאריך: {{ getCurrentDate() }}</p>
+            <p class="receipt-date">נוצר ב- {{ getCurrentDateTime() }}</p>
           </div>
 
-          <!-- Expenses List -->
-          <div class="receipt-section">
-            <div class="receipt-section-title">
-              <ion-icon name="list-outline"></ion-icon>
-              <span>פירוט הוצאות</span>
-            </div>
-            
-            <div class="receipt-table">
-              <div class="receipt-table-header">
-                <div class="col-description">תיאור</div>
-                <div class="col-paid-by">שולם ע"י</div>
-                <div class="col-amount">סכום</div>
-                <div class="col-parent1">{{ parentNames.parent1 }}</div>
-                <div class="col-parent2">{{ parentNames.parent2 }}</div>
-              </div>
-
-              <div class="receipt-table-row" *ngFor="let expense of item.expenses">
-                <div class="col-description">
-                  <strong>{{ expense.title }}</strong>
-                  <p *ngIf="expense.notes" class="expense-note">{{ expense.notes }}</p>
-                </div>
-                <div class="col-paid-by">
-                  <span class="paid-by-badge">{{ getExpensePaidByName(expense) }}</span>
-                </div>
-                <div class="col-amount">{{ formatCurrency(expense.amount) }}</div>
-                <div class="col-parent1" 
-                     [class.paid-amount]="expense.createdBy === getParentUidByRole('parent1')"
-                     [class.owes-amount]="expense.createdBy !== getParentUidByRole('parent1')">
-                  {{ formatCurrency(calculateShare(expense.amount, expense.splitParent1)) }}
-                </div>
-                <div class="col-parent2" 
-                     [class.paid-amount]="expense.createdBy === getParentUidByRole('parent2')"
-                     [class.owes-amount]="expense.createdBy !== getParentUidByRole('parent2')">
-                  {{ formatCurrency(calculateShare(expense.amount, 100 - expense.splitParent1)) }}
-                </div>
-              </div>
-
-              <!-- Subtotal -->
-              <div class="receipt-table-row subtotal-row">
-                <div class="col-description"><strong>סה"כ הוצאות</strong></div>
-                <div class="col-paid-by"></div>
-                <div class="col-amount"><strong>{{ formatCurrency(item.report.approvedTotal) }}</strong></div>
-                <div class="col-parent1"><strong>{{ formatCurrency(item.report.parent1Share) }}</strong></div>
-                <div class="col-parent2"><strong>{{ formatCurrency(item.report.parent2Share) }}</strong></div>
-              </div>
-
-              <!-- Alimony if applicable -->
-
-            </div>
+          <div class="table-wrap">
+            <table class="expense-table">
+              <thead>
+                <tr>
+                  <th>תיאור</th>
+                  <th>שולם ע"י</th>
+                  <th>סכום</th>
+                  <th>{{ parentNames.parent2 }}</th>
+                  <th>{{ parentNames.parent1 }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let expense of item.expenses">
+                  <td class="title-cell">
+                    <div class="title-text">{{ expense.title }}</div>
+                    <div class="muted">{{ expense.date | date:'dd/MM/yyyy' }}</div>
+                  </td>
+                  <td class="payer-cell">
+                    <span class="chip payer">{{ getExpensePaidByName(expense) }}</span>
+                  </td>
+                  <td class="amount-cell">{{ formatCurrency(expense.amount) }}</td>
+                  <td class="share-cell negative">
+                    {{ formatCurrency(calculateShare(expense.amount, 100 - expense.splitParent1)) }}
+                  </td>
+                  <td class="share-cell positive">
+                    {{ formatCurrency(calculateShare(expense.amount, expense.splitParent1)) }}
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th>סה״כ הוצאות</th>
+                  <th></th>
+                  <th>{{ formatCurrency(item.report.approvedTotal) }}</th>
+                  <th class="share-cell negative">{{ formatCurrency(item.report.parent2Share) }}</th>
+                  <th class="share-cell positive">{{ formatCurrency(item.report.parent1Share) }}</th>
+                </tr>
+              </tfoot>
+            </table>
           </div>
 
           <!-- Final Settlement -->
@@ -503,12 +489,6 @@
         </div>
 
         <!-- Download Button (Fixed) -->
-        <div class="download-button-container">
-          <ion-button expand="block" (click)="downloadReceipt()" color="primary" size="large">
-            <ion-icon slot="start" name="download-outline"></ion-icon>
-            הורד כ-PDF
-          </ion-button>
-        </div>
       </ion-content>
     </ng-template>
   </ion-modal>

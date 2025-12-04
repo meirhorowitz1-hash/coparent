@@ -1,0 +1,144 @@
+:host {
+  --wa-green: #dcf8c6;
+  --wa-green-light: #c9f1ac;
+  --wa-gray: #f5f5f5;
+  --wa-text: #1f2d3a;
+}
+
+.chat-header ion-toolbar {
+  --background: #f0f2f5;
+  --color: #202c33;
+}
+
+.chat-content {
+  --padding-top: calc(env(safe-area-inset-top) + 12px);
+  --padding-start: 0;
+  --padding-end: 0;
+  --padding-bottom: calc(env(safe-area-inset-bottom) + 80px);
+  --keyboard-offset: 0px !important;
+  background: #e5ddd5;
+  color: var(--wa-text);
+}
+
+.chat-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 12px 0;
+  height: 100%;
+}
+
+.messages {
+  flex: 1;
+  padding: 12px 8px 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  direction: ltr; /* keep alignment logic consistent */
+}
+
+.message-row {
+  display: flex;
+  justify-content: flex-start;
+  gap: 8px;
+  align-items: flex-end;
+  flex-direction: row;
+}
+
+.message-row.outgoing {
+  justify-content: flex-end;
+}
+
+.message-row.incoming {
+  justify-content: flex-start;
+}
+
+.bubble {
+  max-width: 78%;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 10px 12px 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  color: var(--wa-text);
+  line-height: 1.5;
+  position: relative;
+  direction: rtl;
+  text-align: right;
+}
+
+.message-row.outgoing .bubble {
+  background: linear-gradient(135deg, var(--wa-green) 0%, var(--wa-green-light) 100%);
+  color: #234029;
+}
+
+.bubble p {
+  margin: 0 0 6px;
+}
+
+.meta {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  align-items: center;
+  font-size: 11px;
+  color: #9fb3bd;
+}
+
+.composer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 16px;
+  background: #f0f2f5;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  position: static;
+  margin: 0 8px 8px;
+}
+
+.composer ion-button {
+  --padding-start: 8px;
+  --padding-end: 8px;
+height: 30px;
+}
+
+.message-input {
+  --padding-start: 12px;
+  --padding-end: 12px;
+  --background: #ffffff;
+  --color: #202c33;
+  --border-radius: 12px;
+}
+
+.empty-chat {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: #9fb3bd;
+  gap: 8px;
+}
+
+.empty-chat ion-icon {
+  font-size: 40px;
+  color: var(--wa-green-light);
+}
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #ececec;
+  color: #202c33;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.avatar.outgoing {
+  margin-right: 8px;
+  margin-left: 0;
+  order: 2;
+}

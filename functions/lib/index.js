@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onExpenseStatusChanged = exports.onExpenseCreated = exports.dispatchEventReminders = exports.onCalendarEventDeleted = exports.onCalendarEventUpdated = exports.onCalendarEventCreated = exports.onSwapRequestStatusChanged = exports.onCustodyScheduleChanged = exports.onSwapRequestCreated = void 0;
+exports.onChatMessageCreated = exports.onExpenseStatusChanged = exports.onExpenseCreated = exports.dispatchEventReminders = exports.onCalendarEventDeleted = exports.onCalendarEventUpdated = exports.onCalendarEventCreated = exports.onSwapRequestStatusChanged = exports.onCustodyScheduleChanged = exports.onSwapRequestCreated = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 const reminders_1 = require("./reminders");
@@ -130,7 +130,8 @@ exports.onCalendarEventCreated = functions.firestore
         parentId: event.parentId
     });
     const targetUids = await resolveTargetUidsForEvent(familyId, event.parentId, event.targetUids);
-    if (!targetUids.length) {
+    const notifyUids = targetUids.filter(uid => uid && uid !== event.createdBy);
+    if (!notifyUids.length) {
         functions.logger.warn('[calendarEventCreated] No target users for event', { familyId });
         return;
     }
@@ -144,7 +145,7 @@ exports.onCalendarEventCreated = functions.firestore
         eventId: context.params.eventId,
         parentId: event.parentId
     };
-    for (const uid of targetUids) {
+    for (const uid of notifyUids) {
         await sendPushToUser(uid, payload, dataPayload);
     }
     await (0, reminders_1.upsertReminder)({
@@ -240,6 +241,28 @@ exports.onExpenseStatusChanged = functions.firestore
         familyId,
         expenseId: context.params.expenseId
     });
+});
+exports.onChatMessageCreated = functions.firestore
+    .document('families/{familyId}/messages/{messageId}')
+    .onCreate(async (snapshot, context) => {
+    const familyId = context.params.familyId;
+    const messageId = context.params.messageId;
+    const data = snapshot.data();
+    const members = await getFamilyMembers(familyId);
+    const recipients = members.filter(uid => uid && uid !== data.senderId);
+    if (!recipients.length) {
+        functions.logger.info('[onChatMessageCreated] no recipients', { familyId, messageId });
+        return;
+    }
+    const title = data.senderName || 'הודעה חדשה';
+    const body = (data.text || '').slice(0, 120) || 'הודעה חדשה בצ׳אט';
+    await Promise.all(recipients.map(uid => sendPushToUser(uid, { title, body }, {
+        type: 'chat',
+        familyId,
+        messageId,
+        senderId: data.senderId || '',
+        senderName: data.senderName || ''
+    })));
 });
 async function sendPushToUser(uid, notification, data) {
     if (!uid) {

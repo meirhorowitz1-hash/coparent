@@ -4,6 +4,7 @@ import {
   Timestamp,
   collection,
   collectionData,
+  deleteDoc,
   doc,
   orderBy,
   query,
@@ -122,6 +123,20 @@ export class TaskHistoryService implements OnDestroy {
         completedAt: updated.completedAt ? Timestamp.fromDate(updated.completedAt) : null,
         updatedAt: serverTimestamp()
       });
+    } catch (error) {
+      this.tasksSubject.next(current);
+      throw error;
+    }
+  }
+
+  async deleteTask(id: string): Promise<void> {
+    const familyId = this.requireFamilyId();
+    const current = this.tasksSubject.value;
+    const next = current.filter(task => task.id !== id);
+    this.tasksSubject.next(next);
+
+    try {
+      await deleteDoc(doc(this.firestore, 'families', familyId, 'tasks', id));
     } catch (error) {
       this.tasksSubject.next(current);
       throw error;

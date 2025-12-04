@@ -8,7 +8,9 @@ import {
   signOut,
   updateProfile,
   user,
-  UserCredential
+  UserCredential,
+  setPersistence,
+  indexedDBLocalPersistence
 } from '@angular/fire/auth';
 import { from, Observable } from 'rxjs';
 
@@ -18,6 +20,13 @@ import { from, Observable } from 'rxjs';
 export class AuthService {
   private readonly auth = inject(Auth);
   readonly user$ = user(this.auth);
+
+  constructor() {
+    // Keep the session across app restarts
+    setPersistence(this.auth, indexedDBLocalPersistence).catch(error => {
+      console.warn('Failed to set auth persistence', error);
+    });
+  }
 
   login(email: string, password: string): Observable<UserCredential> {
     return from(signInWithEmailAndPassword(this.auth, email, password));

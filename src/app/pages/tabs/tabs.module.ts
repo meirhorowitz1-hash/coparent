@@ -34,6 +34,10 @@ const routes: Routes = [
         loadChildren: () => import('../tasks/tasks.module').then(m => m.TasksPageModule)
       },
       {
+        path: 'chat',
+        loadChildren: () => import('../chat/chat.module').then(m => m.ChatPageModule)
+      },
+      {
         path: 'documents',
         loadChildren: () => import('../documents/documents.module').then(m => m.DocumentsPageModule)
       },

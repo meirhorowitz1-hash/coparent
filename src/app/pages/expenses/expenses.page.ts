@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild, ElementRef, ViewChildren, QueryList } from '@angular/core';
 import { FormArray, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { ToastController } from '@ionic/angular';
 import { ActivatedRoute } from '@angular/router';
@@ -48,6 +48,7 @@ export class ExpensesPage implements OnInit, OnDestroy {
   editingExpenseId: string | null = null;
   pendingReceipt?: File;
   pendingReceiptPreview?: string;
+  @ViewChildren('receiptContent') receiptContent!: QueryList<ElementRef<HTMLElement>>;
   private readonly MAX_RECEIPT_PREVIEW_BYTES = 900_000;
   isSubmitting = false;
   isSavingSettings = false;
@@ -942,15 +943,50 @@ export class ExpensesPage implements OnInit, OnDestroy {
   }
 
   async downloadReceipt() {
-    const toast = await this.toastCtrl.create({
-      message: 'הורדת PDF תהיה זמינה בקרוב',
-      duration: 2000,
-      color: 'primary'
-    });
-    toast.present();
-    
-    // TODO: Implement PDF generation using jsPDF or similar library
-    // For now, this is a placeholder
-    console.log('Download receipt requested');
+    const section = this.receiptContent?.first?.nativeElement;
+    if (!section) {
+      const toast = await this.toastCtrl.create({
+        message: 'אין נתונים להורדה כרגע',
+        duration: 2000,
+        color: 'warning'
+      });
+      toast.present();
+      return;
+    }
+
+    const tableHtml = section.querySelector('.table-wrap')?.innerHTML || '';
+    const balanceEl = section.querySelector('.final-balance');
+    const balanceText = balanceEl ? balanceEl.textContent?.trim() || '' : '';
+
+    const style = `
+      <style>
+        body { direction: rtl; font-family: Arial, sans-serif; padding: 16px; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { border: 1px solid #dce0e5; padding: 8px; text-align: right; }
+        thead { background: #eef2f7; }
+        .positive { background: #ecfdf3; color: #15803d; }
+        .negative { background: #fef2f2; color: #b91c1c; }
+        .total-row { font-weight: 700; background: #f8fafc; }
+        .balance { margin-top: 12px; font-weight: 800; }
+      </style>
+    `;
+
+    const htmlContent = `
+      <html>
+        <head>${style}</head>
+        <body>
+          ${tableHtml}
+          <div class="balance">${balanceText}</div>
+        </body>
+      </html>
+    `;
+
+    const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `expenses-${this.getCurrentDateTime().replace(/\\s+/g, '_')}.xls`;
+    link.click();
+    URL.revokeObjectURL(url);
   }
 }

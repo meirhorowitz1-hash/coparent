@@ -30,6 +30,7 @@ interface CalendarEventDoc {
   isAllDay?: boolean;
   targetUids?: string[];
   reminderMinutes?: number | null;
+  createdBy?: string;
 }
 
 type ExpenseStatus = 'pending' | 'approved' | 'rejected';
@@ -166,7 +167,8 @@ export const onCalendarEventCreated = functions.firestore
     });
 
     const targetUids = await resolveTargetUidsForEvent(familyId, event.parentId, event.targetUids);
-    if (!targetUids.length) {
+    const notifyUids = targetUids.filter(uid => uid && uid !== event.createdBy);
+    if (!notifyUids.length) {
       functions.logger.warn('[calendarEventCreated] No target users for event', { familyId });
       return;
     }
@@ -183,7 +185,7 @@ export const onCalendarEventCreated = functions.firestore
       parentId: event.parentId
     };
 
-    for (const uid of targetUids) {
+    for (const uid of notifyUids) {
       await sendPushToUser(uid, payload, dataPayload);
     }
 
@@ -302,6 +304,45 @@ export const onExpenseStatusChanged = functions.firestore
       }
     );
 });
+
+export const onChatMessageCreated = functions.firestore
+  .document('families/{familyId}/messages/{messageId}')
+  .onCreate(async (snapshot: functions.firestore.QueryDocumentSnapshot, context: functions.EventContext) => {
+    const familyId = context.params.familyId as string;
+    const messageId = context.params.messageId as string;
+    const data = snapshot.data() as {
+      text?: string;
+      senderId?: string;
+      senderName?: string;
+    };
+
+    const members = await getFamilyMembers(familyId);
+    const recipients = members.filter(uid => uid && uid !== data.senderId);
+
+    if (!recipients.length) {
+      functions.logger.info('[onChatMessageCreated] no recipients', { familyId, messageId });
+      return;
+    }
+
+    const title = data.senderName || 'הודעה חדשה';
+    const body = (data.text || '').slice(0, 120) || 'הודעה חדשה בצ׳אט';
+
+    await Promise.all(
+      recipients.map(uid =>
+        sendPushToUser(
+          uid,
+          { title, body },
+          {
+            type: 'chat',
+            familyId,
+            messageId,
+            senderId: data.senderId || '',
+            senderName: data.senderName || ''
+          }
+        )
+      )
+    );
+  });
 
 async function sendPushToUser(
   uid: string | undefined,

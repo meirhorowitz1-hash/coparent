@@ -223,10 +223,10 @@ export class HomeService implements OnDestroy {
     
     return [
       {
-        id: 'swap-request',
-        title: 'בקשת החלפה',
-        icon: 'swap-horizontal',
-        route: '/calendar',
+        id: 'chat',
+        title: 'צ׳אט',
+        icon: 'chatbubble-ellipses-outline',
+        route: '/chat',
         color: 'primary'
       },
       {

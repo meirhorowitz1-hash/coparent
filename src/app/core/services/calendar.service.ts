@@ -33,10 +33,12 @@ type FirestoreRecurringPattern = Omit<RecurringPattern, 'endDate'> & {
   endDate?: Timestamp | null;
 };
 
-type FirestoreCalendarEvent = Omit<CalendarEvent, 'startDate' | 'endDate' | 'recurring'> & {
+type FirestoreCalendarEvent = Omit<CalendarEvent, 'startDate' | 'endDate' | 'recurring' | 'createdAt' | 'updatedAt'> & {
   startDate: Timestamp;
   endDate: Timestamp;
   recurring?: FirestoreRecurringPattern;
+  createdAt?: Timestamp | null;
+  updatedAt?: Timestamp | null;
 };
 
 type FirestoreCustodySchedule = Omit<CustodySchedule, 'startDate' | 'endDate'> & {
@@ -253,7 +255,9 @@ export class CalendarService implements OnDestroy {
       ...data,
       startDate: this.toDate(data.startDate),
       endDate: this.toDate(data.endDate),
-      recurring: data.recurring ? this.mapRecurringPattern(data.recurring) : undefined
+      recurring: data.recurring ? this.mapRecurringPattern(data.recurring) : undefined,
+      createdAt: data.createdAt ? this.toDate(data.createdAt) : undefined,
+      updatedAt: data.updatedAt ? this.toDate(data.updatedAt) : undefined
     };
   }
 
@@ -522,9 +526,11 @@ export class CalendarService implements OnDestroy {
     const eventsRef = collection(this.firestore, 'families', familyId, 'calendarEvents');
 
     const targetUids = this.resolveEventTargetUids(event.parentId);
+    const createdBy = this.currentUserId ?? 'unknown';
+    const createdByName = this.getCurrentUserDisplayName();
 
     return addDoc(eventsRef, {
-      ...this.serializeEvent({ ...event, targetUids }),
+      ...this.serializeEvent({ ...event, targetUids, createdBy, createdByName }),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     }).then(() => undefined);
@@ -860,6 +866,14 @@ export class CalendarService implements OnDestroy {
 
     if (event.targetUids) {
       payload['targetUids'] = [...event.targetUids];
+    }
+
+    if (event.createdAt instanceof Date) {
+      payload['createdAt'] = Timestamp.fromDate(event.createdAt);
+    }
+
+    if (event.updatedAt instanceof Date) {
+      payload['updatedAt'] = Timestamp.fromDate(event.updatedAt);
     }
 
     return payload;

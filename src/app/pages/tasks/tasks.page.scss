@@ -98,17 +98,22 @@ ion-item.invalid {
   --border-color: var(--ion-color-danger);
 }
 
-.add-task-button {
-  margin-top: var(--space-3);
-  --border-radius: 999px;
-  --background: linear-gradient(120deg, #0f7878, #0b6a6a);
-  color: #fff;
-  font-weight: var(--font-semibold);
-  letter-spacing: -0.01em;
-  box-shadow: 0 14px 30px rgba(15, 120, 120, 0.28);
+ion-fab {
+  margin-bottom: 72px;
+  margin-inline-end: 16px;
 
-  ion-icon {
-    margin-inline-start: 6px;
+  ion-fab-button {
+    --box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+    width: 56px;
+    height: 56px;
+
+    ion-icon {
+      font-size: 28px;
+    }
+
+    &::part(native) {
+      border-radius: 16px;
+    }
   }
 }
 

@@ -51,6 +51,35 @@
             </div>
           </div>
 
+          <form class="household-info panel-lite" [formGroup]="householdForm" (ngSubmit)="saveHouseholdMeta()">
+            <div class="info-block">
+              <p class="eyebrow">שם המרחב</p>
+              <h3>{{ family?.name || 'מרחב משותף' }}</h3>
+              <ion-item lines="none" class="inline-input">
+                <ion-input formControlName="name" placeholder="תנו שם למרחב"></ion-input>
+              </ion-item>
+            </div>
+            <div class="info-block">
+              <p class="eyebrow">ילדים</p>
+              <div class="chips" *ngIf="householdChildren.length; else noKids">
+                <ion-chip *ngFor="let kid of householdChildren" (click)="removeChild(kid)">
+                  <ion-label>{{ kid }}</ion-label>
+                  <ion-icon name="close"></ion-icon>
+                </ion-chip>
+              </div>
+              <ng-template #noKids>
+                <p class="helper">לא הוזנו ילדים במרחב</p>
+              </ng-template>
+              <div class="inline-input">
+                <ion-input formControlName="childName" placeholder="שם ילד/ה"></ion-input>
+                <ion-button size="small" fill="clear" type="button" (click)="addChild()">הוספה</ion-button>
+              </div>
+              <ion-button expand="block" size="small" (click)="saveHouseholdMeta()" [disabled]="isSavingHousehold">
+                {{ isSavingHousehold ? 'שומר...' : 'שמור פרטים' }}
+              </ion-button>
+            </div>
+          </form>
+
           <div class="leave-family" *ngIf="family?.id">
             <button type="button" class="ghost danger" (click)="leaveFamily()" [disabled]="isLeavingFamily">
               <ion-icon name="exit-outline"></ion-icon>

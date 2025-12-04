@@ -2,6 +2,9 @@
   <ion-toolbar>
     <ion-title>מרכז הבית</ion-title>
     <ion-buttons slot="end">
+      <ion-button fill="clear" size="small" (click)="goToProfile()">
+        <ion-icon slot="icon-only" name="person-circle-outline"></ion-icon>
+      </ion-button>
       <ion-button fill="clear" size="small" (click)="manualRefresh()">
         <ion-icon slot="icon-only" name="refresh"></ion-icon>
       </ion-button>
@@ -94,7 +97,7 @@
         class="panel-accordion"
         [value]="openAccordions"
         (ionChange)="openAccordions = $event.detail.value">
-        <ion-accordion value="requests" class="accordion-card">
+       <ion-accordion value="requests" class="accordion-card">
           <div slot="header" class="accordion-header">
             <div>
               <p class="eyebrow">בקשות</p>
@@ -106,113 +109,19 @@
             </div>
           </div>
           <div slot="content" class="accordion-body">
-            @if (pendingSwapRequests.length > 0) {
-              <article class="swap-card" *ngFor="let request of pendingSwapRequests">
-                <header>
-                  <div class="parties">
-                    <strong>{{ request.requestedByName }}</strong>
-                    <ion-icon name="swap-horizontal"></ion-icon>
-                    <strong>{{ request.requestedToName }}</strong>
-                  </div>
-                  <div class="header-actions">
-                    <ion-chip color="tertiary" class="type-chip">
-                      {{ getRequestTypeLabel(request) }}
-                    </ion-chip>
-                    <ion-badge [color]="getRequestStatusColor(request.status)">
-                      {{ getRequestStatusLabel(request.status) }}
-                    </ion-badge>
-                  </div>
-                </header>
-
-                <div class="swap-timeline">
-                  <div>
-                    <span class="label">תאריך מקורי</span>
-                    <strong>{{ formatDate(request.originalDate) }}</strong>
-                  </div>
-                  @if (request.proposedDate) {
-                    <ion-icon name="chevron-back-outline"></ion-icon>
-                    <div>
-                      <span class="label">תאריך מוצע</span>
-                      <strong>{{ formatDate(request.proposedDate) }}</strong>
-                    </div>
-                  } @else {
-                    <div class="oneway-note">
-                      <ion-icon name="arrow-forward-circle"></ion-icon>
-                      <span>בקשה ללא תאריך חלופי</span>
-                    </div>
-                  }
-                </div>
-
-                @if (request.reason) {
-                  <p class="request-reason">{{ request.reason }}</p>
-                }
-
-                <ion-note class="request-meta">
-                  נשלחה ב־{{ formatDate(request.createdAt) }}
-                </ion-note>
-
-                @if (request.respondedAt) {
-                  <ion-note class="request-meta">
-                    עודכנה ב־{{ formatDate(request.respondedAt) }}
-                  </ion-note>
-                }
-
-                @if (request.status !== SwapRequestStatus.PENDING && request.responseNote) {
-                  <div class="response-note">
-                    <ion-icon name="chatbubbles-outline"></ion-icon>
-                    <span>{{ request.responseNote }}</span>
-                  </div>
-                }
-
-                @if (canRespondToRequest(request)) {
-                  <ion-textarea
-                    class="request-note-input"
-                    placeholder="הוסיפו הערה לבן/בת הזוג"
-                    autoGrow="true"
-                    [rows]="2"
-                    [maxlength]="300"
-                    [name]="'note-' + request.id"
-                    [(ngModel)]="requestNotes[request.id]">
-                  </ion-textarea>
-
-                  <div class="request-actions">
-                    <ion-button
-                      color="success"
-                      expand="block"
-                      (click)="handleRequestAction(request, SwapRequestStatus.APPROVED)">
-                      <ion-icon slot="start" name="checkmark-circle"></ion-icon>
-                      אישור
-                    </ion-button>
-                    <ion-button
-                      color="danger"
-                      expand="block"
-                      fill="outline"
-                      (click)="handleRequestAction(request, SwapRequestStatus.REJECTED)">
-                      <ion-icon slot="start" name="close-circle"></ion-icon>
-                      דחייה
-                    </ion-button>
-                  </div>
-                }
-
-                @if (canCancelRequest(request)) {
-                  <ion-button
-                    expand="block"
-                    fill="outline"
-                    color="medium"
-                    class="request-cancel-button"
-                    (click)="handleRequestAction(request, SwapRequestStatus.CANCELLED)">
-                    <ion-icon slot="start" name="close-circle-outline"></ion-icon>
-                    בטל בקשה
-                  </ion-button>
-                }
-              </article>
-            } @else {
-              <div class="empty-card">
-                <ion-icon name="swap-horizontal-outline"></ion-icon>
-                <p>אין בקשות ממתינות כרגע</p>
-              </div>
-            }
-           
+            <div class="empty-card">
+              <ion-icon name="swap-horizontal-outline"></ion-icon>
+              <p>בקשות ההחלפה עברו ללוח שנה</p>
+              <ion-button
+                expand="block"
+                fill="clear"
+                size="small"
+                color="primary"
+                routerLink="/tabs/calendar">
+                עבור ללוח שנה
+                <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>
+              </ion-button>
+            </div>
           </div>
         </ion-accordion>
 

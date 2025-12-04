@@ -12,6 +12,9 @@ export interface Family {
   members: string[];
   pendingInvites: FamilyInvite[];
   pendingInviteEmails: string[];
+  name?: string;
+  photoUrl?: string | null;
+  children?: string[];
   shareCode?: string | null;
   shareCodeUpdatedAt?: unknown;
   createdAt?: unknown;

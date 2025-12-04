@@ -5,7 +5,12 @@
       [tab]="tab.id"
       [aria-label]="tab.label"
       [class.tab-active]="isSelected(tab.id)">
-      <ion-icon [name]="isSelected(tab.id) ? tab.activeIcon : tab.icon"></ion-icon>
+      <span class="icon-wrapper">
+        <ion-icon [name]="isSelected(tab.id) ? tab.activeIcon : tab.icon"></ion-icon>
+        <ion-badge *ngIf="getBadgeCount(tab.id) > 0" color="danger" class="tab-badge">
+          {{ getBadgeCount(tab.id) }}
+        </ion-badge>
+      </span>
       <ion-label>{{ tab.label }}</ion-label>
     </ion-tab-button>
   </ion-tab-bar>

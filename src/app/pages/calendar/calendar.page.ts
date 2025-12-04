@@ -1,5 +1,5 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { ModalController, ToastController } from '@ionic/angular';
+import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { IonContent, ModalController, ToastController } from '@ionic/angular';
 import { Subject, takeUntil } from 'rxjs';
 import { CalendarService } from '../../core/services/calendar.service';
 import { CalendarDay, CalendarEvent, EventType } from '../../core/models/calendar-event.model';
@@ -7,6 +7,8 @@ import { CustodySetupComponent } from './custody-setup.component';
 import { EventFormComponent } from './event-form.component';
 import { SwapRequestModalComponent } from '../../components/swap-request-modal/swap-request-modal.component';
 import { SwapRequestService } from '../../core/services/swap-request.service';
+import { SwapRequest, SwapRequestStatus } from '../../core/models/swap-request.model';
+import { TaskHistoryService } from '../../core/services/task-history.service';
 
 @Component({
   selector: 'app-calendar',
@@ -14,8 +16,10 @@ import { SwapRequestService } from '../../core/services/swap-request.service';
   styleUrls: ['./calendar.page.scss'],
   standalone: false
 })
-export class CalendarPage implements OnInit, OnDestroy {
+export class CalendarPage implements OnInit, OnDestroy, AfterViewInit {
   private destroy$ = new Subject<void>();
+  @ViewChild(IonContent) private ionContent?: IonContent;
+  @ViewChild('swapPanel') private swapPanel?: ElementRef<HTMLElement>;
   
   calendarDays: CalendarDay[] = [];
   currentMonth: Date = new Date();
@@ -28,15 +32,26 @@ export class CalendarPage implements OnInit, OnDestroy {
   hasPendingCustodyApproval = false;
   currentUserId: string | null = null;
   currentUserRole: 'parent1' | 'parent2' | null = null;
+  swapRequests: SwapRequest[] = [];
+  requestNotes: Record<string, string> = {};
+  protected readonly SwapRequestStatus = SwapRequestStatus;
+  private viewReady = false;
+  private hasScrolledToSwap = false;
+  private seenEventIds = new Set<string>();
+  private newEventIds = new Set<string>();
+  private readonly SEEN_STORAGE_KEY = 'calendar:seen-events';
 
   constructor(
     private calendarService: CalendarService,
     private modalController: ModalController,
     private toastCtrl: ToastController,
-    private swapRequestService: SwapRequestService
+    private swapRequestService: SwapRequestService,
+    private taskHistoryService: TaskHistoryService
   ) {}
 
   ngOnInit() {
+    this.loadSeenEvents();
+
     // האזן לשינויים בחודש הנוכחי
     this.calendarService.currentMonth$
       .pipe(takeUntil(this.destroy$))
@@ -52,6 +67,7 @@ export class CalendarPage implements OnInit, OnDestroy {
       .subscribe(events => {
         console.log('[CalendarPage] events$ received', events, 'events');
         this.updateCalendar();
+        this.updateNewEvents(events);
       });
 
     // האזן לשינויים במשמורת (כדי לרענן צבעי ימים)
@@ -78,6 +94,22 @@ export class CalendarPage implements OnInit, OnDestroy {
           parent2: metadata.parent2.name || 'הורה 2'
         };
       });
+
+    this.swapRequestService.swapRequests$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(requests => {
+        this.swapRequests = requests;
+        if (this.pendingSwapRequests.length === 0) {
+          this.hasScrolledToSwap = false;
+        } else {
+          this.scheduleSwapScroll();
+        }
+      });
+  }
+
+  ngAfterViewInit(): void {
+    this.viewReady = true;
+    this.scheduleSwapScroll();
   }
 
   ngOnDestroy() {
@@ -118,6 +150,8 @@ export class CalendarPage implements OnInit, OnDestroy {
 
   onDayClick(day: CalendarDay) {
     this.selectedDay = day;
+    this.markDayEventsSeen(day);
+    this.persistSeenEvents();
     this.showEventModal = true;
   }
 
@@ -320,5 +354,152 @@ export class CalendarPage implements OnInit, OnDestroy {
       position: 'bottom'
     });
     await toast.present();
+  }
+
+  // ===== אירועים חדשים =====
+  hasNewEvent(day: CalendarDay): boolean {
+    return day.events.some(ev => this.newEventIds.has(ev.id));
+  }
+
+  private loadSeenEvents() {
+    try {
+      const raw = localStorage.getItem(this.SEEN_STORAGE_KEY);
+      if (raw) {
+        (JSON.parse(raw) as string[]).forEach(id => this.seenEventIds.add(id));
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  private persistSeenEvents() {
+    try {
+      localStorage.setItem(this.SEEN_STORAGE_KEY, JSON.stringify(Array.from(this.seenEventIds)));
+    } catch {
+      // ignore
+    }
+  }
+
+  private isEventRelevant(event: CalendarEvent): boolean {
+    const uid = this.calendarService.getCurrentUserId();
+    const role = this.calendarService.getParentRoleForUser(uid);
+    if (!uid) {
+      return false;
+    }
+    // סימון חדש רק אם ברור מי יצר את האירוע וזה לא המשתמש הנוכחי
+    if (!event.createdBy || event.createdBy === uid) {
+      return false;
+    }
+    const targetsUid = event.targetUids?.includes(uid);
+    const targetsRole =
+      event.parentId === 'both' ||
+      (role === 'parent1' && event.parentId === 'parent1') ||
+      (role === 'parent2' && event.parentId === 'parent2');
+    return !!(targetsUid || targetsRole);
+  }
+
+  private updateNewEvents(events: CalendarEvent[]) {
+    const relevant = events.filter(ev => this.isEventRelevant(ev));
+    this.newEventIds = new Set<string>(
+      relevant.map(ev => ev.id).filter(id => !this.seenEventIds.has(id))
+    );
+
+    if (this.newEventIds.size > 0 && this.viewReady) {
+      this.scrollToFirstNewEvent(relevant);
+    }
+  }
+
+  private markDayEventsSeen(day: CalendarDay) {
+    day.events.forEach(ev => {
+      this.seenEventIds.add(ev.id);
+      this.newEventIds.delete(ev.id);
+    });
+  }
+
+  private scrollToFirstNewEvent(events: CalendarEvent[]) {
+    if (!this.ionContent) {
+      return;
+    }
+    const first = events.find(ev => this.newEventIds.has(ev.id));
+    if (!first) {
+      return;
+    }
+
+    setTimeout(() => {
+      const selector = `[data-date="${first.startDate.toISOString().slice(0, 10)}"]`;
+      const dayEl = document.querySelector<HTMLElement>(selector);
+      if (dayEl) {
+        const y = dayEl.getBoundingClientRect().top + window.scrollY - 120;
+        this.ionContent!.scrollToPoint(0, y, 400);
+      }
+    }, 150);
+  }
+
+  // בקשות החלפה
+  get pendingSwapRequests(): SwapRequest[] {
+    return this.swapRequests.filter(request => request.status === SwapRequestStatus.PENDING);
+  }
+
+  canRespondToRequest(request: SwapRequest): boolean {
+    return (
+      request.status === SwapRequestStatus.PENDING &&
+      !!this.currentUserId &&
+      request.requestedTo === this.currentUserId
+    );
+  }
+
+  canCancelRequest(request: SwapRequest): boolean {
+    return (
+      request.status === SwapRequestStatus.PENDING &&
+      !!this.currentUserId &&
+      request.requestedBy === this.currentUserId
+    );
+  }
+
+  getRequestTypeLabel(request: SwapRequest): string {
+    return request.requestType === 'one-way' ? 'בקשה ללא החזרה' : 'בקשת החלפה';
+  }
+
+  formatDate(date: Date | string | number): string {
+    return new Date(date).toLocaleDateString('he-IL');
+  }
+
+  async handleRequestAction(request: SwapRequest, status: SwapRequestStatus) {
+    const canPerform =
+      status === SwapRequestStatus.CANCELLED
+        ? this.canCancelRequest(request)
+        : this.canRespondToRequest(request);
+
+    if (!canPerform) {
+      return;
+    }
+
+    const note =
+      status === SwapRequestStatus.CANCELLED ? undefined : (this.requestNotes[request.id] || '');
+
+    try {
+      await this.swapRequestService.updateSwapRequestStatus(request.id, status, note);
+      if (status !== SwapRequestStatus.CANCELLED) {
+        this.requestNotes = { ...this.requestNotes, [request.id]: '' };
+      }
+      await this.presentToast(status === SwapRequestStatus.APPROVED ? 'הבקשה אושרה' : status === SwapRequestStatus.REJECTED ? 'הבקשה נדחתה' : 'הבקשה בוטלה');
+    } catch (error) {
+      console.error('Failed to update swap request', error);
+      await this.presentToast('עדכון הבקשה נכשל', 'danger');
+    }
+  }
+
+  private scheduleSwapScroll() {
+    if (!this.viewReady || this.hasScrolledToSwap || !this.pendingSwapRequests.length) {
+      return;
+    }
+    setTimeout(() => {
+      if (!this.swapPanel?.nativeElement || !this.ionContent) {
+        return;
+      }
+      const y = this.swapPanel.nativeElement.offsetTop - 24;
+      this.ionContent.scrollToPoint(0, y, 500);
+      this.hasScrolledToSwap = true;
+    }, 100);
   }
 }

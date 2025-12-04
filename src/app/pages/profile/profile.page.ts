@@ -32,6 +32,9 @@ export class ProfilePage implements OnInit, OnDestroy {
   signOutError: string | null = null;
   familiesList: string[] = [];
   switchingFamilyId: string | null = null;
+  householdForm: FormGroup;
+  householdChildren: string[] = [];
+  isSavingHousehold = false;
 
   private readonly profileSubject = new BehaviorSubject<UserProfile | null>(null);
   readonly profile$ = this.profileSubject.asObservable();
@@ -55,6 +58,10 @@ export class ProfilePage implements OnInit, OnDestroy {
     });
     this.familyCodeForm = this.formBuilder.group({
       code: ['', [Validators.required, Validators.minLength(6)]]
+    });
+    this.householdForm = this.formBuilder.group({
+      name: ['', [Validators.minLength(2)]],
+      childName: ['']
     });
   }
 
@@ -123,6 +130,11 @@ export class ProfilePage implements OnInit, OnDestroy {
     this.familySubscription = this.familyService.listenToFamily(familyId).subscribe(family => {
       this.familySubject.next(family);
       this.updateShareCode(family);
+      this.householdChildren = [...(family?.children ?? [])];
+      this.householdForm.patchValue({
+        name: family?.name || '',
+        childName: ''
+      });
     });
   }
 
@@ -208,6 +220,51 @@ export class ProfilePage implements OnInit, OnDestroy {
     } catch (error) {
       console.error(error);
       this.shareCodeError = 'העתקה נכשלה. נסו לסמן ולהעתיק ידנית.';
+    }
+  }
+
+  addChild() {
+    const child = (this.householdForm.value.childName as string)?.trim();
+    if (!child) {
+      return;
+    }
+    this.householdChildren = [...this.householdChildren, child];
+    this.householdForm.patchValue({ childName: '' });
+  }
+
+  removeChild(name: string) {
+    this.householdChildren = this.householdChildren.filter(c => c !== name);
+  }
+
+  async saveHouseholdMeta() {
+    const family = this.familySubject.value;
+    if (!family?.id) {
+      return;
+    }
+    const nameCtrl = this.householdForm.get('name');
+    if (nameCtrl && nameCtrl.value && nameCtrl.invalid) {
+      nameCtrl.markAsTouched();
+      return;
+    }
+
+    const cleanedChildren = Array.from(
+      new Set(
+        this.householdChildren
+          .map(c => (c || '').trim())
+          .filter(Boolean)
+      )
+    );
+
+    this.isSavingHousehold = true;
+    try {
+      await this.familyService.updateFamilyMeta(family.id, {
+        name: (nameCtrl?.value as string)?.trim() || family.name || 'מרחב משותף',
+        children: cleanedChildren
+      });
+    } catch (error) {
+      console.error('Failed to save household meta', error);
+    } finally {
+      this.isSavingHousehold = false;
     }
   }
 

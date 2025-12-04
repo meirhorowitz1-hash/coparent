@@ -18,14 +18,14 @@
 <ion-content [fullscreen]="true">
   <div class="calendar-shell">
     <section class="calendar-hero surface-card">
-      <div class="hero-row">
+      <!-- <div class="hero-row">
         <div>
           <p class="eyebrow">חודש נוכחי</p>
           <h1>{{ monthName }} {{ yearNumber }}</h1>
           <p class="hero-subtitle">מסנכרן בין כל בני המשפחה</p>
         </div>
      
-      </div>
+      </div> -->
 
       <div class="month-controls">
         <ion-button fill="clear" shape="round" (click)="previousMonth()">
@@ -54,6 +54,7 @@
         <button
           type="button"
           *ngFor="let day of calendarDays"
+          [attr.data-date]="day.date.toISOString().slice(0,10)"
           [class]="getDayClasses(day)"
           (click)="onDayClick(day)">
           <div class="day-number">{{ day.date.getDate() }}</div>
@@ -74,12 +75,13 @@
             <div class="more-events" *ngIf="day.events.length > 3">
               +{{ day.events.length - 3 }}
             </div>
+            <span class="new-event-pill" *ngIf="hasNewEvent(day)">חדש</span>
           </div>
         </button>
       </div>
     </section>
 
-    <section class="legend-panel">
+    <!-- <section class="legend-panel">
       <div class="legend-item">
         <span class="legend-color parent1"></span>
         <span>{{ parentLabels.parent1 }}</span>
@@ -92,6 +94,84 @@
         <span class="legend-color both"></span>
         <span>שניהם</span>
       </div>
+    </section> -->
+
+    <section class="swap-panel surface-card" #swapPanel *ngIf="pendingSwapRequests.length">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">בקשות החלפה</p>
+          <h3>ממתינות לטיפול</h3>
+        </div>
+        <ion-chip color="warning">{{ pendingSwapRequests.length }}</ion-chip>
+      </div>
+
+      <ion-accordion-group expand="inset" multiple="true">
+        <ion-accordion *ngFor="let request of pendingSwapRequests" class="swap-accordion">
+          <div slot="header" class="swap-header">
+            <div class="swap-header-row">
+              <span class="pill">בקשת החלפה</span>
+              <div class="names">
+                <strong>{{ request.requestedByName }}</strong>
+                <ion-icon name="swap-horizontal"></ion-icon>
+                <strong>{{ request.requestedToName }}</strong>
+              </div>
+            </div>
+            <div class="dates-row">
+              <div class="date-col">
+                <span class="label">תאריך מקורי</span>
+                <strong>{{ formatDate(request.originalDate) }}</strong>
+              </div>
+              <ion-icon name="chevron-back-outline" class="chevron"></ion-icon>
+              <div class="date-col">
+                <span class="label">תאריך מוצע</span>
+                <strong>{{ request.proposedDate ? formatDate(request.proposedDate) : '—' }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="swap-body" slot="content">
+            <ion-textarea
+              *ngIf="canRespondToRequest(request)"
+              class="request-note-input"
+              placeholder="הוסיפו הערה לבן/בת הזוג"
+              autoGrow="true"
+              [rows]="2"
+              [maxlength]="300"
+              [name]="'note-' + request.id"
+              [(ngModel)]="requestNotes[request.id]">
+            </ion-textarea>
+
+            <div class="request-actions" *ngIf="canRespondToRequest(request)">
+              <ion-button
+                color="success"
+                expand="block"
+                (click)="handleRequestAction(request, SwapRequestStatus.APPROVED)">
+                <ion-icon slot="start" name="checkmark-circle"></ion-icon>
+                אישור
+              </ion-button>
+              <ion-button
+                color="danger"
+                expand="block"
+                fill="outline"
+                (click)="handleRequestAction(request, SwapRequestStatus.REJECTED)">
+                <ion-icon slot="start" name="close-circle"></ion-icon>
+                דחייה
+              </ion-button>
+            </div>
+
+            <ion-button
+              *ngIf="canCancelRequest(request)"
+              expand="block"
+              fill="outline"
+              color="medium"
+              class="request-cancel-button"
+              (click)="handleRequestAction(request, SwapRequestStatus.CANCELLED)">
+              <ion-icon slot="start" name="close-circle-outline"></ion-icon>
+              בטל בקשה
+            </ion-button>
+          </div>
+        </ion-accordion>
+      </ion-accordion-group>
     </section>
   </div>
 

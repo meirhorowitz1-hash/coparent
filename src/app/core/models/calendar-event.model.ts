@@ -13,6 +13,10 @@ export interface CalendarEvent {
   isAllDay?: boolean;
   recurring?: RecurringPattern;
   swapRequestId?: string;
+  createdBy?: string;
+  createdByName?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export enum EventType {

@@ -149,6 +149,21 @@ export class TasksPage implements OnInit, OnDestroy {
     this.showForm = true;
   }
 
+  async deleteTask(task: Task, event?: Event): Promise<void> {
+    event?.stopPropagation();
+    const confirmed = window.confirm('למחוק את המשימה? לא ניתן לבטל.');
+    if (!confirmed) {
+      return;
+    }
+    try {
+      await this.taskHistoryService.deleteTask(task.id);
+      this.presentToast('המשימה נמחקה', 'success');
+    } catch (error) {
+      console.error('Failed to delete task', error);
+      this.presentToast('לא הצלחנו למחוק משימה', 'danger');
+    }
+  }
+
   private async presentToast(message: string, color: 'success' | 'danger' | 'warning' = 'success') {
     const toast = await this.toastCtrl.create({
       message,

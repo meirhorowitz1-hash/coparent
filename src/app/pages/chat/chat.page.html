@@ -1,0 +1,73 @@
+<ion-header [translucent]="false" class="chat-header">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/home" text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ otherParentName }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button fill="clear" color="medium">
+        <ion-icon name="call-outline"></ion-icon>
+      </ion-button>
+      <ion-button fill="clear" color="medium">
+        <ion-icon name="videocam-outline"></ion-icon>
+      </ion-button>
+      <ion-button fill="clear" color="medium">
+        <ion-icon name="ellipsis-vertical"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="chat-content">
+  <div class="chat-thread" *ngIf="familyId; else noFamily">
+    <div class="messages">
+      <div
+        *ngFor="let message of messages"
+        class="message-row"
+        [class.outgoing]="isOutgoing(message)"
+        [class.incoming]="!isOutgoing(message)">
+        <div class="avatar" *ngIf="!isOutgoing(message)">
+          <span>{{ getInitial(message) }}</span>
+        </div>
+        <div class="bubble">
+          <p>{{ message.text }}</p>
+          <div class="meta">
+            <span>{{ formatTime(message.sentAt) }}</span>
+            <ion-icon
+              *ngIf="isOutgoing(message)"
+              name="checkmark-done-outline">
+            </ion-icon>
+          </div>
+        </div>
+        <div class="avatar outgoing" *ngIf="isOutgoing(message)">
+          <span>{{ getInitial(message) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="composer">
+      <ion-button fill="clear" color="medium">
+        <ion-icon slot="icon-only" name="attach-outline"></ion-icon>
+      </ion-button>
+      <ion-button fill="clear" color="medium">
+        <ion-icon slot="icon-only" name="happy-outline"></ion-icon>
+      </ion-button>
+      <ion-input
+        class="message-input"
+        placeholder="הקלד הודעה"
+        [(ngModel)]="messageText"
+        (keyup.enter)="sendMessage()">
+      </ion-input>
+      <ion-button color="success" shape="round" [disabled]="isSending" (click)="sendMessage()">
+        <ion-icon slot="icon-only" name="send"></ion-icon>
+      </ion-button>
+    </div>
+  </div>
+
+  <ng-template #noFamily>
+    <div class="empty-chat">
+      <ion-icon name="chatbubble-ellipses-outline"></ion-icon>
+      <p>כדי להתחיל להתכתב, הצטרפו למשפחה פעילה.</p>
+    </div>
+  </ng-template>
+</ion-content>

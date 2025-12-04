@@ -785,22 +785,22 @@ ion-fab {
       }
 
       // מי ששילם - טקסט ירוק מודגש
-      &.paid-amount {
-        color: #047857;
-        font-weight: 700;
-        background: linear-gradient(135deg, rgba(209, 250, 229, 0.3) 0%, rgba(167, 243, 208, 0.3) 100%);
-        border-radius: 6px;
-        padding: 4px 8px;
-      }
+      // &.paid-amount {
+      //   color: #047857;
+      //   font-weight: 700;
+      //   background: linear-gradient(135deg, rgba(209, 250, 229, 0.3) 0%, rgba(167, 243, 208, 0.3) 100%);
+      //   border-radius: 6px;
+      //   padding: 4px 8px;
+      // }
 
-      // מי שחייב - טקסט אדום
-      &.owes-amount {
-        color: #b91c1c;
-        font-weight: 600;
-        background: linear-gradient(135deg, rgba(254, 226, 226, 0.3) 0%, rgba(254, 202, 202, 0.3) 100%);
-        border-radius: 6px;
-        padding: 4px 8px;
-      }
+      // // מי שחייב - טקסט אדום
+      // &.owes-amount {
+      //   color: #b91c1c;
+      //   font-weight: 600;
+      //   background: linear-gradient(135deg, rgba(254, 226, 226, 0.3) 0%, rgba(254, 202, 202, 0.3) 100%);
+      //   border-radius: 6px;
+      //   padding: 4px 8px;
+      // }
     }
   }
 }
@@ -1282,6 +1282,96 @@ ion-fab {
   }
 }
 
+/* Downloadable table layout */
+.table-wrap {
+  overflow-x: auto;
+  padding: 0 8px 16px;
+}
+
+.expense-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  font-size: 14px;
+
+  thead {
+    background: #edf2f7;
+
+    th {
+      text-align: right;
+      padding: 12px;
+      color: #475569;
+      font-weight: 700;
+    }
+  }
+
+  tbody tr {
+    border-bottom: 1px solid #e2e8f0;
+
+    &:hover {
+      background: #f8fafc;
+    }
+  }
+
+  td,
+  th {
+    padding: 12px;
+    vertical-align: middle;
+  }
+
+  .title-cell {
+    .title-text {
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 4px;
+    }
+    .muted {
+      color: #94a3b8;
+      font-size: 12px;
+    }
+  }
+
+  .payer-cell .chip {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-weight: 700;
+    font-size: 12px;
+  }
+
+  .amount-cell {
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .share-cell {
+    font-weight: 700;
+    // &.positive {
+    //   color: #15803d;
+    //   background: #ecfdf3;
+    //   border-radius: 8px;
+    //   padding: 8px 10px;
+    // }
+    // &.negative {
+    //   color: #b91c1c;
+    //   background: #fef2f2;
+    //   border-radius: 8px;
+    //   padding: 8px 10px;
+    // }
+  }
+
+  tfoot {
+    background: #f8fafc;
+    font-weight: 800;
+
+    th {
+      padding: 12px;
+    }
+  }
+}
+
 @media (max-width: 640px) {
   ion-content {
     padding: var(--space-4);
@@ -1306,6 +1396,38 @@ ion-fab {
 
     h2 {
       font-size: 24px;
+    }
+  }
+
+  .table-wrap {
+    padding: 0;
+  }
+
+  .expense-table {
+    font-size: 12px;
+
+    th,
+    td {
+      padding: 8px;
+      white-space: nowrap;
+    }
+
+    .title-cell {
+      .title-text {
+        font-size: 13px;
+      }
+      .muted {
+        font-size: 11px;
+      }
+    }
+
+    .payer-cell .chip {
+      font-size: 10px;
+      padding: 4px 8px;
+    }
+
+    .share-cell {
+      padding: 6px 8px;
     }
   }
 }

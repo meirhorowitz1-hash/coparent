@@ -232,6 +232,31 @@ export class FamilyService {
     await firstValueFrom(this.userProfileService.removeFamily(uid, familyId));
   }
 
+  async updateFamilyMeta(
+    familyId: string,
+    payload: { name?: string; children?: string[]; photoUrl?: string | null }
+  ): Promise<void> {
+    if (!familyId) {
+      throw new Error('missing-family-id');
+    }
+    const familyRef = doc(this.firestore, 'families', familyId);
+    const next: Record<string, any> = {
+      updatedAt: serverTimestamp()
+    };
+
+    if (typeof payload.name === 'string') {
+      next['name'] = payload.name.trim();
+    }
+    if (Array.isArray(payload.children)) {
+      next['children'] = payload.children;
+    }
+    if (payload.photoUrl !== undefined) {
+      next['photoUrl'] = payload.photoUrl;
+    }
+
+    await updateDoc(familyRef, next);
+  }
+
   private async createUniqueShareCode(currentFamilyId?: string): Promise<string> {
     const familiesRef = collection(this.firestore, 'families');
 

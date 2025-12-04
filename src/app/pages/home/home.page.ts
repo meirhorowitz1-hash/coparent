@@ -107,16 +107,14 @@ export class HomePage implements OnInit, OnDestroy {
     });
   }
 
+  goToProfile() {
+    this.router.navigate(['/tabs/profile']);
+  }
+
   /**
    * ביצוע פעולה מהירה
    */
   async executeQuickAction(action: QuickAction) {
-    // מקרה מיוחד לבקשת החלפה - נפתח Modal
-    if (action.id === 'swap-request') {
-      await this.openModal();
-      return;
-    }
-
     if (action.route) {
       this.router.navigate([`/tabs${action.route}`]);
     } else if (action.action) {
