@@ -13,6 +13,7 @@ export interface Task {
   completedBy?: string;
   reminders?: TaskReminder[];
   attachments?: string[];
+  childId?: string | null;
 }
 
 export enum TaskPriority {

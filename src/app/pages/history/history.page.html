@@ -78,6 +78,15 @@
                         • על ידי {{ expense.createdByName || expense.createdBy || 'לא ידוע' }}
                       </p>
                     </ion-label>
+                    <ion-button
+                      *ngIf="expense.receiptPreview"
+                      fill="clear"
+                      size="small"
+                      class="receipt-btn"
+                      slot="end"
+                      (click)="openReceipt(expense.receiptPreview)">
+                      <ion-icon slot="icon-only" name="image-outline"></ion-icon>
+                    </ion-button>
                     <div class="amount-pill">{{ formatCurrency(expense.amount) }}</div>
                     <ion-badge
                       slot="end"

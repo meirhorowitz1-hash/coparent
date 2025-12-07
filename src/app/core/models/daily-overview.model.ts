@@ -30,6 +30,8 @@ export interface DailySummary {
   pendingExpensesCount: number;
   hasUrgentTasks: boolean;
   totalPendingAmount: number;
+  totalExpensesAmount: number;
+  approvedExpensesAmount: number;
 }
 
 export interface QuickAction {
@@ -39,5 +41,7 @@ export interface QuickAction {
   route?: string;
   action?: () => void;
   badge?: number;
+  emptyLabel?: string;
   color?: string;
+  disabled?: boolean;
 }

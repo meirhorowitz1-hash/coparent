@@ -1,11 +1,167 @@
 
-  <ion-header [translucent]="true">
-    <ion-toolbar>
-      <ion-title>מסמכים</ion-title>
-    </ion-toolbar>
-  </ion-header>
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>{{ 'documents.title' | t }}</ion-title>
+  </ion-toolbar>
+</ion-header>
 
-  <ion-content class="ion-padding">
-    <p>ניהול מסמכים משפטיים, רפואיים וחינוכיים.</p>
-  </ion-content>
+<ion-content class="documents-content">
+  <div class="screen">
+    @if (documents.length > 0) {
+      <section class="list-card search-wrapper">
+        <div class="search-row">
+          <ion-item lines="none" class="search-field">
+            <ion-icon slot="start" name="search-outline"></ion-icon>
+            <ion-input
+              [(ngModel)]="searchTerm"
+              [placeholder]="'documents.searchPlaceholder' | t"
+              autocomplete="off"
+              clearInput>
+            </ion-input>
+          </ion-item>
+          <div class="child-filter" *ngIf="children.length">
+            <p class="label">{{ 'documents.childFilterLabel' | t }}</p>
+            <div class="child-chips">
+              <button
+                type="button"
+                class="child-chip"
+                [class.active]="childFilter === 'all'"
+                (click)="childFilter = 'all'">
+                {{ 'documents.filter.all' | t }}
+              </button>
+              <button
+                type="button"
+                class="child-chip"
+                [class.active]="childFilter === 'none'"
+                (click)="childFilter = 'none'">
+                {{ 'documents.filter.none' | t }}
+              </button>
+              <button
+                *ngFor="let child of children"
+                type="button"
+                class="child-chip"
+                [class.active]="childFilter === child"
+                (click)="childFilter = child">
+                {{ child }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
 
+      <section class="list-card">
+        <div class="list-header">
+          <div>
+            <p class="eyebrow">{{ 'documents.list.count' | t:{ count: documents.length } }}</p>
+          </div>
+        </div>
+
+        <ion-list lines="none">
+          <ion-item
+            *ngFor="let doc of filteredDocuments"
+            class="doc-item"
+            detail="false">
+            <div class="doc-body">
+              <strong>{{ doc.title }}</strong>
+              <p class="muted">{{ formatDate(doc.uploadedAt) }}</p>
+              <p class="muted child-inline" *ngIf="doc.childId">
+                <ion-icon name="person-outline"></ion-icon>
+                {{ getChildLabel(doc.childId) }}
+              </p>
+            </div>
+            <ion-button
+              slot="end"
+              fill="clear"
+              size="small"
+              color="primary"
+              (click)="openDocument(doc)">
+              <ion-icon slot="icon-only" name="open-outline"></ion-icon>
+            </ion-button>
+          </ion-item>
+        </ion-list>
+      </section>
+    } @else {
+      <div class="empty-state">
+        <ion-icon name="folder-open-outline"></ion-icon>
+        <p>{{ 'documents.empty.title' | t }}</p>
+        <span class="muted">{{ 'documents.empty.subtitle' | t }}</span>
+      </div>
+    }
+  </div>
+
+  <ion-fab slot="fixed" vertical="bottom" horizontal="end" class="documents-fab">
+    <ion-fab-button color="primary" (click)="openUploadModal()">
+      <ion-icon name="add"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+
+  <ion-modal [isOpen]="showUploadModal" (didDismiss)="closeUploadModal()">
+    <ng-template>
+      <div class="modal-sheet">
+        <div class="upload-header">
+          <div>
+            <p class="eyebrow">{{ 'documents.upload.new' | t }}</p>
+            <h2>{{ 'documents.upload.saveTitle' | t }}</h2>
+          </div>
+          <ion-buttons>
+            <ion-button fill="clear" (click)="closeUploadModal()">
+              <ion-icon slot="icon-only" name="close"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </div>
+
+        <div class="form-grid">
+          <ion-item lines="none">
+            <ion-label position="stacked">{{ 'documents.upload.form.titleLabel' | t }}</ion-label>
+            <ion-input
+              [(ngModel)]="title"
+              [placeholder]="'documents.upload.form.titlePlaceholder' | t"
+              autocomplete="off">
+            </ion-input>
+          </ion-item>
+
+          <div class="child-filter child-filter-modal">
+            <p class="label">
+              {{ 'documents.upload.child.label' | t }}
+              <span class="muted" *ngIf="!children.length">{{ 'documents.upload.child.empty' | t }}</span>
+            </p>
+            <div class="child-chips">
+              <button
+                type="button"
+                class="child-chip"
+                [class.active]="selectedChildId === null"
+                (click)="selectedChildId = null"
+                [disabled]="!children.length">
+                {{ 'documents.upload.child.none' | t }}
+              </button>
+              <button
+                *ngFor="let child of children"
+                type="button"
+                class="child-chip"
+                [class.active]="selectedChildId === child"
+                (click)="selectedChildId = child">
+                {{ child }}
+              </button>
+            </div>
+          </div>
+
+          <div class="file-row">
+            <input type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" (change)="onFileSelected($event)" hidden #fileInputModal>
+            <ion-button fill="outline" color="primary" (click)="fileInputModal.click()">
+              <ion-icon slot="start" name="attach-outline"></ion-icon>
+              {{ 'documents.upload.file.button' | t }}
+            </ion-button>
+            <span class="file-name" *ngIf="selectedFileName; else noFileModal">{{ selectedFileName }}</span>
+            <ng-template #noFileModal>
+              <span class="file-name muted">{{ 'documents.upload.file.none' | t }}</span>
+            </ng-template>
+          </div>
+
+          <ion-button expand="block" color="primary" (click)="uploadDocument()">
+            {{ 'documents.upload.saveButton' | t }}
+          </ion-button>
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+</ion-content>

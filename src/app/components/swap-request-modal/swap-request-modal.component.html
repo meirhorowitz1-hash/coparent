@@ -1,7 +1,6 @@
-
 <ion-header>
   <ion-toolbar color="primary">
-    <ion-title>בקשת החלפה</ion-title>
+    <ion-title>{{ t('swapRequest.title') }}</ion-title>
     <ion-buttons slot="start">
       <ion-button (click)="dismiss()">
         <ion-icon slot="icon-only" name="close"></ion-icon>
@@ -15,13 +14,13 @@
     
     <div class="info-box">
       <ion-icon name="information-circle" color="primary"></ion-icon>
-      <p>בקש מההורה השני להחליף יום משמורת</p>
+      <p>{{ t('swapRequest.info') }}</p>
     </div>
 
     <ion-item lines="full">
       <ion-label>
-        <strong>בקשה ללא יום חלופי</strong>
-        <p>תעביר יום משמורת ללא קבלת יום אחר בתמורה</p>
+        <strong>{{ t('swapRequest.oneWay.label') }}</strong>
+        <p>{{ t('swapRequest.oneWay.description') }}</p>
       </ion-label>
       <ion-toggle
         slot="end"
@@ -35,7 +34,7 @@
       <ion-item>
         <ion-label position="stacked">
           <ion-icon name="calendar-outline"></ion-icon>
-          התאריך המקורי שלך
+          {{ t('swapRequest.originalDate') }}
         </ion-label>
         <ion-datetime-button datetime="swap-original-date" [disabled]="lockOriginalDate"></ion-datetime-button>
       </ion-item>
@@ -49,8 +48,8 @@
             [min]="minDate"
             [disabled]="lockOriginalDate"
             displayFormat="DD/MM/YYYY"
-            cancelText="ביטול"
-            doneText="אישור">
+            [cancelText]="t('swapRequest.cancel')"
+            [doneText]="t('swapRequest.confirm')">
           </ion-datetime>
         </ng-template>
       </ion-modal>
@@ -60,7 +59,7 @@
         <ion-item>
           <ion-label position="stacked">
             <ion-icon name="swap-horizontal"></ion-icon>
-            תאריך מוצע להחלפה
+            {{ t('swapRequest.proposedDate') }}
           </ion-label>
           <ion-datetime-button datetime="swap-proposed-date"></ion-datetime-button>
         </ion-item>
@@ -73,8 +72,8 @@
               name="proposedDate"
               [min]="minDate"
               displayFormat="DD/MM/YYYY"
-              cancelText="ביטול"
-              doneText="אישור">
+              [cancelText]="t('swapRequest.cancel')"
+              [doneText]="t('swapRequest.confirm')">
             </ion-datetime>
           </ng-template>
         </ion-modal>
@@ -84,12 +83,12 @@
       <ion-item>
         <ion-label position="stacked">
           <ion-icon name="create-outline"></ion-icon>
-          סיבה (אופציונלי)
+          {{ t('swapRequest.reason') }}
         </ion-label>
         <ion-textarea
           [(ngModel)]="reason"
           name="reason"
-          placeholder="למה אתה מבקש החלפה?"
+          [placeholder]="t('swapRequest.reasonPlaceholder')"
           rows="4"
           maxlength="500">
         </ion-textarea>
@@ -101,20 +100,20 @@
     </form>
 
     <div class="swap-preview" *ngIf="originalDate">
-      <h4>תצוגה מקדימה:</h4>
+      <h4>{{ t('swapRequest.preview.title') }}</h4>
       <div class="preview-item">
         <ion-icon name="arrow-back" color="danger"></ion-icon>
-        <span>{{ originalDate | date:'dd/MM/yyyy':'':'he-IL' }} → תתן להורה השני</span>
+        <span>{{ t('swapRequest.preview.give', { date: formatDate(originalDate) }) }}</span>
       </div>
       @if (requestType === 'swap' && proposedDate) {
         <div class="preview-item">
           <ion-icon name="arrow-forward" color="success"></ion-icon>
-          <span>{{ proposedDate | date:'dd/MM/yyyy':'':'he-IL' }} → תקבל במקום</span>
+          <span>{{ t('swapRequest.preview.receive', { date: formatDate(proposedDate) }) }}</span>
         </div>
       } @else {
         <div class="preview-item">
           <ion-icon name="checkmark-circle" color="tertiary"></ion-icon>
-          <span>ללא תאריך חלופי</span>
+          <span>{{ t('swapRequest.preview.noAlternative') }}</span>
         </div>
       }
     </div>
@@ -129,7 +128,7 @@
       (click)="submit()"
       [disabled]="!isFormValid()">
       <ion-icon slot="start" name="checkmark"></ion-icon>
-      שלח בקשה
+      {{ t('swapRequest.submit') }}
     </ion-button>
   </ion-toolbar>
 </ion-footer>

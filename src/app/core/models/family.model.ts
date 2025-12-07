@@ -9,6 +9,7 @@ export interface FamilyInvite {
 
 export interface Family {
   id?: string;
+  ownerId?: string;
   members: string[];
   pendingInvites: FamilyInvite[];
   pendingInviteEmails: string[];

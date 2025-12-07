@@ -1,11 +1,12 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { Subject, of } from 'rxjs';
+import { Subject, Subscription, of } from 'rxjs';
 import { switchMap, takeUntil } from 'rxjs/operators';
 import { ChatMessage, ChatService } from '../../core/services/chat.service';
 import { CalendarService } from '../../core/services/calendar.service';
 import { AuthService } from '../../core/services/auth.service';
 import { FamilyService } from '../../core/services/family.service';
 import { Family } from '../../core/models/family.model';
+import { I18nService } from '../../core/services/i18n.service';
 
 @Component({
   selector: 'app-chat',
@@ -19,18 +20,26 @@ export class ChatPage implements OnInit, OnDestroy {
   messageText = '';
   isSending = false;
   currentUserId: string | null = null;
-  currentUserName = 'אני';
-  otherParentName = 'הורה';
-  familyName = 'צ׳אט';
+  currentUserName = '';
+  otherParentName = '';
+  familyName = '';
 
   private destroy$ = new Subject<void>();
+  private langSub?: Subscription;
+  private defaultMe = '';
+  private defaultParent = '';
+  private defaultChatTitle = '';
 
   constructor(
     private chatService: ChatService,
     private calendarService: CalendarService,
     private authService: AuthService,
-    private familyService: FamilyService
-  ) {}
+    private familyService: FamilyService,
+    private i18n: I18nService
+  ) {
+    this.resetFallbackLabels();
+    this.langSub = this.i18n.language$.subscribe(() => this.resetFallbackLabels());
+  }
 
   ngOnInit(): void {
     this.authService.user$
@@ -50,7 +59,7 @@ export class ChatPage implements OnInit, OnDestroy {
         takeUntil(this.destroy$),
         switchMap(familyId => {
           this.familyId = familyId;
-          this.familyName = 'צ׳אט';
+          this.familyName = this.i18n.translate('chat.titleDefault');
           if (!familyId) {
             return of<ChatMessage[]>([]);
           }
@@ -72,13 +81,14 @@ export class ChatPage implements OnInit, OnDestroy {
         })
       )
       .subscribe(family => {
-        this.familyName = family?.name || 'צ׳אט';
+        this.familyName = family?.name || this.i18n.translate('chat.titleDefault');
       });
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    this.langSub?.unsubscribe();
   }
 
   private updateOtherParentName() {
@@ -116,7 +126,7 @@ export class ChatPage implements OnInit, OnDestroy {
     if (!date) {
       return '';
     }
-    return date.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+    return this.i18n.formatTime(date);
   }
 
   isOutgoing(message: ChatMessage): boolean {
@@ -126,8 +136,43 @@ export class ChatPage implements OnInit, OnDestroy {
   getInitial(message: ChatMessage): string {
     const isMine = this.isOutgoing(message);
     const name = isMine
-      ? this.currentUserName || 'אני'
-      : message.senderName || this.otherParentName || 'הורה';
+      ? this.currentUserName || this.i18n.translate('chat.me')
+      : message.senderName || this.otherParentName || this.i18n.translate('chat.parent');
     return name.trim().charAt(0).toUpperCase();
+  }
+
+  getAvatarUrl(message: ChatMessage): string | null {
+    const meta = this.calendarService.getParentMetadataSnapshot();
+    if (message.senderId === meta.parent1.uid) {
+      return meta.parent1.photoUrl || null;
+    }
+    if (message.senderId === meta.parent2.uid) {
+      return meta.parent2.photoUrl || null;
+    }
+    // if it's me but metadata not matched
+    if (message.senderId === this.currentUserId && this.currentUserName) {
+      return meta.parent1.uid === this.currentUserId ? meta.parent1.photoUrl || null : meta.parent2.photoUrl || null;
+    }
+    return null;
+  }
+
+  private resetFallbackLabels() {
+    const prevMe = this.defaultMe;
+    const prevParent = this.defaultParent;
+    const prevTitle = this.defaultChatTitle;
+
+    this.defaultMe = this.i18n.translate('chat.me');
+    this.defaultParent = this.i18n.translate('chat.parent');
+    this.defaultChatTitle = this.i18n.translate('chat.titleDefault');
+
+    if (!this.currentUserName || this.currentUserName === prevMe) {
+      this.currentUserName = this.defaultMe;
+    }
+    if (!this.otherParentName || this.otherParentName === prevParent) {
+      this.otherParentName = this.defaultParent;
+    }
+    if (!this.familyName || this.familyName === prevTitle) {
+      this.familyName = this.defaultChatTitle;
+    }
   }
 }

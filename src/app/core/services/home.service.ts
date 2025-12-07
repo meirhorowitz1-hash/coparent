@@ -94,7 +94,9 @@ export class HomeService implements OnDestroy {
         tasksCount: 0,
         pendingExpensesCount: 0,
         hasUrgentTasks: false,
-        totalPendingAmount: 0
+        totalPendingAmount: 0,
+        totalExpensesAmount: 0,
+        approvedExpensesAmount: 0
       }
     };
 
@@ -206,12 +208,23 @@ export class HomeService implements OnDestroy {
       0
     );
 
+    const totalExpensesAmount = this.expenseStore.getAll().reduce(
+      (sum, expense) => sum + (expense.amount || 0),
+      0
+    );
+
+    const approvedExpensesAmount = this.expenseStore.getAll().reduce((sum, expense) => {
+      return expense.status === 'approved' ? sum + (expense.amount || 0) : sum;
+    }, 0);
+
     return {
       eventsCount: overview.events.length,
       tasksCount: overview.upcomingTasks.filter(t => t.status !== TaskStatus.COMPLETED).length,
       pendingExpensesCount: overview.pendingExpenses.length,
       hasUrgentTasks,
-      totalPendingAmount
+      totalPendingAmount,
+      totalExpensesAmount,
+      approvedExpensesAmount
     };
   }
 
@@ -220,37 +233,38 @@ export class HomeService implements OnDestroy {
    */
   getQuickActions(): QuickAction[] {
     const overview = this.dailyOverviewSubject.value;
-    
+    const pendingExpensesCount = overview?.pendingExpenses.length ?? 0;
+    const pendingSwapRequestsCount =
+      overview?.swapRequests.filter(r => r.status === SwapRequestStatus.PENDING).length ?? 0;
+
     return [
       {
-        id: 'chat',
-        title: 'צ׳אט',
-        icon: 'chatbubble-ellipses-outline',
-        route: '/chat',
-        color: 'secondary'
+        id: 'pending-expenses',
+        title: 'הוצאות ממתינות',
+        icon: 'wallet-outline',
+        route: pendingExpensesCount > 0 ? '/expenses' : undefined,
+        badge: pendingExpensesCount > 0 ? pendingExpensesCount : undefined,
+        emptyLabel: pendingExpensesCount === 0 ? 'אין הוצאות ממתינות לאישור' : undefined,
+        color: 'warning',
+        disabled: pendingExpensesCount === 0
       },
       {
-        id: 'new-expense',
-        title: 'הוצאה חדשה',
-        icon: 'wallet',
-        route: '/expenses',
-        badge: overview?.pendingExpenses.length,
-        color: 'success'
+        id: 'swap-requests',
+        title: 'בקשות החלפה',
+        icon: 'swap-horizontal-outline',
+        route: pendingSwapRequestsCount > 0 ? '/calendar' : undefined,
+        badge: pendingSwapRequestsCount > 0 ? pendingSwapRequestsCount : undefined,
+        emptyLabel: pendingSwapRequestsCount === 0 ? 'אין בקשות להחלפה' : undefined,
+        color: 'primary',
+        disabled: pendingSwapRequestsCount === 0
       },
       {
-        id: 'new-task',
-        title: 'משימה חדשה',
-        icon: 'checkbox',
-        route: '/tasks',
-        badge: overview?.upcomingTasks.filter(t => t.status !== TaskStatus.COMPLETED).length,
-        color: 'warning'
-      },
-      {
-        id: 'add-event',
-        title: 'אירוע חדש',
-        icon: 'calendar',
-        route: '/calendar',
-        color: 'tertiary'
+        id: 'documents',
+        title: 'מסמכים',
+        icon: 'document-text-outline',
+        route: '/documents',
+        color: 'tertiary',
+        disabled: false
       }
     ];
   }

@@ -92,6 +92,13 @@
   white-space: nowrap;
 }
 
+.receipt-btn {
+  --padding-start: 6px;
+  --padding-end: 6px;
+  --color: var(--ion-color-medium);
+  margin-inline-start: 4px;
+}
+
 .dates-row {
   display: grid;
   grid-template-columns: 1fr auto 1fr;

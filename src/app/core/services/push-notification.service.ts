@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import { BehaviorSubject, Observable } from 'rxjs';
 import { Messaging, getToken, onMessage } from '@angular/fire/messaging';
 import { ToastController } from '@ionic/angular';
 import { Capacitor } from '@capacitor/core';
@@ -12,6 +13,13 @@ import {
 import { environment } from '../../../environments/environment';
 import { AuthService } from './auth.service';
 import { UserProfileService } from './user-profile.service';
+
+export interface InAppNotification {
+  id: string;
+  title: string;
+  body: string;
+  createdAt: number;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -27,6 +35,9 @@ export class PushNotificationService {
   private registering = false;
   private initialized = false;
   private nativeListenersRegistered = false;
+  private inAppNotifications$ = new BehaviorSubject<InAppNotification[]>([]);
+
+  readonly notifications$: Observable<InAppNotification[]> = this.inAppNotifications$.asObservable();
 
   constructor() {
     if (this.isNativePlatform) {
@@ -166,6 +177,8 @@ export class PushNotificationService {
   }
 
   private async presentForegroundToast(title: string, message: string) {
+    this.addInAppNotification(title, message);
+
     if (!message) {
       return;
     }
@@ -272,5 +285,35 @@ export class PushNotificationService {
     }
 
     await this.userProfileService.addPushToken(this.currentUserId, token);
+  }
+
+  clearNotifications() {
+    if (this.inAppNotifications$.value.length === 0) {
+      return;
+    }
+    this.inAppNotifications$.next([]);
+  }
+
+  private addInAppNotification(title?: string, body?: string) {
+    const normalizedTitle = title?.trim() || 'עדכון חדש';
+    const normalizedBody = body?.trim() || '';
+
+    if (!normalizedBody && !normalizedTitle) {
+      return;
+    }
+
+    const notification: InAppNotification = {
+      id: this.generateNotificationId(),
+      title: normalizedTitle,
+      body: normalizedBody,
+      createdAt: Date.now()
+    };
+
+    const current = this.inAppNotifications$.value;
+    this.inAppNotifications$.next([...current, notification]);
+  }
+
+  private generateNotificationId(): string {
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   }
 }

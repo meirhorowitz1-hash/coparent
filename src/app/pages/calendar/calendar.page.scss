@@ -511,6 +511,19 @@
         margin-left: var(--space-1);
       }
     }
+
+    .event-child {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--ion-color-tertiary);
+      font-weight: var(--font-medium);
+      font-size: var(--text-sm);
+
+      ion-icon {
+        margin: 0;
+      }
+    }
   }
 
   ion-button {

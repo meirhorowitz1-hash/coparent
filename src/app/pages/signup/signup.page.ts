@@ -163,7 +163,7 @@ export class SignupPage implements OnInit {
       }
 
       this.isLoading = false;
-      this.router.navigate(['/calendar']);
+      this.router.navigate(['/tabs/calendar']);
     } catch (error: any) {
       this.isLoading = false;
       if (error?.message === 'family-not-found') {

@@ -6,6 +6,7 @@ import { RouterModule, Routes } from '@angular/router';
 import { CalendarPage } from './calendar.page';
 import { EventFormComponent } from './event-form.component';
 import { CustodySetupComponent } from './custody-setup.component';
+import { SharedModule } from '../../shared/shared.module';
 
 const routes: Routes = [
   {
@@ -21,6 +22,7 @@ const routes: Routes = [
     FormsModule,
     ReactiveFormsModule,
     IonicModule,
+    SharedModule,
     RouterModule.forChild(routes)
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA]

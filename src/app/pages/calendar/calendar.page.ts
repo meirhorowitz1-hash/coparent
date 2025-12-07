@@ -1,6 +1,7 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { IonContent, ModalController, ToastController } from '@ionic/angular';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, Subscription, takeUntil } from 'rxjs';
 import { CalendarService } from '../../core/services/calendar.service';
 import { CalendarDay, CalendarEvent, EventType } from '../../core/models/calendar-event.model';
 import { CustodySetupComponent } from './custody-setup.component';
@@ -9,6 +10,7 @@ import { SwapRequestModalComponent } from '../../components/swap-request-modal/s
 import { SwapRequestService } from '../../core/services/swap-request.service';
 import { SwapRequest, SwapRequestStatus } from '../../core/models/swap-request.model';
 import { TaskHistoryService } from '../../core/services/task-history.service';
+import { I18nService } from '../../core/services/i18n.service';
 
 @Component({
   selector: 'app-calendar',
@@ -28,29 +30,43 @@ export class CalendarPage implements OnInit, OnDestroy, AfterViewInit {
   weekDays = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
   selectedDay: CalendarDay | null = null;
   showEventModal = false;
-  parentLabels = { parent1: 'הורה 1', parent2: 'הורה 2' };
+  parentLabels = { parent1: '', parent2: '' };
   hasPendingCustodyApproval = false;
   currentUserId: string | null = null;
   currentUserRole: 'parent1' | 'parent2' | null = null;
   swapRequests: SwapRequest[] = [];
   requestNotes: Record<string, string> = {};
+  children: string[] = [];
   protected readonly SwapRequestStatus = SwapRequestStatus;
   private viewReady = false;
   private hasScrolledToSwap = false;
   private seenEventIds = new Set<string>();
   private newEventIds = new Set<string>();
   private readonly SEEN_STORAGE_KEY = 'calendar:seen-events';
+  private pendingEventId: string | null = null;
+  private langSub?: Subscription;
 
   constructor(
     private calendarService: CalendarService,
     private modalController: ModalController,
     private toastCtrl: ToastController,
     private swapRequestService: SwapRequestService,
-    private taskHistoryService: TaskHistoryService
+    private taskHistoryService: TaskHistoryService,
+    private route: ActivatedRoute,
+    private i18n: I18nService
   ) {}
 
   ngOnInit() {
     this.loadSeenEvents();
+    this.parentLabels = {
+      parent1: this.i18n.translate('profile.parent1'),
+      parent2: this.i18n.translate('profile.parent2')
+    };
+    this.buildWeekDays();
+    this.langSub = this.i18n.language$.subscribe(() => {
+      this.buildWeekDays();
+      this.updateCalendar();
+    });
 
     // האזן לשינויים בחודש הנוכחי
     this.calendarService.currentMonth$
@@ -68,6 +84,7 @@ export class CalendarPage implements OnInit, OnDestroy, AfterViewInit {
         console.log('[CalendarPage] events$ received', events, 'events');
         this.updateCalendar();
         this.updateNewEvents(events);
+        this.focusEventFromQuery();
       });
 
     // האזן לשינויים במשמורת (כדי לרענן צבעי ימים)
@@ -90,9 +107,15 @@ export class CalendarPage implements OnInit, OnDestroy, AfterViewInit {
       .pipe(takeUntil(this.destroy$))
       .subscribe(metadata => {
         this.parentLabels = {
-          parent1: metadata.parent1.name || 'הורה 1',
-          parent2: metadata.parent2.name || 'הורה 2'
+          parent1: metadata.parent1.name || this.i18n.translate('profile.parent1'),
+          parent2: metadata.parent2.name || this.i18n.translate('profile.parent2')
         };
+      });
+
+    this.calendarService.familyChildren$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(children => {
+        this.children = children ?? [];
       });
 
     this.swapRequestService.swapRequests$
@@ -105,6 +128,14 @@ export class CalendarPage implements OnInit, OnDestroy, AfterViewInit {
           this.scheduleSwapScroll();
         }
       });
+
+    this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(params => {
+      const eventId = params['eventId'];
+      this.pendingEventId = typeof eventId === 'string' ? eventId : null;
+      if (this.pendingEventId) {
+        this.focusEventFromQuery();
+      }
+    });
   }
 
   ngAfterViewInit(): void {
@@ -115,6 +146,7 @@ export class CalendarPage implements OnInit, OnDestroy, AfterViewInit {
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
+    this.langSub?.unsubscribe();
   }
 
   updateCalendar() {
@@ -122,16 +154,43 @@ export class CalendarPage implements OnInit, OnDestroy, AfterViewInit {
     const month = this.currentMonth.getMonth();
     
     this.calendarDays = this.calendarService.generateCalendarDays(year, month);
-    this.monthName = this.getHebrewMonthName(month);
+    this.monthName = this.i18n.formatDate(new Date(year, month, 1), { month: 'long' });
     this.yearNumber = year;
+    this.buildWeekDays();
+  }
+  private isSameDay(dateA: Date, dateB: Date): boolean {
+    return (
+      dateA.getFullYear() === dateB.getFullYear() &&
+      dateA.getMonth() === dateB.getMonth() &&
+      dateA.getDate() === dateB.getDate()
+    );
   }
 
-  getHebrewMonthName(month: number): string {
-    const months = [
-      'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
-      'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'
-    ];
-    return months[month];
+  private focusEventFromQuery() {
+    if (!this.pendingEventId) {
+      return;
+    }
+
+    const targetEvent = this.calendarService.getEventById(this.pendingEventId);
+    if (!targetEvent) {
+      return;
+    }
+
+    const eventDate = new Date(targetEvent.startDate);
+    if (isNaN(eventDate.getTime())) {
+      this.pendingEventId = null;
+      return;
+    }
+
+    this.calendarService.setMonth(eventDate);
+    this.currentMonth = new Date(eventDate.getFullYear(), eventDate.getMonth(), 1);
+    this.updateCalendar();
+
+    const day = this.calendarDays.find(d => this.isSameDay(d.date, eventDate));
+    if (day) {
+      this.onDayClick(day);
+      this.pendingEventId = null;
+    }
   }
 
   previousMonth() {
@@ -186,24 +245,29 @@ export class CalendarPage implements OnInit, OnDestroy, AfterViewInit {
 
   getEventTypeLabel(type: EventType): string {
     const labels: Record<EventType, string> = {
-      [EventType.CUSTODY]: 'משמרת',
-      [EventType.PICKUP]: 'איסוף',
-      [EventType.DROPOFF]: 'החזרה',
-      [EventType.SCHOOL]: 'בית ספר',
-      [EventType.ACTIVITY]: 'פעילות',
-      [EventType.MEDICAL]: 'רפואי',
-      [EventType.HOLIDAY]: 'חג',
-      [EventType.VACATION]: 'חופשה',
-      [EventType.OTHER]: 'אחר'
+      [EventType.CUSTODY]: 'calendar.eventType.custody',
+      [EventType.PICKUP]: 'calendar.eventType.pickup',
+      [EventType.DROPOFF]: 'calendar.eventType.dropoff',
+      [EventType.SCHOOL]: 'calendar.eventType.school',
+      [EventType.ACTIVITY]: 'calendar.eventType.activity',
+      [EventType.MEDICAL]: 'calendar.eventType.medical',
+      [EventType.HOLIDAY]: 'calendar.eventType.holiday',
+      [EventType.VACATION]: 'calendar.eventType.vacation',
+      [EventType.OTHER]: 'calendar.eventType.other'
     };
-    return labels[type] || 'אחר';
+    return this.i18n.translate(labels[type] || 'calendar.eventType.other');
   }
 
   formatTime(date: Date): string {
-    return new Date(date).toLocaleTimeString('he-IL', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+    return this.i18n.formatTime(date);
+  }
+
+  getChildLabel(childId?: string | null): string {
+    if (!childId) {
+      return '';
+    }
+    const found = this.children.find(c => c === childId);
+    return found || childId;
   }
 
   showTemplateParent(day: CalendarDay): 'parent1' | 'parent2' | null {
@@ -217,7 +281,7 @@ export class CalendarPage implements OnInit, OnDestroy, AfterViewInit {
 
   addNewEvent() {
     if (!this.selectedDay) {
-      this.presentToast('בחרו יום בלוח כדי להוסיף אירוע', 'danger');
+      this.presentToast(this.i18n.translate('calendar.toast.selectDay'), 'danger');
       return;
     }
     this.openEventForm(undefined, this.selectedDay.date);
@@ -245,7 +309,7 @@ export class CalendarPage implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
     if (!this.canRequestSwap(this.selectedDay)) {
-      await this.presentToast('אפשר לבקש החלפה רק ביום שבו הילדים אצלך', 'danger');
+      await this.presentToast(this.i18n.translate('calendar.toast.swapOnlyOwn'), 'danger');
       return;
     }
 
@@ -270,10 +334,10 @@ export class CalendarPage implements OnInit, OnDestroy, AfterViewInit {
           reason: data.reason,
           requestType: data.requestType
         });
-        await this.presentToast('בקשת ההחלפה נשלחה', 'success');
+        await this.presentToast(this.i18n.translate('calendar.toast.swapSent'), 'success');
       } catch (error: any) {
         console.error('Failed to submit swap request', error);
-        await this.presentToast('לא ניתן לשלוח בקשה ליום הזה', 'danger');
+        await this.presentToast(this.i18n.translate('calendar.toast.swapFailed'), 'danger');
       }
     }
   }
@@ -339,11 +403,11 @@ export class CalendarPage implements OnInit, OnDestroy, AfterViewInit {
       this.updateCalendar();
     } catch (error) {
       console.error('Failed to delete event', error);
-      await this.presentToast('מחיקת האירוע נכשלה', 'danger');
+      await this.presentToast(this.i18n.translate('calendar.toast.deleteFailed'), 'danger');
       return;
     }
 
-    await this.presentToast('האירוע נמחק', 'success');
+    await this.presentToast(this.i18n.translate('calendar.toast.deleted'), 'success');
   }
 
   private async presentToast(message: string, color: 'success' | 'danger' = 'success') {
@@ -457,11 +521,17 @@ export class CalendarPage implements OnInit, OnDestroy, AfterViewInit {
   }
 
   getRequestTypeLabel(request: SwapRequest): string {
-    return request.requestType === 'one-way' ? 'בקשה ללא החזרה' : 'בקשת החלפה';
+    return request.requestType === 'one-way'
+      ? this.i18n.translate('calendar.request.type.oneWay')
+      : this.i18n.translate('calendar.request.type.swap');
   }
 
   formatDate(date: Date | string | number): string {
-    return new Date(date).toLocaleDateString('he-IL');
+    return this.i18n.formatDate(date, { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  formatFullDate(date: Date): string {
+    return this.i18n.formatDate(date, { weekday: 'long', day: 'numeric', month: 'long' });
   }
 
   async handleRequestAction(request: SwapRequest, status: SwapRequestStatus) {
@@ -482,10 +552,16 @@ export class CalendarPage implements OnInit, OnDestroy, AfterViewInit {
       if (status !== SwapRequestStatus.CANCELLED) {
         this.requestNotes = { ...this.requestNotes, [request.id]: '' };
       }
-      await this.presentToast(status === SwapRequestStatus.APPROVED ? 'הבקשה אושרה' : status === SwapRequestStatus.REJECTED ? 'הבקשה נדחתה' : 'הבקשה בוטלה');
+      const statusLabel =
+        status === SwapRequestStatus.APPROVED
+          ? this.i18n.translate('calendar.request.status.approved')
+          : status === SwapRequestStatus.REJECTED
+            ? this.i18n.translate('calendar.request.status.rejected')
+            : this.i18n.translate('calendar.request.status.cancelled');
+      await this.presentToast(statusLabel);
     } catch (error) {
       console.error('Failed to update swap request', error);
-      await this.presentToast('עדכון הבקשה נכשל', 'danger');
+      await this.presentToast(this.i18n.translate('calendar.request.status.failed'), 'danger');
     }
   }
 
@@ -501,5 +577,17 @@ export class CalendarPage implements OnInit, OnDestroy, AfterViewInit {
       this.ionContent.scrollToPoint(0, y, 500);
       this.hasScrolledToSwap = true;
     }, 100);
+  }
+
+  private buildWeekDays() {
+    this.weekDays = [
+      this.i18n.translate('calendar.weekdays.sun'),
+      this.i18n.translate('calendar.weekdays.mon'),
+      this.i18n.translate('calendar.weekdays.tue'),
+      this.i18n.translate('calendar.weekdays.wed'),
+      this.i18n.translate('calendar.weekdays.thu'),
+      this.i18n.translate('calendar.weekdays.fri'),
+      this.i18n.translate('calendar.weekdays.sat')
+    ];
   }
 }

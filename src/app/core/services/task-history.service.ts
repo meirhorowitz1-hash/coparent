@@ -73,6 +73,7 @@ export class TaskHistoryService implements OnDestroy {
       createdAt: new Date(),
       dueDate: task.dueDate ? new Date(task.dueDate) : null,
       createdBy: uid,
+      childId: task.childId ?? null,
       completedAt: task.status === TaskStatus.COMPLETED ? new Date() : undefined
     };
 
@@ -88,6 +89,7 @@ export class TaskHistoryService implements OnDestroy {
         status: record.status,
         assignedTo: record.assignedTo ?? 'both',
         category: record.category ?? TaskCategory.OTHER,
+        childId: record.childId ?? null,
         createdBy: record.createdBy,
         createdByName: name,
         createdAt: serverTimestamp(),
@@ -170,6 +172,7 @@ export class TaskHistoryService implements OnDestroy {
       status: item.status,
       assignedTo: item.assignedTo ?? 'both',
       category: item.category ?? TaskCategory.OTHER,
+      childId: item.childId ?? null,
       createdBy: item.createdBy ?? 'unknown',
       createdAt: this.toDate(item.createdAt),
       completedAt: item.completedAt ? this.toDate(item.completedAt) : undefined,

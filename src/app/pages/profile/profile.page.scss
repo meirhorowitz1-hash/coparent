@@ -30,9 +30,10 @@ ion-header {
   gap: var(--space-4);
 
   .edit-toggle {
-   position: absolute;
+    position: absolute;
     top: 5px;
-    left: 15px;
+    right: 15px;
+    left: auto;
     width: 40px;
     height: 40px;
     background: rgba(255, 255, 255, 0.95);
@@ -106,6 +107,13 @@ ion-header {
   }
 }
 
+:host-context([dir='rtl']) {
+  .profile-card .edit-toggle {
+    right: auto;
+    left: 15px;
+  }
+}
+
 .profile-card {
   h1 {
     margin: 0;
@@ -143,6 +151,53 @@ ion-header {
     justify-content: center;
     font-size: 32px;
     color: var(--ion-color-primary);
+    position: relative;
+    overflow: hidden;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: inherit;
+      display: block;
+    }
+
+    .avatar-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.35);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      gap: 6px;
+      opacity: 0;
+      transition: opacity var(--transition-base);
+      text-align: center;
+      padding: 10px;
+
+      ion-icon {
+        font-size: 24px;
+      }
+
+      .overlay-hint {
+        font-size: 12px;
+        line-height: 1.2;
+        font-weight: var(--font-medium);
+      }
+    }
+
+    &.editable {
+      cursor: pointer;
+      border-color: rgba(240, 138, 122, 0.45);
+      background: rgba(240, 138, 122, 0.12);
+
+      &:hover .avatar-overlay {
+        opacity: 1;
+      }
+      .avatar-overlay {
+        opacity: 1; /* ensure visible even when image exists */
+      }
+    }
   }
 
   .eyebrow {
@@ -152,6 +207,12 @@ ion-header {
     font-size: var(--text-xs);
     color: var(--app-text-tertiary);
   }
+}
+
+.avatar-error {
+  color: var(--ion-color-danger);
+  font-size: var(--text-sm);
+  margin: var(--space-2) 0 0;
 }
 
 .family-card {
@@ -385,9 +446,27 @@ ion-header {
       background: #fff;
       border: 1px solid var(--app-border);
 
-      ion-icon {
-        color: var(--ion-color-primary);
-        font-size: 20px;
+      .member-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--app-background);
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        border: 1px solid var(--app-border);
+
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          border-radius: inherit;
+        }
+
+        ion-icon {
+          color: var(--ion-color-primary);
+          font-size: 20px;
+        }
       }
     }
   }

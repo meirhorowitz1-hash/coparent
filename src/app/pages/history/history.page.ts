@@ -121,6 +121,18 @@ export class HistoryPage implements OnInit, OnDestroy {
     this.selectedMonth = 'all';
   }
 
+  openReceipt(preview?: string | null): void {
+    if (!preview) {
+      return;
+    }
+    const url = this.dataUrlToObjectUrl(preview) || preview;
+    try {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      console.error('Failed to open receipt preview', error);
+    }
+  }
+
   formatDate(value: Date | string | number | null | undefined): string {
     if (!value) {
       return '';
@@ -208,6 +220,30 @@ export class HistoryPage implements OnInit, OnDestroy {
       other: 'אחר'
     };
     return labels[type] || 'אירוע';
+  }
+
+  private dataUrlToObjectUrl(dataUrl: string): string | null {
+    if (!dataUrl.startsWith('data:')) {
+      return null;
+    }
+    const parts = dataUrl.split(',');
+    if (parts.length < 2) {
+      return null;
+    }
+    try {
+      const mime = parts[0].split(':')[1].split(';')[0] || 'application/octet-stream';
+      const byteString = atob(parts[1]);
+      const arrayBuffer = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(arrayBuffer);
+      for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+      }
+      const blob = new Blob([arrayBuffer], { type: mime });
+      return URL.createObjectURL(blob);
+    } catch (error) {
+      console.error('Failed to convert data URL', error);
+      return null;
+    }
   }
 
   private rebuildMonthOptions(): void {

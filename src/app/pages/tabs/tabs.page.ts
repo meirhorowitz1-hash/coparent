@@ -1,6 +1,6 @@
 import { AfterViewInit, Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { IonTabs } from '@ionic/angular';
-import { Subject, of } from 'rxjs';
+import { Subject, Subscription, of } from 'rxjs';
 import { switchMap, takeUntil } from 'rxjs/operators';
 
 type TabsDidChangeEventDetail = {
@@ -29,6 +29,7 @@ import { TaskHistoryService } from '../../core/services/task-history.service';
 import { TaskStatus } from '../../core/models/task.model';
 import { CalendarService } from '../../core/services/calendar.service';
 import { CalendarEvent } from '../../core/models/calendar-event.model';
+import { I18nService } from '../../core/services/i18n.service';
 
 @Component({
   selector: 'app-tabs',
@@ -39,15 +40,9 @@ import { CalendarEvent } from '../../core/models/calendar-event.model';
 export class TabsPage implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild(IonTabs, { static: true }) private ionTabs?: IonTabs;
 
-  protected readonly tabs = [
-    { id: 'home', label: 'בית', icon: 'home-outline', activeIcon: 'home' },
-    { id: 'calendar', label: 'לוח שנה', icon: 'calendar-outline', activeIcon: 'calendar' },
-    { id: 'expenses', label: 'הוצאות', icon: 'cash-outline', activeIcon: 'cash' },
-    { id: 'tasks', label: 'משימות', icon: 'list-outline', activeIcon: 'list' },
-    { id: 'chat', label: 'צ׳אט', icon: 'chatbubble-ellipses-outline', activeIcon: 'chatbubble-ellipses' }
-  ];
+  protected tabs: { id: string; label: string; icon: string; activeIcon: string }[] = [];
 
-  protected selectedTab = this.tabs[0].id;
+  protected selectedTab = 'home';
   protected pendingExpensesCount = 0;
   protected pendingCalendarCount = 0;
   protected pendingTasksCount = 0;
@@ -65,13 +60,15 @@ export class TabsPage implements OnInit, AfterViewInit, OnDestroy {
   private activeFamilyId: string | null = null;
   private chatSeenStore: Record<string, number> = {};
   private destroy$ = new Subject<void>();
+  private langSub?: Subscription;
 
   constructor(
     private expenseStore: ExpenseStoreService,
     private swapRequestService: SwapRequestService,
     private taskHistoryService: TaskHistoryService,
     private calendarService: CalendarService,
-    private chatService: ChatService
+    private chatService: ChatService,
+    private i18n: I18nService
   ) {
     this.chatSeenStore = this.loadChatSeenStore();
     addIcons({
@@ -88,9 +85,12 @@ export class TabsPage implements OnInit, AfterViewInit, OnDestroy {
       chatbubbleEllipsesOutline,
       chatbubbleEllipses
     });
+    this.buildTabs();
   }
 
   ngOnInit(): void {
+    this.langSub = this.i18n.language$.subscribe(() => this.buildTabs());
+
     this.currentUserId = this.calendarService.getCurrentUserId();
     this.currentParentRole = this.calendarService.getParentRoleForUser(this.currentUserId) || null;
 
@@ -242,6 +242,7 @@ export class TabsPage implements OnInit, AfterViewInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    this.langSub?.unsubscribe();
   }
 
   private handleChatMessages(messages: ChatMessage[]): void {
@@ -340,5 +341,15 @@ export class TabsPage implements OnInit, AfterViewInit, OnDestroy {
     } catch {
       // ignore
     }
+  }
+
+  private buildTabs() {
+    this.tabs = [
+      { id: 'home', label: this.i18n.translate('tabs.home'), icon: 'home-outline', activeIcon: 'home' },
+      { id: 'calendar', label: this.i18n.translate('tabs.calendar'), icon: 'calendar-outline', activeIcon: 'calendar' },
+      { id: 'expenses', label: this.i18n.translate('tabs.expenses'), icon: 'cash-outline', activeIcon: 'cash' },
+      { id: 'tasks', label: this.i18n.translate('tabs.tasks'), icon: 'list-outline', activeIcon: 'list' },
+      { id: 'chat', label: this.i18n.translate('tabs.chat'), icon: 'chatbubble-ellipses-outline', activeIcon: 'chatbubble-ellipses' }
+    ];
   }
 }

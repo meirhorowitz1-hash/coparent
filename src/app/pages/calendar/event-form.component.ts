@@ -3,6 +3,7 @@ import { ModalController, ToastController } from '@ionic/angular';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { CalendarService } from '../../core/services/calendar.service';
 import { CalendarEvent, EventType } from '../../core/models/calendar-event.model';
+import { I18nService } from '../../core/services/i18n.service';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
@@ -19,6 +20,7 @@ export class EventFormComponent implements OnInit, OnDestroy {
   eventForm!: FormGroup;
   isEditMode = false;
   parentLabels = { parent1: 'הורה 1', parent2: 'הורה 2' };
+  children: string[] = [];
   private destroy$ = new Subject<void>();
   
   eventTypes = [
@@ -47,7 +49,8 @@ export class EventFormComponent implements OnInit, OnDestroy {
     private modalController: ModalController,
     private formBuilder: FormBuilder,
     private calendarService: CalendarService,
-    private toastCtrl: ToastController
+    private toastCtrl: ToastController,
+    private i18n: I18nService
   ) {}
 
   ngOnInit() {
@@ -60,6 +63,10 @@ export class EventFormComponent implements OnInit, OnDestroy {
         };
         this.refreshParentOptions();
       });
+
+    this.calendarService.familyChildren$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(children => (this.children = children ?? []));
 
     this.isEditMode = !!this.event;
     this.initForm();
@@ -85,7 +92,9 @@ export class EventFormComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
  
-
+t(key: string): string {
+  return this.i18n.translate(key); // או this.i18n.get(key)
+}
   initForm() {
     const baseDate = this.selectedDate ? new Date(this.selectedDate) : new Date();
     baseDate.setSeconds(0, 0);
@@ -97,6 +106,7 @@ export class EventFormComponent implements OnInit, OnDestroy {
       description: [''],
       type: [EventType.OTHER, Validators.required],
       parentId: ['both', Validators.required],
+      childId: [null],
       startTime: [now.toTimeString().slice(0, 5)],
       endTime: [oneHourLater.toTimeString().slice(0, 5)],
       isAllDay: [true],
@@ -142,6 +152,10 @@ export class EventFormComponent implements OnInit, OnDestroy {
       reminderEnabled: this.event.reminderMinutes !== undefined && this.event.reminderMinutes !== null,
       color: this.event.color || '#2196F3'
     });
+
+    if (this.event?.childId) {
+      this.eventForm.patchValue({ childId: this.event.childId });
+    }
   }
 
   updateColorByType(type: EventType) {
@@ -202,7 +216,8 @@ export class EventFormComponent implements OnInit, OnDestroy {
       isAllDay: formValue.isAllDay,
       location: formValue.location,
       reminderMinutes: formValue.reminderEnabled ? formValue.reminderMinutes : null,
-      color: formValue.color
+      color: formValue.color,
+      childId: formValue.childId || null
     };
 
     if (this.hasOverlap(eventData, this.event?.id)) {
@@ -275,7 +290,12 @@ export class EventFormComponent implements OnInit, OnDestroy {
   }
 
   private hasOverlap(eventData: Omit<CalendarEvent, 'id'>, currentId?: string): boolean {
-    // בודק אם יש אירוע אחר עם חפיפה בזמן לאותו הורה
+    // בודק חפיפה בזמן רק כשמדובר באירוע מתוזמן של הורה יחיד
+    // אירועי יום שלם או אחריות "שניהם" לא נחסמים
+    if (eventData.isAllDay || eventData.parentId === 'both') {
+      return false;
+    }
+
     const dayEvents = this.calendarService.getEventsForDay(eventData.startDate);
 
     const currentStart = new Date(eventData.startDate).getTime();
@@ -286,6 +306,10 @@ export class EventFormComponent implements OnInit, OnDestroy {
 
     return dayEvents.some(existing => {
       if (existing.id === currentId) {
+        return false;
+      }
+      // התעלם מאירועי יום שלם או מאירועים שמוגדרים על "שניהם"
+      if (existing.isAllDay || existing.parentId === 'both') {
         return false;
       }
       if (!isSameParent(eventData.parentId, existing.parentId)) {

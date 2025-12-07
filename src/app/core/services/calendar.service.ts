@@ -55,6 +55,7 @@ type FirestorePendingApproval = Omit<CustodyScheduleApprovalRequest, 'startDate'
 interface ParentMetadataEntry {
   uid?: string;
   name: string;
+  photoUrl?: string | null;
 }
 
 interface ParentMetadata {
@@ -92,6 +93,8 @@ export class CalendarService implements OnDestroy {
 
   private parentMetadataSubject = new BehaviorSubject<ParentMetadata>(this.createDefaultParentMetadata());
   readonly parentMetadata$ = this.parentMetadataSubject.asObservable();
+  private familyChildrenSubject = new BehaviorSubject<string[]>([]);
+  readonly familyChildren$ = this.familyChildrenSubject.asObservable();
 
   private profileSubscription?: Subscription;
   private eventsSubscription?: Subscription;
@@ -122,6 +125,10 @@ export class CalendarService implements OnDestroy {
     this.detachFamilyListeners();
   }
 
+  getFamilyChildren(): Observable<string[]> {
+    return this.familyChildren$;
+  }
+
   // ========= Firestore Sync =========
 
   private subscribeToFamilyData(familyId: string | null) {
@@ -132,7 +139,8 @@ export class CalendarService implements OnDestroy {
     if (!familyId) {
       this.eventsSubject.next([]);
       this.custodyScheduleSubject.next(null);
-       this.parentMetadataSubject.next(this.createDefaultParentMetadata());
+      this.parentMetadataSubject.next(this.createDefaultParentMetadata());
+      this.familyChildrenSubject.next([]);
       return;
     }
 
@@ -160,10 +168,12 @@ export class CalendarService implements OnDestroy {
     this.familyMetadataSubscription = docSnapshots(familyRef).subscribe(snapshot => {
       if (!snapshot.exists()) {
         this.parentMetadataSubject.next(this.createDefaultParentMetadata());
+        this.familyChildrenSubject.next([]);
         return;
       }
 
       const data = snapshot.data() as Family;
+      this.familyChildrenSubject.next(data.children ?? []);
       this.updateParentMetadata(data.members ?? []);
     });
   }
@@ -175,6 +185,7 @@ export class CalendarService implements OnDestroy {
     this.custodySubscription = undefined;
     this.familyMetadataSubscription?.unsubscribe();
     this.familyMetadataSubscription = undefined;
+    this.familyChildrenSubject.next([]);
   }
 
   private async updateParentMetadata(memberIds: string[]) {
@@ -210,6 +221,13 @@ export class CalendarService implements OnDestroy {
       );
     };
 
+    const resolvePhoto = (uid?: string, profile?: UserProfile | null): string | null => {
+      if (uid && this.currentProfile?.uid === uid) {
+        return this.currentProfile.photoUrl ?? null;
+      }
+      return profile?.photoUrl ?? null;
+    };
+
     if (requestId !== this.parentMetadataRequestId) {
       return;
     }
@@ -217,11 +235,13 @@ export class CalendarService implements OnDestroy {
     this.parentMetadataSubject.next({
       parent1: {
         uid: parent1Uid,
-        name: resolveName(parent1Uid, parent1Profile) || 'הורה 1'
+        name: resolveName(parent1Uid, parent1Profile) || 'הורה 1',
+        photoUrl: resolvePhoto(parent1Uid, parent1Profile)
       },
       parent2: {
         uid: parent2Uid,
-        name: resolveName(parent2Uid, parent2Profile) || 'הורה 2'
+        name: resolveName(parent2Uid, parent2Profile) || 'הורה 2',
+        photoUrl: resolvePhoto(parent2Uid, parent2Profile)
       }
     });
   }
@@ -358,6 +378,10 @@ export class CalendarService implements OnDestroy {
       endDate.setHours(0, 0, 0, 0);
       return checkDate >= eventDate && checkDate <= endDate;
     });
+  }
+
+  getEventById(eventId: string): CalendarEvent | undefined {
+    return this.eventsSubject.value.find(event => event.id === eventId);
   }
 
   getCustodyDetailsForDate(date: Date): CustodyToday | null {
@@ -821,8 +845,8 @@ export class CalendarService implements OnDestroy {
 
   private createDefaultParentMetadata(): ParentMetadata {
     return {
-      parent1: { name: 'הורה 1' },
-      parent2: { name: 'הורה 2' }
+      parent1: { name: 'הורה 1', photoUrl: null },
+      parent2: { name: 'הורה 2', photoUrl: null }
     };
   }
 
@@ -875,6 +899,8 @@ export class CalendarService implements OnDestroy {
     if (event.updatedAt instanceof Date) {
       payload['updatedAt'] = Timestamp.fromDate(event.updatedAt);
     }
+
+    payload['childId'] = event.childId ?? null;
 
     return payload;
   }

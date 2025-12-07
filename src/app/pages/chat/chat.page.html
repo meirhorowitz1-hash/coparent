@@ -4,7 +4,7 @@
       <ion-back-button defaultHref="/tabs/home" text=""></ion-back-button>
     </ion-buttons>
     <ion-title>{{ familyName }}</ion-title>
-    <ion-buttons slot="end">
+    <!-- <ion-buttons slot="end">
       <ion-button fill="clear" color="medium">
         <ion-icon name="call-outline"></ion-icon>
       </ion-button>
@@ -14,7 +14,7 @@
       <ion-button fill="clear" color="medium">
         <ion-icon name="ellipsis-vertical"></ion-icon>
       </ion-button>
-    </ion-buttons>
+    </ion-buttons> -->
   </ion-toolbar>
 </ion-header>
 
@@ -27,7 +27,8 @@
         [class.outgoing]="isOutgoing(message)"
         [class.incoming]="!isOutgoing(message)">
         <div class="avatar" *ngIf="!isOutgoing(message)">
-          <span>{{ getInitial(message) }}</span>
+          <img *ngIf="getAvatarUrl(message)" [src]="getAvatarUrl(message)" alt="avatar">
+          <span *ngIf="!getAvatarUrl(message)">{{ getInitial(message) }}</span>
         </div>
         <div class="bubble">
           <p>{{ message.text }}</p>
@@ -40,21 +41,22 @@
           </div>
         </div>
         <div class="avatar outgoing" *ngIf="isOutgoing(message)">
-          <span>{{ getInitial(message) }}</span>
+          <img *ngIf="getAvatarUrl(message)" [src]="getAvatarUrl(message)" alt="avatar">
+          <span *ngIf="!getAvatarUrl(message)">{{ getInitial(message) }}</span>
         </div>
       </div>
     </div>
 
     <div class="composer">
-      <ion-button fill="clear" color="medium">
+      <!-- <ion-button fill="clear" color="medium">
         <ion-icon slot="icon-only" name="attach-outline"></ion-icon>
       </ion-button>
       <ion-button fill="clear" color="medium">
         <ion-icon slot="icon-only" name="happy-outline"></ion-icon>
-      </ion-button>
+      </ion-button> -->
       <ion-input
         class="message-input"
-        placeholder="הקלד הודעה"
+        [placeholder]="'chat.placeholder' | t"
         [(ngModel)]="messageText"
         (keyup.enter)="sendMessage()">
       </ion-input>
@@ -67,7 +69,7 @@
   <ng-template #noFamily>
     <div class="empty-chat">
       <ion-icon name="chatbubble-ellipses-outline"></ion-icon>
-      <p>כדי להתחיל להתכתב, הצטרפו למשפחה פעילה.</p>
+      <p>{{ 'chat.empty' | t }}</p>
     </div>
   </ng-template>
 </ion-content>

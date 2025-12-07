@@ -54,6 +54,13 @@ export class AuthService {
     return from(signInWithPopup(this.auth, provider));
   }
 
+  /**
+   * מחזיר את המשתמש המחובר הנוכחי (אם קיים)
+   */
+  get currentUser() {
+    return this.auth.currentUser;
+  }
+
   getFriendlyErrorMessage(errorCode?: string): string {
     switch (errorCode) {
       case 'auth/invalid-email':

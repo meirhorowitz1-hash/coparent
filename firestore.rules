@@ -1,0 +1,127 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() { 
+      return request.auth != null; 
+    }
+    
+    function userId() { 
+      return request.auth.uid; 
+    }
+
+    // פרופיל משתמש – המשתמש עצמו או בן משפחה שמשתף לפחות משפחה אחת
+    match /users/{uid} {
+      function sharesFamilyWithTarget() {
+        let targetFamilies = resource.data.families == null ? [] : resource.data.families;
+        let requesterProfile = get(/databases/$(database)/documents/users/$(userId())).data;
+        let requesterFamilies = requesterProfile.families == null ? [] : requesterProfile.families;
+        return targetFamilies.size() > 0 &&
+          requesterFamilies.size() > 0 &&
+          targetFamilies.hasAny(requesterFamilies);
+      }
+
+      allow read: if isSignedIn() && (uid == userId() || sharesFamilyWithTarget());
+      allow write: if isSignedIn() && uid == userId();
+    }
+
+    // משפחות
+    match /families/{familyId} {
+      function isMember() {
+        return isSignedIn() && (
+          userId() in resource.data.members ||
+          resource.data.ownerId == userId()
+        );
+      }
+
+      function membersWithinLimit() {
+        let nextMembers = request.resource.data.members;
+        return nextMembers == null || nextMembers.size() <= 2;
+      }
+
+      function canJoinByShareCode() {
+        let diff = request.resource.data.diff(resource.data);
+        let prevMembers = resource.data.members == null ? [] : resource.data.members;
+        let nextMembers = request.resource.data.members == null ? [] : request.resource.data.members;
+        return isSignedIn() &&
+          resource.data.shareCode != null &&
+          request.resource.data.shareCode == resource.data.shareCode &&
+          diff.changedKeys().hasOnly(['members', 'updatedAt']) &&
+          nextMembers.hasAll(prevMembers) &&
+          nextMembers.size() == prevMembers.size() + 1 &&
+          nextMembers.hasAny([userId()]) &&
+          nextMembers.size() <= 2;
+      }
+
+      function canAcceptInviteByEmail() {
+        let diff = request.resource.data.diff(resource.data);
+        let email = request.auth.token.email;
+        let normalizedEmail = email == null ? '' : email.lower();
+        let prevEmails = resource.data.pendingInviteEmails == null ? [] : resource.data.pendingInviteEmails;
+        let prevInvites = resource.data.pendingInvites == null ? [] : resource.data.pendingInvites;
+        let nextEmails = request.resource.data.pendingInviteEmails == null ? [] : request.resource.data.pendingInviteEmails;
+        let nextInvites = request.resource.data.pendingInvites == null ? [] : request.resource.data.pendingInvites;
+        let prevMembers = resource.data.members == null ? [] : resource.data.members;
+        let nextMembers = request.resource.data.members == null ? [] : request.resource.data.members;
+        return isSignedIn() &&
+          normalizedEmail != '' &&
+          prevEmails.hasAny([normalizedEmail]) &&
+          !nextEmails.hasAny([normalizedEmail]) &&
+          diff.changedKeys().hasOnly(['members', 'pendingInviteEmails', 'pendingInvites', 'updatedAt']) &&
+          nextEmails.size() == prevEmails.size() - 1 &&
+          nextInvites.size() == prevInvites.size() - 1 &&
+          nextMembers.hasAll(prevMembers) &&
+          nextMembers.size() == prevMembers.size() + 1 &&
+          nextMembers.hasAny([userId()]) &&
+          nextMembers.size() <= 2;
+      }
+      
+      function isMemberForSubcollection() {
+        let family = get(/databases/$(database)/documents/families/$(familyId)).data;
+        return isSignedIn() && (
+          userId() in family.members ||
+          family.ownerId == userId()
+        );
+      }
+
+      allow create: if isSignedIn();
+      allow read: if isSignedIn();
+      allow update, delete: if (isMember() && membersWithinLimit()) || canJoinByShareCode() || canAcceptInviteByEmail();
+
+      // הוצאות
+      match /expenses/{expId} {
+        allow read, create, update, delete: if isMemberForSubcollection();
+      }
+
+      // משימות
+      match /tasks/{taskId} {
+        allow read, create, update, delete: if isMemberForSubcollection();
+      }
+
+      // אירועים
+      match /calendarEvents/{eventId} {
+        allow read, create, update, delete: if isMemberForSubcollection();
+      }
+
+      // הודעות צ'אט
+      match /messages/{messageId} {
+        allow read, create: if isMemberForSubcollection();
+        allow update, delete: if false; // מניעת עריכה/מחיקה של הודעות לאחר שליחה
+      }
+
+      // הגדרות כלליות (כולל custodySchedule)
+      match /settings/{settingId} {
+        allow read, create, update, delete: if isMemberForSubcollection();
+      }
+
+      // מסמכים
+      match /documents/{docId} {
+        allow read, write: if isMemberForSubcollection();
+      }
+
+      // בקשות החלפה
+      match /swapRequests/{reqId} {
+        allow read, create, update, delete: if isMemberForSubcollection();
+      }
+    }
+  }
+}

@@ -70,6 +70,27 @@
               </ion-segment-button>
             </ion-segment>
           </ion-item>
+
+          <div class="child-chip-group" *ngIf="children.length">
+            <p class="section-label">שיוך לילד (אופציונלי)</p>
+            <div class="child-chips">
+              <button
+                type="button"
+                class="child-chip"
+                [class.active]="!newTaskForm.value.childId"
+                (click)="newTaskForm.get('childId')?.setValue(null)">
+                ללא שיוך
+              </button>
+              <button
+                *ngFor="let child of children"
+                type="button"
+                class="child-chip"
+                [class.active]="newTaskForm.value.childId === child"
+                (click)="newTaskForm.get('childId')?.setValue(child)">
+                {{ child }}
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 

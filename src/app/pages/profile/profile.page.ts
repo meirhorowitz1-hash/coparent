@@ -9,6 +9,8 @@ import { CalendarService } from '../../core/services/calendar.service';
 import { UserProfile } from '../../core/models/user-profile.model';
 import { Family, FamilyInvite } from '../../core/models/family.model';
 import { Router } from '@angular/router';
+import { I18nService } from '../../core/services/i18n.service';
+import { SupportedLanguage } from '../../core/i18n/translations';
 
 @Component({
   selector: 'app-profile',
@@ -43,11 +45,15 @@ export class ProfilePage implements OnInit, OnDestroy {
   isEditingFamilyMeta = false;
   showMembersAccordion = false;
   memberNames: string[] = [];
+  memberProfiles: { name: string; photoUrl?: string | null; uid?: string }[] = [];
   profileEditForm: FormGroup;
   isEditingProfile = false;
   isSavingProfile = false;
-  parentLabels = { parent1: 'הורה 1', parent2: 'הורה 2' };
+  parentLabels = { parent1: '', parent2: '' };
   readonly parentColors = { parent1: 'var(--ion-color-secondary)', parent2: 'var(--ion-color-primary)' };
+  avatarPreviewUrl: string | null = null;
+  avatarError: string | null = null;
+  currentLanguage: SupportedLanguage;
 
   private readonly profileSubject = new BehaviorSubject<UserProfile | null>(null);
   readonly profile$ = this.profileSubject.asObservable();
@@ -57,6 +63,7 @@ export class ProfilePage implements OnInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
   private familySubscription?: Subscription;
+  private langSubscription?: Subscription;
   private lastAuthUser: { uid: string; email: string | null; displayName: string | null } | null = null;
 
   constructor(
@@ -65,7 +72,8 @@ export class ProfilePage implements OnInit, OnDestroy {
     private familyService: FamilyService,
     private calendarService: CalendarService,
     private formBuilder: FormBuilder,
-    private router: Router
+    private router: Router,
+    private i18n: I18nService
   ) {
     this.inviteForm = this.formBuilder.group({
       email: ['', [Validators.required, Validators.email]]
@@ -79,14 +87,46 @@ export class ProfilePage implements OnInit, OnDestroy {
     });
     this.householdForm.disable({ emitEvent: false });
     this.profileEditForm = this.formBuilder.group({
-      fullName: ['', [Validators.required, Validators.minLength(2)]],
-      photoUrl: ['']
+      fullName: ['', [Validators.required, Validators.minLength(2)]]
     });
+    this.currentLanguage = this.i18n.currentLanguage;
+    this.syncParentLabels();
   }
 
   ngOnInit() {
+    this.langSubscription = this.i18n.language$.subscribe(lang => {
+      this.currentLanguage = lang;
+      this.syncParentLabels();
+    });
     this.observeProfile();
     this.observeParentMetadata();
+  }
+
+  onLanguageChange(lang: SupportedLanguage) {
+    if (lang !== 'he' && lang !== 'en') {
+      return;
+    }
+    this.i18n.setLanguage(lang);
+    this.currentLanguage = lang;
+  }
+
+  private syncParentLabels() {
+    this.parentLabels = {
+      parent1: this.i18n.translate('profile.parent1'),
+      parent2: this.i18n.translate('profile.parent2')
+    };
+  }
+
+  getMembersTitle(count: number): string {
+    return count > 1
+      ? this.i18n.translate('profile.members.connected', { count })
+      : this.i18n.translate('profile.members.none');
+  }
+
+  getMembersSubtitle(count: number): string {
+    return count > 1
+      ? this.i18n.translate('profile.members.subtitle.connected')
+      : this.i18n.translate('profile.members.subtitle.none');
   }
 
   private observeProfile() {
@@ -124,9 +164,9 @@ export class ProfilePage implements OnInit, OnDestroy {
         this.profileSubject.next(profile);
         const fallbackFamilyId = profile?.activeFamilyId || (profile as any)?.familyId || null;
         this.refreshFamilyOptions(profile, fallbackFamilyId);
+        this.avatarPreviewUrl = profile?.photoUrl || null;
         this.profileEditForm.patchValue({
-          fullName: profile?.fullName || '',
-          photoUrl: profile?.photoUrl || ''
+          fullName: profile?.fullName || ''
         });
 
         if (profile && !profile.activeFamilyId && fallbackFamilyId) {
@@ -194,6 +234,7 @@ export class ProfilePage implements OnInit, OnDestroy {
   private async loadMemberNames(memberIds: string[]) {
     if (!memberIds?.length) {
       this.memberNames = [];
+      this.memberProfiles = [];
       return;
     }
 
@@ -202,9 +243,15 @@ export class ProfilePage implements OnInit, OnDestroy {
       this.memberNames = profiles.map(profile =>
         profile.fullName || (profile as any)?.displayName || profile.email || 'הורה'
       );
+      this.memberProfiles = profiles.map(profile => ({
+        uid: profile.uid,
+        name: profile.fullName || (profile as any)?.displayName || profile.email || 'הורה',
+        photoUrl: profile.photoUrl || null
+      }));
     } catch (error) {
       console.error('Failed to load member names', error);
       this.memberNames = [];
+      this.memberProfiles = [];
     }
   }
 
@@ -335,13 +382,17 @@ export class ProfilePage implements OnInit, OnDestroy {
 
   startProfileEdit() {
     this.isEditingProfile = true;
+    const profile = this.profileSubject.value;
+    this.avatarPreviewUrl = profile?.photoUrl || null;
+    this.avatarError = null;
   }
 
   cancelProfileEdit() {
     const profile = this.profileSubject.value;
+    this.avatarPreviewUrl = profile?.photoUrl || null;
+    this.avatarError = null;
     this.profileEditForm.patchValue({
-      fullName: profile?.fullName || '',
-      photoUrl: profile?.photoUrl || ''
+      fullName: profile?.fullName || ''
     });
     this.isEditingProfile = false;
   }
@@ -363,13 +414,13 @@ export class ProfilePage implements OnInit, OnDestroy {
       await firstValueFrom(
         this.userProfileService.updateProfile(profile.uid, {
           fullName: (fullName as string).trim(),
-          photoUrl: (photoUrl as string)?.trim() || null
+          photoUrl: (this.avatarPreviewUrl as string) || (photoUrl as string)?.trim() || null
         })
       );
       const updated: UserProfile = {
         ...profile,
         fullName: (fullName as string).trim(),
-        photoUrl: (photoUrl as string)?.trim() || null
+        photoUrl: (this.avatarPreviewUrl as string) || (photoUrl as string)?.trim() || null
       };
       this.profileSubject.next(updated);
       this.isEditingProfile = false;
@@ -475,6 +526,95 @@ export class ProfilePage implements OnInit, OnDestroy {
   startFamilyEdit() {
     this.isEditingFamilyMeta = true;
     this.householdForm.enable({ emitEvent: false });
+  }
+
+  onAvatarRingClick(input: HTMLInputElement) {
+    if (!this.isEditingProfile) {
+      return;
+    }
+    this.avatarError = null;
+    input.click();
+  }
+
+  onAvatarFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    this.avatarError = null;
+
+    if (!file.type.startsWith('image/')) {
+      this.avatarError = 'נא לבחור קובץ תמונה';
+      input.value = '';
+      return;
+    }
+
+    this.processAvatarFile(file)
+      .then(dataUrl => {
+        this.avatarPreviewUrl = dataUrl;
+        this.profileEditForm.patchValue({ photoUrl: this.avatarPreviewUrl });
+      })
+      .catch(err => {
+        console.error('Avatar processing failed', err);
+        this.avatarError = 'טעינת התמונה נכשלה. נסה/י תמונה קטנה יותר';
+      })
+      .finally(() => {
+        input.value = '';
+      });
+  }
+
+  private async processAvatarFile(file: File): Promise<string> {
+    const maxBytes = 900 * 1024; // keep safely under Firestore 1MB limit
+    const image = await this.readImage(file);
+    const { width, height } = this.getScaledSize(image, 480);
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('no canvas context');
+    }
+    ctx.drawImage(image, 0, 0, width, height);
+
+    let quality = 0.8;
+    let dataUrl = canvas.toDataURL('image/jpeg', quality);
+
+    const sizeOf = (data: string) => Math.ceil((data.length - data.indexOf(',') - 1) * 3 / 4);
+
+    while (sizeOf(dataUrl) > maxBytes && quality > 0.4) {
+      quality -= 0.1;
+      dataUrl = canvas.toDataURL('image/jpeg', quality);
+    }
+
+    if (sizeOf(dataUrl) > maxBytes) {
+      throw new Error('image too large after compression');
+    }
+
+    return dataUrl;
+  }
+
+  private readImage(file: File): Promise<HTMLImageElement> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = reader.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  private getScaledSize(img: HTMLImageElement, maxDimension: number): { width: number; height: number } {
+    const ratio = Math.min(1, maxDimension / Math.max(img.width, img.height));
+    return {
+      width: Math.max(1, Math.round(img.width * ratio)),
+      height: Math.max(1, Math.round(img.height * ratio))
+    };
   }
 
   cancelFamilyEdit() {
@@ -611,5 +751,6 @@ export class ProfilePage implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
     this.unsubscribeFromFamily();
+    this.langSubscription?.unsubscribe();
   }
 }

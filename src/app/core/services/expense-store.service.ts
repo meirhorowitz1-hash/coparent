@@ -113,6 +113,8 @@ export class ExpenseStoreService implements OnDestroy {
       Partial<Pick<ExpenseRecord, 'status' | 'isPaid' | 'id'>>
   ): Promise<ExpenseRecord> {
     const familyId = this.requireFamilyId();
+    console.log('[ExpenseStoreService] addExpense - current user', this.authService.currentUser);
+    console.log('[ExpenseStoreService] addExpense - familyId', familyId);
     const currentUser = this.resolveCurrentUser(expense);
     const record: ExpenseRecord = {
       ...expense,
@@ -134,6 +136,12 @@ export class ExpenseStoreService implements OnDestroy {
     const next = [record, ...current];
     this.expensesSubject.next(next);
     this.persist(next);
+
+    console.log('[ExpenseStoreService] isFamilyMember check payload', {
+      members: this.currentProfile?.families,
+      activeFamilyId: this.currentProfile?.activeFamilyId,
+      ownerId: (this.currentProfile as any)?.ownedFamilyId
+    });
 
     const payload = {
       title: record.title,

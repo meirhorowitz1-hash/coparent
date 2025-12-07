@@ -48,6 +48,7 @@ export class FamilyService {
           members.add(profile.uid);
           await updateDoc(existingRef, {
             members: Array.from(members),
+            ...(existingData.ownerId ? {} : { ownerId: existingData.ownerId ?? profile.uid }),
             updatedAt: serverTimestamp()
           });
         }
@@ -77,6 +78,7 @@ export class FamilyService {
     const shareCode = await this.createUniqueShareCode(familyRef.id);
 
     await setDoc(familyRef, {
+      ownerId: profile.uid,
       members: [profile.uid],
       pendingInvites: [],
       pendingInviteEmails: [],

@@ -1,7 +1,6 @@
-
 <ion-header>
   <ion-toolbar>
-    <ion-title>הגדרת משמרות קבועות</ion-title>
+    <ion-title>{{ t('custody.title') }}</ion-title>
     <ion-buttons slot="end">
       <ion-button (click)="cancel()">
         <ion-icon name="close" slot="icon-only"></ion-icon>
@@ -9,21 +8,20 @@
     </ion-buttons>
   </ion-toolbar>
   
-  <!-- Progress bar -->
   <div class="progress-steps">
     <div class="step" [class.active]="step === 'template'" [class.completed]="step !== 'template'">
       <div class="step-circle">1</div>
-      <div class="step-label">תבנית</div>
+      <div class="step-label">{{ t('custody.step.template') }}</div>
     </div>
     <div class="step-line" [class.active]="step !== 'template'"></div>
     <div class="step" [class.active]="step === 'customize'" [class.completed]="step === 'confirm'">
       <div class="step-circle">2</div>
-      <div class="step-label">התאמה</div>
+      <div class="step-label">{{ t('custody.step.customize') }}</div>
     </div>
     <div class="step-line" [class.active]="step === 'confirm'"></div>
     <div class="step" [class.active]="step === 'confirm'">
       <div class="step-circle">3</div>
-      <div class="step-label">אישור</div>
+      <div class="step-label">{{ t('custody.step.confirm') }}</div>
     </div>
   </div>
 </ion-header>
@@ -32,8 +30,8 @@
   
   <!-- Step 1: Template Selection -->
   <div *ngIf="step === 'template'" class="step-content">
-    <h2>בחר תבנית משמרות</h2>
-    <p class="subtitle">בחר תבנית קיימת או צור התאמה אישית</p>
+    <h2>{{ t('custody.selectTemplate.title') }}</h2>
+    <p class="subtitle">{{ t('custody.selectTemplate.subtitle') }}</p>
     
     <div class="templates-grid">
       <ion-card 
@@ -42,7 +40,7 @@
         (click)="selectTemplate(template)"
         [class.selected]="selectedTemplate?.id === template.id">
         <ion-card-header>
-          <ion-card-title>{{ template.nameHebrew }}</ion-card-title>
+          <ion-card-title>{{ getTemplateName(template) }}</ion-card-title>
         </ion-card-header>
         <ion-card-content>
           <p>{{ describeTemplate(template) }}</p>
@@ -58,42 +56,22 @@
 
   <!-- Step 2: Customize Days -->
   <div *ngIf="step === 'customize'" class="step-content">
-    <h2>התאם את ימי המשמרת</h2>
-    <p class="subtitle">בחר באילו ימים כל הורה יהיה עם הילדים</p>
+    <h2>{{ t('custody.customize.title') }}</h2>
+    <p class="subtitle">{{ t('custody.customize.subtitle') }}</p>
 
     <div *ngIf="custodySchedule.pattern === 'biweekly'" class="biweekly-toggle">
       <ion-segment [(ngModel)]="activeBiweeklyWeek" mode="ios">
         <ion-segment-button value="a">
-          שבוע כן
+          {{ t('custody.customize.week1') }}
         </ion-segment-button>
         <ion-segment-button value="b">
-          שבוע לא
+          {{ t('custody.customize.week2') }}
         </ion-segment-button>
       </ion-segment>
-      <ion-note>
-        שבוע כן מתחיל מתאריך ההתחלה; שבוע לא הוא השבוע שאחריו. ניתן להגדיר לכל שבוע דפוס אחר.
-      </ion-note>
+      <ion-note>{{ t('custody.customize.biweeklyNote') }}</ion-note>
     </div>
 
-    <div class="approval-banner" *ngIf="isApprovalPending">
-      <ion-icon [name]="isWaitingForOtherParent ? 'hourglass-outline' : 'person-add-outline'"></ion-icon>
-      <div>
-        <h4 *ngIf="isWaitingForOtherParent">
-          ממתין לאישור של {{ awaitingParentName }}
-        </h4>
-        <h4 *ngIf="isAwaitingMyApproval">
-          {{ pendingApproval?.requestedByName || 'הורה שותף' }} ביקש לעדכן את המשמרות
-        </h4>
-        <p>
-          <ng-container *ngIf="isWaitingForOtherParent">
-            שלחנו התראה ל{{ awaitingParentName }} לאשר את ההצעה.
-          </ng-container>
-          <ng-container *ngIf="isAwaitingMyApproval">
-            עיינו בחלוקה והחליטו אם לאשר או לדחות.
-          </ng-container>
-        </p>
-      </div>
-    </div>
+    <ng-container *ngTemplateOutlet="approvalBanner"></ng-container>
     
     <div class="parent-section">
       <h3 class="parent1-header">
@@ -111,7 +89,7 @@
         </ion-button>
       </div>
       <ion-note class="hint-note" *ngIf="custodySchedule.pattern === 'biweekly'">
-        {{ activeBiweeklyWeek === 'a' ? 'שבוע כן' : 'שבוע לא' }} – ימים של {{ parentLabels.parent1 }}
+        {{ t('custody.customize.daysOf', { week: getWeekLabel(), parent: parentLabels.parent1 }) }}
       </ion-note>
     </div>
 
@@ -131,23 +109,23 @@
         </ion-button>
       </div>
       <ion-note class="hint-note" *ngIf="custodySchedule.pattern === 'biweekly'">
-        {{ activeBiweeklyWeek === 'a' ? 'שבוע כן' : 'שבוע לא' }} – ימים של {{ parentLabels.parent2 }}
+        {{ t('custody.customize.daysOf', { week: getWeekLabel(), parent: parentLabels.parent2 }) }}
       </ion-note>
     </div>
 
     <ion-item>
-      <ion-label>תבנית חזרה</ion-label>
+      <ion-label>{{ t('custody.customize.pattern') }}</ion-label>
       <ion-select [(ngModel)]="custodySchedule.pattern" interface="action-sheet" [disabled]="isApprovalPending">
-        <ion-select-option [value]="'weekly'">כל שבוע</ion-select-option>
-        <ion-select-option [value]="'biweekly'">כל שבועיים</ion-select-option>
-        <ion-select-option [value]="'week_on_week_off'">שבוע אצל כל אחד</ion-select-option>
-        <ion-select-option [value]="'custom'">מותאם אישית</ion-select-option>
+        <ion-select-option value="weekly">{{ t('custody.customize.pattern.weekly') }}</ion-select-option>
+        <ion-select-option value="biweekly">{{ t('custody.customize.pattern.biweekly') }}</ion-select-option>
+        <ion-select-option value="week_on_week_off">{{ t('custody.customize.pattern.weekOnOff') }}</ion-select-option>
+        <ion-select-option value="custom">{{ t('custody.customize.pattern.custom') }}</ion-select-option>
       </ion-select>
     </ion-item>
 
     <div class="start-date-row">
       <div class="start-date-copy">
-        <span>תאריך התחלה</span>
+        <span>{{ t('custody.customize.startDate') }}</span>
         <strong>{{ custodySchedule.startDate | date:'dd/MM/yyyy' }}</strong>
       </div>
       <ion-datetime-button
@@ -173,53 +151,31 @@
       expand="block" 
       (click)="goToConfirm()"
       [disabled]="isApprovalPending || (custodySchedule.parent1Days.length === 0 && custodySchedule.parent2Days.length === 0)">
-      המשך
+      {{ t('custody.customize.continue') }}
       <ion-icon name="arrow-back" slot="end"></ion-icon>
     </ion-button>
   </div>
 
   <!-- Step 3: Confirm -->
   <div *ngIf="step === 'confirm'" class="step-content">
-    <h2>אישור הגדרות</h2>
-    <p class="subtitle">בדוק שהכל נכון לפני השמירה</p>
+    <h2>{{ t('custody.confirm.title') }}</h2>
+    <p class="subtitle">{{ t('custody.confirm.subtitle') }}</p>
 
-    <div class="approval-banner" *ngIf="isApprovalPending">
-      <ion-icon [name]="isWaitingForOtherParent ? 'hourglass-outline' : 'person-add-outline'"></ion-icon>
-      <div>
-        <h4 *ngIf="isWaitingForOtherParent">
-          ממתין לאישור של {{ awaitingParentName }}
-        </h4>
-        <h4 *ngIf="isAwaitingMyApproval">
-          {{ pendingApproval?.requestedByName || 'הורה שותף' }} ביקש לעדכן את המשמרות
-        </h4>
-        <p>
-          <ng-container *ngIf="isWaitingForOtherParent">
-            ניתן לבטל את הבקשה בכל רגע עד לקבלת האישור.
-          </ng-container>
-          <ng-container *ngIf="isAwaitingMyApproval">
-            בחרו האם לאשר או לדחות את השינויים המוצעים.
-          </ng-container>
-        </p>
-      </div>
-    </div>
+    <ng-container *ngTemplateOutlet="approvalBanner"></ng-container>
 
     <ion-card>
       <ion-card-header>
-        <ion-card-title>סיכום המשמרות</ion-card-title>
+        <ion-card-title>{{ t('custody.confirm.summary') }}</ion-card-title>
       </ion-card-header>
       <ion-card-content>
         <div class="summary-item">
-          <strong>תבנית:</strong>
-          <span>{{ selectedTemplate?.nameHebrew || 'מותאם אישית' }}</span>
+          <strong>{{ t('custody.confirm.template') }}</strong>
+          <span>{{ getTemplateName(selectedTemplate) || t('custody.confirm.customTemplate') }}</span>
         </div>
         
-        <div class="summary-item">
-          <strong>תאריך התחלה:</strong>
-          <span>{{ custodySchedule.startDate | date:'dd/MM/yyyy' }}</span>
-        </div>
         <div class="start-date-row compact-row">
           <div class="start-date-copy">
-            <span>תאריך התחלה</span>
+            <span>{{ t('custody.confirm.startDate') }}</span>
             <strong>{{ custodySchedule.startDate | date:'dd/MM/yyyy' }}</strong>
           </div>
           <ion-datetime-button
@@ -248,7 +204,19 @@
               {{ weekDays[dayValue].label }}
             </span>
             <span *ngIf="custodySchedule.parent1Days.length === 0" class="empty-state">
-              לא נבחרו ימים
+              {{ t('custody.confirm.noDaysSelected') }}
+            </span>
+          </div>
+        </div>
+
+        <div class="summary-section" *ngIf="custodySchedule.pattern === 'biweekly'">
+          <h5 class="parent1-color sub-heading">{{ t('custody.customize.week2') }}</h5>
+          <div class="days-display">
+            <span *ngFor="let dayValue of custodySchedule.biweeklyAltParent1Days" class="day-chip parent1">
+              {{ weekDays[dayValue].label }}
+            </span>
+            <span *ngIf="(custodySchedule.biweeklyAltParent1Days?.length ?? 0) === 0" class="empty-state">
+              {{ t('custody.confirm.noDaysSelected') }}
             </span>
           </div>
         </div>
@@ -260,30 +228,42 @@
               {{ weekDays[dayValue].label }}
             </span>
             <span *ngIf="custodySchedule.parent2Days.length === 0" class="empty-state">
-              לא נבחרו ימים
+              {{ t('custody.confirm.noDaysSelected') }}
+            </span>
+          </div>
+        </div>
+
+        <div class="summary-section" *ngIf="custodySchedule.pattern === 'biweekly'">
+          <h5 class="parent2-color sub-heading">{{ t('custody.customize.week2') }}</h5>
+          <div class="days-display">
+            <span *ngFor="let dayValue of custodySchedule.biweeklyAltParent2Days" class="day-chip parent2">
+              {{ weekDays[dayValue].label }}
+            </span>
+            <span *ngIf="(custodySchedule.biweeklyAltParent2Days?.length ?? 0) === 0" class="empty-state">
+              {{ t('custody.confirm.noDaysSelected') }}
             </span>
           </div>
         </div>
 
         <ion-note class="info-note">
           <ion-icon name="information-circle"></ion-icon>
-          המשמרות ייווצרו אוטומטית בלוח השנה לשנה הקרובה
+          {{ t('custody.confirm.autoCreate') }}
         </ion-note>
       </ion-card-content>
     </ion-card>
 
     <ion-note class="info-note" *ngIf="requiresPartnerApproval && !isApprovalPending">
-      השינויים יישלחו לאישור {{ awaitingParentName }} לפני הפעלה
+      {{ t('custody.confirm.pendingApproval', { name: awaitingParentName }) }}
     </ion-note>
 
     <div class="approval-actions" *ngIf="isAwaitingMyApproval">
       <ion-button expand="block" color="success" (click)="respondToPending(true)">
         <ion-icon name="checkmark" slot="start"></ion-icon>
-        אשר בקשה
+        {{ t('custody.approval.approve') }}
       </ion-button>
       <ion-button expand="block" fill="outline" color="medium" (click)="respondToPending(false)">
         <ion-icon name="close" slot="start"></ion-icon>
-        דחה בקשה
+        {{ t('custody.approval.reject') }}
       </ion-button>
     </div>
 
@@ -293,12 +273,12 @@
       (click)="save()"
       *ngIf="!isApprovalPending">
       <ion-icon name="checkmark" slot="start"></ion-icon>
-      {{ requiresPartnerApproval ? 'שלח לאישור' : 'שמור משמרות' }}
+      {{ requiresPartnerApproval ? t('custody.confirm.sendForApproval') : t('custody.confirm.save') }}
     </ion-button>
 
     <ion-button expand="block" fill="outline" (click)="goToCustomize()" *ngIf="!isApprovalPending">
       <ion-icon name="create" slot="start"></ion-icon>
-      ערוך
+      {{ t('custody.confirm.edit') }}
     </ion-button>
 
     <ion-button 
@@ -308,7 +288,7 @@
       (click)="deleteSchedule()"
       *ngIf="custodySchedule.id && !isApprovalPending">
       <ion-icon name="trash" slot="start"></ion-icon>
-      מחק משמרות
+      {{ t('custody.confirm.delete') }}
     </ion-button>
 
     <ion-button
@@ -318,8 +298,31 @@
       *ngIf="isWaitingForOtherParent"
       (click)="cancelPendingRequest()">
       <ion-icon name="close-circle" slot="start"></ion-icon>
-      בטל בקשה
+      {{ t('custody.approval.cancel') }}
     </ion-button>
   </div>
 
 </ion-content>
+
+<!-- Reusable approval banner template -->
+<ng-template #approvalBanner>
+  <div class="approval-banner" *ngIf="isApprovalPending">
+    <ion-icon [name]="isWaitingForOtherParent ? 'hourglass-outline' : 'person-add-outline'"></ion-icon>
+    <div>
+      <h4 *ngIf="isWaitingForOtherParent">
+        {{ t('custody.approval.waiting', { name: awaitingParentName }) }}
+      </h4>
+      <h4 *ngIf="isAwaitingMyApproval">
+        {{ t('custody.approval.requested', { name: pendingApproval?.requestedByName || t('custody.approval.coParent') }) }}
+      </h4>
+      <p>
+        <ng-container *ngIf="isWaitingForOtherParent">
+          {{ step === 'customize' ? t('custody.approval.waitingNote', { name: awaitingParentName }) : t('custody.approval.canCancel') }}
+        </ng-container>
+        <ng-container *ngIf="isAwaitingMyApproval">
+          {{ step === 'customize' ? t('custody.approval.requestedNote') : t('custody.approval.chooseAction') }}
+        </ng-container>
+      </p>
+    </div>
+  </div>
+</ng-template>

@@ -13,6 +13,7 @@ export interface CalendarEvent {
   isAllDay?: boolean;
   recurring?: RecurringPattern;
   swapRequestId?: string;
+  childId?: string | null;
   createdBy?: string;
   createdByName?: string;
   createdAt?: Date;

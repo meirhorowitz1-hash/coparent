@@ -1,30 +1,66 @@
 
-  <ion-header>
-    <ion-toolbar>
-      <ion-title>פרופיל</ion-title>
-    </ion-toolbar>
-  </ion-header>
+<ion-header>
+  <ion-toolbar>
+    <ion-title>{{ 'profile.title' | t }}</ion-title>
+  </ion-toolbar>
+</ion-header>
 
   <ion-content [fullscreen]="true">
   <ng-container *ngIf="profile$ | async as profile; else loadingState">
     <div class="profile-layout">
+      <section class="panel language-card">
+        <header>
+          <div>
+            <h2>{{ 'language.settings.title' | t }}</h2>
+            <p class="helper">{{ 'language.settings.description' | t }}</p>
+          </div>
+        </header>
+        <ion-segment [value]="currentLanguage">
+          <ion-segment-button value="he" (click)="onLanguageChange('he')">
+            <ion-label>{{ 'language.settings.he' | t }}</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="en" (click)="onLanguageChange('en')">
+            <ion-label>{{ 'language.settings.en' | t }}</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+      </section>
+
       <section class="profile-card panel">
         <div class="profile-hero">
-          <div class="avatar-ring">
-            <ion-icon name="person-outline"></ion-icon>
+          <div
+            class="avatar-ring"
+            [class.editable]="isEditingProfile"
+            (click)="onAvatarRingClick(avatarInput)"
+            [title]="isEditingProfile ? ('profile.uploadHint' | t) : ''">
+            <img
+              *ngIf="avatarPreviewUrl"
+              [src]="avatarPreviewUrl"
+              alt="תמונת פרופיל" />
+            <ion-icon *ngIf="!avatarPreviewUrl" name="person-outline"></ion-icon>
+            <div class="avatar-overlay" *ngIf="isEditingProfile">
+              <ion-icon name="camera"></ion-icon>
+              <span class="overlay-hint">{{ 'profile.uploadHint' | t }}</span>
+            </div>
           </div>
+          <input
+            #avatarInput
+            type="file"
+            accept="image/*"
+            hidden
+            (change)="onAvatarFileSelected($event)" />
           <div>
-            <p class="eyebrow">הפרופיל שלי</p>
-            <h1>{{ profile?.fullName || 'משתמש חדש' }}</h1>
+            <p class="eyebrow">{{ 'profile.myProfile' | t }}</p>
+            <h1>{{ profile?.fullName || ('profile.newUser' | t) }}</h1>
             <p class="email">{{ profile?.email }}</p>
-            <p class="phone" *ngIf="profile?.phone">טלפון: {{ profile.phone }}</p>
+            <p class="phone" *ngIf="profile?.phone">{{ 'profile.phone' | t }}: {{ profile.phone }}</p>
           </div>
           <button class="edit-toggle" type="button" (click)="isEditingProfile ? cancelProfileEdit() : startProfileEdit()">
             <ion-icon [name]="isEditingProfile ? 'close-outline' : 'create-outline'"></ion-icon>
           </button>
         </div>
+        <p class="avatar-error" *ngIf="avatarError">{{ avatarError }}</p>
         <div class="profile-body" *ngIf="!isEditingProfile">
-          <p class="hint">עדכן את הפרטים שלך בקרוב. בינתיים ניתן להזמין שותף/ה לחשבון.</p>
+          <p class="hint">{{ 'profile.editHint' | t }}</p>
           <div class="profile-colors">
             <div class="profile-color">
               <span class="color-dot" [style.background]="parentColors.parent1"></span>
@@ -38,13 +74,10 @@
         </div>
         <form class="profile-edit" *ngIf="isEditingProfile" [formGroup]="profileEditForm" (ngSubmit)="saveProfile()">
           <ion-item lines="none" class="inline-input">
-            <ion-input formControlName="fullName" placeholder="שם מלא"></ion-input>
-          </ion-item>
-          <ion-item lines="none" class="inline-input">
-            <ion-input formControlName="photoUrl" placeholder="קישור לתמונת פרופיל"></ion-input>
+            <ion-input formControlName="fullName" [placeholder]="'profile.fullNamePlaceholder' | t"></ion-input>
           </ion-item>
           <ion-button expand="block" type="submit" [disabled]="isSavingProfile">
-            {{ isSavingProfile ? 'שומר...' : 'שמור פרופיל' }}
+            {{ isSavingProfile ? ('profile.savingProfile' | t) : ('profile.saveProfile' | t) }}
           </ion-button>
         </form>
       </section>
@@ -52,8 +85,8 @@
       <section class="family-card panel">
         <header>
           <div>
-            <h2>שותפות הורות</h2>
-            <p>שתפו בן/בת זוג כדי לנהל יחד לוח שנה, משימות והוצאות.</p>
+            <h2>{{ 'profile.coParenting' | t }}</h2>
+            <p>{{ 'profile.coParenting.helper' | t }}</p>
           </div>
         </header>
 
@@ -64,10 +97,11 @@
                 <ion-icon name="home-outline"></ion-icon>
               </div>
               <div class="family-summary">
-                <p class="eyebrow">פרופיל המרחב</p>
-                <h1 class="family-title">{{ family?.name || 'מרחב ללא שם' }}</h1>
+                <p class="eyebrow">{{ 'profile.spaceProfile' | t }}</p>
+                <h1 class="family-title">{{ family?.name || ('profile.spaceNoName' | t) }}</h1>
                 <p class="children-line"> 
-                 ילדים: {{ householdChildren?.length ? householdChildren.join(', ') : 'אין ילדים במרחב' }}
+                 {{ 'profile.childrenLabel' | t }}
+                 {{ householdChildren?.length ? householdChildren.join(', ') : ('profile.noChildren' | t) }}
                 </p>
               </div>
             
@@ -86,12 +120,12 @@
               (ngSubmit)="saveHouseholdMeta()"
               *ngIf="isEditingFamilyMeta"
             >
-              <label class="field-label">שם המרחב</label>
+              <label class="field-label">{{ 'profile.spaceName' | t }}</label>
               <ion-item lines="none" class="inline-input prominent">
-                <ion-input formControlName="name" placeholder="לדוגמה: המשפחה שלנו"></ion-input>
+                <ion-input formControlName="name" [placeholder]="'profile.spaceNamePlaceholder' | t"></ion-input>
               </ion-item>
 
-              <label class="field-label with-space">ילדים</label>
+              <label class="field-label with-space">{{ 'profile.childrenLabel' | t }}</label>
               <div class="chips" *ngIf="householdChildren.length; else noKidsEdit">
                 <ion-chip *ngFor="let kid of householdChildren" (click)="removeChild(kid)">
                   <ion-label>{{ kid }}</ion-label>
@@ -99,16 +133,16 @@
                 </ion-chip>
               </div>
               <ng-template #noKidsEdit>
-                <p class="helper">עוד לא הוזנו ילדים במרחב.</p>
+                <p class="helper">{{ 'profile.childrenHelper' | t }}</p>
               </ng-template>
 
               <div class="inline-input add-child">
-                <ion-input formControlName="childName" placeholder="שם ילד/ה"></ion-input>
-                <ion-button size="small" fill="solid" type="button" (click)="addChild()">הוספה</ion-button>
+                <ion-input formControlName="childName" [placeholder]="'profile.childPlaceholder' | t"></ion-input>
+                <ion-button size="small" fill="solid" type="button" (click)="addChild()">{{ 'profile.addChild' | t }}</ion-button>
               </div>
 
               <ion-button expand="block" class="save-household" type="submit" [disabled]="isSavingHousehold">
-                {{ isSavingHousehold ? 'שומר...' : 'שמור פרטים' }}
+                {{ isSavingHousehold ? ('profile.saving' | t) : ('profile.saveHousehold' | t) }}
               </ion-button>
             </form>
           </div>
@@ -118,41 +152,36 @@
               <button class="accordion-header" type="button" (click)="showMembersAccordion = !showMembersAccordion">
                 <div>
                   <p class="title">
-                    {{
-                      (family?.members?.length ?? 0) > 1
-                        ? (family?.members?.length || 0) + ' הורים מחוברים לחשבון הזה'
-                        : 'עדיין אין שותף לחשבון'
-                    }}
+                    {{ getMembersTitle(family?.members?.length || 0) }}
                   </p>
                   <p class="subtitle">
-                    {{
-                      (family?.members?.length ?? 0) > 1
-                        ? 'כל הנתונים מסתנכרנים בין כל בני המשפחה.'
-                        : 'שלחו הזמנה כדי לשתף את בן/בת הזוג בכל מה שקורה.'
-                    }}
+                    {{ getMembersSubtitle(family?.members?.length || 0) }}
                   </p>
                 </div>
                 <ion-icon [name]="showMembersAccordion ? 'chevron-up-outline' : 'people-outline'"></ion-icon>
               </button>
-              <div class="accordion-body" *ngIf="showMembersAccordion && memberNames.length">
+              <div class="accordion-body" *ngIf="showMembersAccordion && memberProfiles.length">
                 <ul>
-                  <li *ngFor="let name of memberNames">
-                    <ion-icon name="person-circle-outline"></ion-icon>
-                    <span>{{ name }}</span>
+                  <li *ngFor="let member of memberProfiles">
+                    <div class="member-avatar">
+                      <img *ngIf="member.photoUrl" [src]="member.photoUrl" alt="avatar" />
+                      <ion-icon *ngIf="!member.photoUrl" name="person-circle-outline"></ion-icon>
+                    </div>
+                    <span>{{ member.name }}</span>
                   </li>
                 </ul>
               </div>
             </div>
 
             <div class="pending" *ngIf="family?.pendingInvites?.length">
-              <h3>הזמנות ממתינות</h3>
+              <h3>{{ 'profile.pendingInvites' | t }}</h3>
               <ul>
                 <li *ngFor="let invite of family.pendingInvites; trackBy: trackInvite">
                   <div>
                     <span>{{ invite.displayEmail }}</span>
-                    <small>נשלחה בתאריך {{ invite.createdAt | date: 'dd/MM/yy HH:mm' }}</small>
+                    <small>{{ 'profile.inviteSentAt' | t:{ date: (invite.createdAt | date:'dd/MM/yy HH:mm') || '' } }}</small>
                   </div>
-                  <span class="badge">ממתין להצטרפות</span>
+                  <span class="badge">{{ 'profile.invitePending' | t }}</span>
                 </li>
               </ul>
             </div>
@@ -161,8 +190,8 @@
 
         <div class="family-switcher" *ngIf="familyOptions.length">
           <div class="switcher-header">
-            <p class="eyebrow">בחירת מרחב פעיל</p>
-            <p class="helper">בחרו באיזה מרחב לעבוד כרגע. הפעיל ישמש לסנכרון לוח שנה, משימות והוצאות.</p>
+            <p class="eyebrow">{{ 'profile.switcher.title' | t }}</p>
+            <p class="helper">{{ 'profile.switcher.helper' | t }}</p>
           </div>
           <div class="switcher-options">
             <div
@@ -179,7 +208,7 @@
                 <ion-icon name="home-outline"></ion-icon>
                 <div class="label">
                   <span>{{ fam.name }}</span>
-                  <small *ngIf="profile?.activeFamilyId === fam.id">משפחה פעילה</small>
+                  <small *ngIf="profile?.activeFamilyId === fam.id">{{ 'profile.activeFamily' | t }}</small>
                 </div>
                 <ion-spinner *ngIf="switchingFamilyId === fam.id" name="crescent"></ion-spinner>
               </button>
@@ -198,13 +227,13 @@
 
         <ng-template #noFamilyState>
           <div class="family-choice">
-            <p class="eyebrow">לא בחרתם מרחב עדיין</p>
-            <h3>הצטרפו למרחב קיים או צרו חדש</h3>
+            <p class="eyebrow">{{ 'profile.noFamilySelected' | t }}</p>
+            <h3>{{ 'profile.joinOrCreate' | t }}</h3>
             <p class="helper">
-              אפשר להצטרף עם קוד שהתקבל מהורה אחר, או לפתוח מרחב חדש ולשתף אותו אחרי ההרשמה.
+              {{ 'profile.joinHelper' | t }}
             </p>
             <div class="choice-actions">
-              <button type="button" class="primary" (click)="scrollToJoinSection()">יש לי קוד הצטרפות</button>
+              <button type="button" class="primary" (click)="scrollToJoinSection()">{{ 'profile.joinWithCode' | t }}</button>
               <button
                 type="button"
                 class="ghost"
@@ -212,21 +241,21 @@
                 [disabled]="isGeneratingShareCode"
               >
                 <ion-spinner *ngIf="isGeneratingShareCode" name="crescent"></ion-spinner>
-                <span *ngIf="!isGeneratingShareCode">יצירת מרחב חדש</span>
+                <span *ngIf="!isGeneratingShareCode">{{ 'profile.createSpace' | t }}</span>
               </button>
             </div>
           </div>
         </ng-template>
 
         <div class="share-code" *ngIf="isShareOwner">
-          <label>קוד שיתוף</label>
+          <label>{{ 'profile.shareCode' | t }}</label>
           <ng-container *ngIf="shareCode">
             <div class="code-wrapper">
               <span class="code">{{ shareCode }}</span>
               <div class="code-actions">
                 <button type="button" (click)="copyShareCode()">
                   <ion-icon name="copy-outline"></ion-icon>
-                  <span>העתק</span>
+                  <span>{{ 'profile.copy' | t }}</span>
                 </button>
                 <button
                   type="button"
@@ -235,20 +264,20 @@
                   [disabled]="isGeneratingShareCode"
                 >
                   <ion-icon name="refresh-outline"></ion-icon>
-                  <span>קוד חדש</span>
+                  <span>{{ 'profile.newCode' | t }}</span>
                 </button>
               </div>
             </div>
             <p class="helper">
-              שלחו את הקוד להורה נוסף. ברגע שיכניס אותו בפרופיל שלו, הוא יצטרף למידע שלכם.
+              {{ 'profile.shareHelper' | t }}
             </p>
-            <p class="link-feedback success" *ngIf="shareCodeCopied">הקוד הועתק ללוח</p>
+            <p class="link-feedback success" *ngIf="shareCodeCopied">{{ 'profile.codeCopied' | t }}</p>
             <p class="link-feedback error" *ngIf="shareCodeError">{{ shareCodeError }}</p>
           </ng-container>
         </div>
 
         <form class="join-code-form" id="join-by-code" [formGroup]="familyCodeForm" (ngSubmit)="joinByCode()">
-          <label for="familyCode">יש קוד שיתוף? הזינו אותו כאן</label>
+          <label for="familyCode">{{ 'profile.enterShareCode' | t }}</label>
           <div class="input-wrapper" [class.invalid]="familyCodeForm.get('code')?.invalid && familyCodeForm.get('code')?.touched">
             <ion-icon name="key-outline"></ion-icon>
             <input
@@ -261,11 +290,11 @@
             />
             <button type="submit" [disabled]="isJoiningByCode">
               <ion-spinner *ngIf="isJoiningByCode" name="crescent"></ion-spinner>
-              <span *ngIf="!isJoiningByCode">הצטרף</span>
+              <span *ngIf="!isJoiningByCode">{{ 'profile.join' | t }}</span>
             </button>
           </div>
           <p class="error" *ngIf="familyCodeForm.get('code')?.invalid && familyCodeForm.get('code')?.touched">
-            הזינו קוד בן 6 ספרות
+            {{ 'profile.joinCodeError' | t }}
           </p>
         </form>
 
@@ -293,7 +322,7 @@
           <button type="button" class="danger" (click)="signOut()" [disabled]="isSigningOut">
             <ion-icon name="log-out-outline" *ngIf="!isSigningOut"></ion-icon>
             <ion-spinner *ngIf="isSigningOut" name="crescent"></ion-spinner>
-            <span>{{ isSigningOut ? 'מתנתק...' : 'יציאה מהחשבון' }}</span>
+            <span>{{ isSigningOut ? ('profile.signingOut' | t) : ('profile.signout' | t) }}</span>
           </button>
           <p class="signout-error" *ngIf="signOutError">{{ signOutError }}</p>
         </div>

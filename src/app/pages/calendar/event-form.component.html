@@ -1,6 +1,6 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title>{{ isEditMode ? 'עריכת אירוע' : 'אירוע חדש' }}</ion-title>
+    <ion-title>{{ isEditMode ? t('eventForm.title.edit') : t('eventForm.title.new') }}</ion-title>
     <ion-buttons slot="end">
       <ion-button (click)="cancel()">
         <ion-icon name="close" slot="icon-only"></ion-icon>
@@ -14,8 +14,8 @@
 
     <section class="form-card hero-card">
       <div>
-        <p class="eyebrow">{{ eventForm.get('isAllDay')?.value ? 'אירוע של יום שלם' : 'אירוע מתוזמן' }}</p>
-        <h1>{{ eventForm.get('title')?.value || 'אירוע ללא שם' }}</h1>
+        <p class="eyebrow">{{ eventForm.get('isAllDay')?.value ? t('eventForm.allDayEvent') : t('eventForm.scheduledEvent') }}</p>
+        <h1>{{ eventForm.get('title')?.value || t('eventForm.untitled') }}</h1>
         <p class="hero-date" *ngIf="eventForm.get('startDate')?.value as start">
           {{ start | date:'EEEE, d MMMM' }}
         </p>
@@ -32,8 +32,8 @@
 
     <section class="form-card">
       <div class="section-heading">
-        <p class="eyebrow">סוג אירוע</p>
-        <h2>בחרו קטגוריה</h2>
+        <p class="eyebrow">{{ t('eventForm.type.eyebrow') }}</p>
+        <h2>{{ t('eventForm.type.heading') }}</h2>
       </div>
       <div class="event-type-grid">
         <button
@@ -43,40 +43,40 @@
           [class.selected]="eventForm.get('type')?.value === type.value"
           (click)="eventForm.patchValue({ type: type.value })">
           <ion-icon [name]="type.icon"></ion-icon>
-          <span>{{ type.label }}</span>
+          <span>{{ t('calendar.eventType.' + type.value) }}</span>
         </button>
       </div>
     </section>
 
     <section class="form-card fields-card">
       <div class="section-heading">
-        <p class="eyebrow">פרטים</p>
-        <h2>גדירו את האירוע</h2>
+        <p class="eyebrow">{{ t('eventForm.details.eyebrow') }}</p>
+        <h2>{{ t('eventForm.details.heading') }}</h2>
       </div>
 
       <ion-item [class.ion-invalid]="isFieldInvalid('title')">
-        <ion-label position="floating">כותרת *</ion-label>
+        <ion-label position="stacked">{{ t('eventForm.field.titleRequired') }}</ion-label>
         <ion-input
           formControlName="title"
           type="text"
-          placeholder="לדוגמה: פגישה עם רופא שיניים">
+          [placeholder]="t('eventForm.field.titlePlaceholder')">
         </ion-input>
         <ion-note slot="error" *ngIf="isFieldInvalid('title')">
-          {{ getErrorMessage('title') }}
+          {{ t('eventForm.field.titleError') }}
         </ion-note>
       </ion-item>
 
       <ion-item>
-        <ion-label position="floating">תיאור</ion-label>
+        <ion-label position="stacked">{{ t('eventForm.field.description') }}</ion-label>
         <ion-textarea
           formControlName="description"
           rows="3"
-          placeholder="פרטים נוספים על האירוע...">
+          [placeholder]="t('eventForm.field.descriptionPlaceholder')">
         </ion-textarea>
       </ion-item>
 
       <div class="form-section compact">
-        <ion-label class="section-label">מי אחראי?</ion-label>
+        <ion-label class="section-label">{{ t('eventForm.field.responsible') }}</ion-label>
         <ion-segment formControlName="parentId">
           <ion-segment-button
             *ngFor="let parent of parentOptions"
@@ -86,14 +86,35 @@
         </ion-segment>
       </div>
 
+      <div class="form-section compact" *ngIf="children.length">
+        <ion-label class="section-label">{{ t('eventForm.field.childAssignment') }}</ion-label>
+        <div class="child-chip-group">
+          <button
+            type="button"
+            class="child-chip"
+            [class.active]="!eventForm.value.childId"
+            (click)="eventForm.get('childId')?.setValue(null)">
+            {{ t('eventForm.field.noChildAssignment') }}
+          </button>
+          <button
+            *ngFor="let child of children"
+            type="button"
+            class="child-chip"
+            [class.active]="eventForm.value.childId === child"
+            (click)="eventForm.get('childId')?.setValue(child)">
+            {{ child }}
+          </button>
+        </div>
+      </div>
+
       <ion-item lines="none" class="toggle-row">
-        <ion-label>אירוע של יום שלם</ion-label>
+        <ion-label>{{ t('eventForm.field.allDay') }}</ion-label>
         <ion-toggle formControlName="isAllDay" slot="end"></ion-toggle>
       </ion-item>
 
       <div class="datetime-grid" *ngIf="!eventForm.get('isAllDay')?.value">
         <ion-item class="datetime-item">
-          <ion-label position="stacked">שעת התחלה</ion-label>
+          <ion-label position="stacked">{{ t('eventForm.field.startTime') }}</ion-label>
           <ion-datetime-button datetime="event-start-time"></ion-datetime-button>
         </ion-item>
         <ion-modal keepContentsMounted="true">
@@ -107,7 +128,7 @@
           </ng-template>
         </ion-modal>
         <ion-item class="datetime-item">
-          <ion-label position="stacked">שעת סיום</ion-label>
+          <ion-label position="stacked">{{ t('eventForm.field.endTime') }}</ion-label>
           <ion-datetime-button datetime="event-end-time"></ion-datetime-button>
         </ion-item>
         <ion-modal keepContentsMounted="true">
@@ -123,23 +144,23 @@
       </div>
 
       <ion-item>
-        <ion-label position="floating">מיקום</ion-label>
+        <ion-label position="floating">{{ t('eventForm.field.location') }}</ion-label>
         <ion-input
           formControlName="location"
           type="text"
-          placeholder="לדוגמה: רחוב הרצל 10, תל אביב">
+          [placeholder]="t('eventForm.field.locationPlaceholder')">
           <ion-icon name="location-outline" slot="start"></ion-icon>
         </ion-input>
       </ion-item>
 
       <div class="inline-fields">
         <ion-item>
-          <ion-label>תזכורת</ion-label>
+          <ion-label>{{ t('eventForm.field.reminder') }}</ion-label>
           <ion-toggle formControlName="reminderEnabled"></ion-toggle>
         </ion-item>
 
         <ion-item>
-          <ion-label>מתי</ion-label>
+          <ion-label>{{ t('eventForm.field.reminderWhen') }}</ion-label>
           <ion-select
             formControlName="reminderMinutes"
             interface="action-sheet"
@@ -153,7 +174,7 @@
         </ion-item>
 
         <ion-item>
-          <ion-label>צבע</ion-label>
+          <ion-label>{{ t('eventForm.field.color') }}</ion-label>
           <input
             type="color"
             formControlName="color"
@@ -164,8 +185,8 @@
 
     <section class="form-card preview-card" *ngIf="eventForm.get('title')?.value">
       <div class="section-heading">
-        <p class="eyebrow">תצוגה מקדימה</p>
-        <h2>כך זה יראה בלוח</h2>
+        <p class="eyebrow">{{ t('eventForm.preview.eyebrow') }}</p>
+        <h2>{{ t('eventForm.preview.heading') }}</h2>
       </div>
       <div class="event-preview" [style.--preview-color]="eventForm.get('color')?.value">
         <div>
@@ -203,13 +224,13 @@
         *ngIf="isEditMode"
         (click)="deleteEvent()">
         <ion-icon name="trash" slot="start"></ion-icon>
-        מחק
+        {{ t('eventForm.action.delete') }}
       </ion-button>
     </ion-buttons>
     
     <ion-buttons slot="end">
       <ion-button fill="clear" (click)="cancel()">
-        ביטול
+        {{ t('eventForm.action.cancel') }}
       </ion-button>
       <ion-button 
         fill="solid" 
@@ -217,7 +238,7 @@
         [disabled]="eventForm.invalid"
         (click)="save()">
         <ion-icon name="checkmark" slot="start"></ion-icon>
-        {{ isEditMode ? 'עדכן' : 'שמור' }}
+        {{ isEditMode ? t('eventForm.action.update') : t('eventForm.action.save') }}
       </ion-button>
     </ion-buttons>
   </ion-toolbar>

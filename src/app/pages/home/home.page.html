@@ -1,20 +1,67 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
-    <ion-title>מרכז הבית</ion-title>
+    <ion-buttons slot="start">
+      <ion-button
+        fill="clear"
+        size="small"
+        class="notification-button"
+        (click)="openNotifications($event)">
+        <ion-icon slot="icon-only" name="notifications-outline"></ion-icon>
+        @if (notifications.length > 0) {
+          <ion-badge class="notification-badge" color="danger">
+            {{ notifications.length }}
+          </ion-badge>
+        }
+      </ion-button>
+    </ion-buttons>
+    <ion-title>{{ 'home.title' | t }}</ion-title>
     <ion-buttons slot="end">
       <ion-button fill="clear" size="small" (click)="goToProfile()">
         <ion-icon slot="icon-only" name="person-circle-outline"></ion-icon>
       </ion-button>
-      <ion-button fill="clear" size="small" (click)="manualRefresh()">
+      <!-- <ion-button fill="clear" size="small" (click)="manualRefresh()">
         <ion-icon slot="icon-only" name="refresh"></ion-icon>
-      </ion-button>
+      </ion-button> -->
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
+<ion-popover
+  [isOpen]="isNotificationsOpen"
+  [event]="notificationsEvent"
+  side="bottom"
+  alignment="start"
+  cssClass="notifications-popover-shell"
+  showBackdrop="false"
+  (didDismiss)="onNotificationsDismiss()">
+  <ng-template>
+    <div class="notifications-popover">
+      <div class="notifications-card">
+        @if (notifications.length > 0) {
+          <ion-list class="notifications-list" lines="none">
+            <ion-item *ngFor="let notification of notifications">
+              <ion-icon slot="start" color="warning" name="notifications"></ion-icon>
+              <ion-label>
+                <strong>{{ notification.title }}</strong>
+                <p>{{ notification.body }}</p>
+                <small class="muted">{{ formatNotificationTime(notification.createdAt) }}</small>
+              </ion-label>
+            </ion-item>
+          </ion-list>
+        } @else {
+          <div class="empty-card">
+            <ion-icon name="notifications-off-outline"></ion-icon>
+            <p>{{ 'home.notifications.empty' | t }}</p>
+          </div>
+        }
+      </div>
+    </div>
+  </ng-template>
+</ion-popover>
+
 <ion-content [fullscreen]="true" class="home-content">
   <ion-refresher slot="fixed" pullMin="60" pullMax="120" (ionRefresh)="handleRefresh($event)">
-    <ion-refresher-content pullingText="משוך לרענון" refreshingSpinner="crescent"></ion-refresher-content>
+    <ion-refresher-content [pullingText]="'home.refresher.pull' | t" refreshingSpinner="crescent"></ion-refresher-content>
   </ion-refresher>
 
   <div class="bg-shapes">
@@ -27,7 +74,7 @@
     @if (isLoading) {
       <div class="state-block">
         <ion-spinner name="crescent"></ion-spinner>
-        <p>טוען...</p>
+        <p>{{ 'home.loading' | t }}</p>
       </div>
     } @else if (dailyOverview; as overview) {
       <section class="home-hero">
@@ -37,10 +84,10 @@
               <ion-icon name="sparkles-outline"></ion-icon>
             </div>
             <div>
-              <p class="eyebrow">משמורת עכשיו</p>
-              <strong>{{ overview.custodyToday.currentParentName || 'לא מוגדר' }}</strong>
+              <p class="eyebrow">{{ 'home.custodyNow' | t }}</p>
+              <strong>{{ overview.custodyToday.currentParentName || ('home.custodyUnknown' | t) }}</strong>
               @if (overview.custodyToday.nextTransition; as transition) {
-                <span>עד {{ formatDate(transition.date) }}</span>
+                <span>{{ 'home.untilDate' | t:{ date: formatDate(transition.date) } }}</span>
               }
             </div>
           </div>
@@ -48,48 +95,113 @@
           @if (overview.summary.hasUrgentTasks) {
             <ion-chip color="danger">
               <ion-icon name="flame-outline"></ion-icon>
-              משימה דחופה
+              {{ 'home.urgentTask' | t }}
             </ion-chip>
           }
         </div>
 
         <div class="hero-main">
-          <p class="eyebrow">סה״כ הוצאות בהמתנה</p>
-          <h1 class="hero-number">{{ formatCurrency(overview.summary.totalPendingAmount || 0) }}</h1>
+          <p class="eyebrow">{{ 'home.totalApprovedExpenses' | t }}</p>
+          <h1 class="hero-number">{{ formatCurrency(overview.summary.approvedExpensesAmount || 0) }}</h1>
           <p class="muted">
-            {{ overview.summary.eventsCount || 0 }} אירועים • {{ overview.summary.tasksCount || 0 }} משימות
+            {{ overview.summary.eventsCount || 0 }} {{ 'home.summary.events' | t }} •
+            {{ overview.summary.tasksCount || 0 }} {{ 'home.summary.tasks' | t }}
           </p>
-          @if (overview.pendingExpenses.length > 0) {
-            <div class="hero-highlight">
-              <div class="pill warning">הוצאות ממתינות</div>
-              <div class="highlight-metrics">
-                <strong>{{ overview.pendingExpenses.length }}</strong>
-                <span>{{ formatCurrency(overview.summary.totalPendingAmount || 0) }}</span>
-              </div>
-            </div>
-          }
         </div>
 
         <div class="hero-controls">
           <button
-            type="button"
-            class="hero-control"
-            [style.--accent]="'var(--ion-color-primary)'"
-            (click)="executeQuickAction({ id: 'add-event', title: 'אירוע חדש', icon: 'add-circle-outline', route: '/calendar' })">
-            <ion-icon name="add-circle-outline"></ion-icon>
-            <span>אירוע חדש</span>
-          </button>
-          <button
             *ngFor="let action of quickActions | slice:0:3"
             type="button"
             class="hero-control"
+            [class.disabled]="action.disabled"
+            [attr.aria-disabled]="action.disabled"
             (click)="executeQuickAction(action)"
             [style.--accent]="action.color ? 'var(--ion-color-' + action.color + ')' : 'var(--ion-color-primary)'">
             <ion-icon [name]="action.icon"></ion-icon>
             <span>{{ action.title }}</span>
+            @if (action.badge !== undefined && action.badge > 0) {
+              <ion-badge color="danger" class="hero-badge">{{ action.badge }}</ion-badge>
+            } @else if (action.emptyLabel) {
+              <small class="hero-empty">{{ action.emptyLabel }}</small>
+            }
           </button>
         </div>
       </section>
+
+      <section class="hero-events-card">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow dark">{{ 'home.todayBoard' | t }}</p>
+            <h2>{{ 'home.eventsTitle' | t }}</h2>
+          </div>
+          <ion-badge color="primary">{{ overview.events.length }}</ion-badge>
+        </div>
+
+        @if (overview.events.length > 0) {
+          <ion-list class="events-list" lines="none">
+            <ion-item
+              button
+              detail="false"
+              class="event-card-item"
+              *ngFor="let event of overview.events"
+              (click)="navigateToEvent(event.id)">
+              <ion-icon slot="start" name="time-outline" class="event-icon"></ion-icon>
+              <ion-label>
+                <strong>{{ event.title }}</strong>
+                <p>
+                  {{ formatTime(event.startDate) }}
+                  @if (event.location) {
+                    <span>• {{ event.location }}</span>
+                  }
+                  @if (event.childId) {
+                    <span class="child-pill">• {{ getChildLabel(event.childId) }}</span>
+                  }
+                </p>
+              </ion-label>
+              <ion-icon slot="end" name="chevron-forward-outline" class="chevron"></ion-icon>
+            </ion-item>
+          </ion-list>
+        } @else {
+          <div class="empty-card light">
+            <ion-icon name="calendar-outline"></ion-icon>
+            <p>{{ 'home.noEventsToday' | t }}</p>
+          </div>
+        }
+      </section>
+
+      @if (todayTasks.length > 0) {
+        <section class="hero-events-card tasks-card">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow dark">{{ 'home.todayBoard' | t }}</p>
+              <h2>{{ 'home.tasksTitle' | t }}</h2>
+            </div>
+            <ion-badge color="secondary">{{ todayTasks.length }}</ion-badge>
+          </div>
+
+          <ion-list class="tasks-list" lines="none">
+            <ion-item
+              button
+              detail="false"
+              class="event-card-item"
+              *ngFor="let task of todayTasks"
+              (click)="navigateToTask(task.id)">
+              <ion-icon slot="start" name="checkbox-outline" class="event-icon secondary"></ion-icon>
+              <ion-label>
+                <strong>{{ task.title }}</strong>
+                <p>
+                  {{ formatTime(task.dueDate) }}
+                  @if (task.priority) {
+                    <span>• {{ getPriorityLabel(task.priority) }}</span>
+                  }
+                </p>
+              </ion-label>
+              <ion-icon slot="end" name="chevron-forward-outline" class="chevron"></ion-icon>
+            </ion-item>
+          </ion-list>
+        </section>
+      }
 
       <ion-accordion-group
         multiple="true"
@@ -97,212 +209,12 @@
         class="panel-accordion"
         [value]="openAccordions"
         (ionChange)="openAccordions = $event.detail.value">
-       <ion-accordion value="requests" class="accordion-card">
-          <div slot="header" class="accordion-header">
-            <div>
-              <p class="eyebrow">בקשות</p>
-              <h2>בקשות החלפה</h2>
-            </div>
-            <div class="accordion-meta">
-              <ion-chip class="accordion-chip" color="warning">{{ pendingSwapRequests.length }}</ion-chip>
-              <ion-icon class="accordion-chevron" name="chevron-down-outline"></ion-icon>
-            </div>
-          </div>
-          <div slot="content" class="accordion-body">
-            <div class="empty-card">
-              <ion-icon name="swap-horizontal-outline"></ion-icon>
-              <p>בקשות ההחלפה עברו ללוח שנה</p>
-              <ion-button
-                expand="block"
-                fill="clear"
-                size="small"
-                color="primary"
-                routerLink="/tabs/calendar">
-                עבור ללוח שנה
-                <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>
-              </ion-button>
-            </div>
-          </div>
-        </ion-accordion>
-
-        <ion-accordion value="events" class="accordion-card">
-          <div slot="header" class="accordion-header">
-            <div>
-              <p class="eyebrow">לוח היום</p>
-              <h2>אירועים</h2>
-            </div>
-            <div class="accordion-meta">
-              <ion-chip class="accordion-chip" color="primary">{{ overview.events.length }}</ion-chip>
-              <ion-icon class="accordion-chevron" name="chevron-down-outline"></ion-icon>
-            </div>
-          </div>
-          <div slot="content" class="accordion-body">
-            @if (overview.events.length > 0) {
-              <ion-list class="stack-list" lines="none">
-                <ion-item
-                  button
-                  detail="false"
-                  class="stack-item"
-                  *ngFor="let event of overview.events"
-                  (click)="navigateToEvent(event.id)">
-                  <div slot="start" class="stack-icon accent">
-                    <ion-icon name="time-outline"></ion-icon>
-                  </div>
-                  <ion-label class="stack-body">
-                    <strong>{{ event.title }}</strong>
-                    <p>
-                      {{ formatTime(event.startDate) }}
-                      @if (event.location) {
-                        <span>• {{ event.location }}</span>
-                      }
-                    </p>
-                  </ion-label>
-                  <ion-icon slot="end" class="chevron" name="chevron-forward-outline"></ion-icon>
-                </ion-item>
-              </ion-list>
-            } @else {
-              <div class="empty-card">
-                <ion-icon name="calendar-outline"></ion-icon>
-                <p>אין אירועים מתוכננים להיום</p>
-              </div>
-            }
-          </div>
-        </ion-accordion>
-
-        <ion-accordion value="tasks" class="accordion-card">
-          <div slot="header" class="accordion-header">
-            <div>
-              <p class="eyebrow">תכנון</p>
-              <h2>משימות קרובות</h2>
-            </div>
-            <div class="accordion-meta">
-              <ion-chip class="accordion-chip" color="medium">
-                {{ overview.upcomingTasks.length }}
-              </ion-chip>
-              <ion-icon class="accordion-chevron" name="chevron-down-outline"></ion-icon>
-            </div>
-          </div>
-          <div slot="content" class="accordion-body">
-            @if (overview.upcomingTasks.length > 0) {
-              <ion-list class="stack-list" lines="none">
-                <ion-item
-                  button
-                  detail="false"
-                  class="stack-item compact"
-                  *ngFor="let task of overview.upcomingTasks.slice(0, 5)"
-                  (click)="navigateToTask(task.id)">
-                  <ion-checkbox
-                    slot="start"
-                    [checked]="task.status === TaskStatus.COMPLETED"
-                    (click)="$event.stopPropagation()"
-                    (ionChange)="completeTask(task, $event.detail.checked); $event.stopPropagation()">
-                  </ion-checkbox>
-                  <ion-label class="stack-body">
-                    <strong>{{ task.title }}</strong>
-                    <p class="muted">{{ formatDate(task.dueDate) }}</p>
-                  </ion-label>
-                  <ion-chip slot="end" [color]="getTaskPriorityColor(task.priority)" outline>
-                    {{ getPriorityLabel(task.priority) }}
-                  </ion-chip>
-                </ion-item>
-              </ion-list>
-
-              @if (overview.upcomingTasks.length > 5) {
-                <ion-button
-                  expand="block"
-                  fill="clear"
-                  (click)="executeQuickAction({ id: 'tasks', title: '', icon: '', route: '/tasks' })">
-                  הצג עוד משימות
-                  <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>
-                </ion-button>
-              }
-            } @else {
-              <div class="empty-card">
-                <ion-icon name="checkbox-outline"></ion-icon>
-                <p>אין משימות קרובות</p>
-              </div>
-            }
-          </div>
-        </ion-accordion>
-
-        <ion-accordion value="expenses" class="accordion-card">
-          <div slot="header" class="accordion-header">
-            <div>
-              <p class="eyebrow">כספים</p>
-              <h2>הוצאות ממתינות</h2>
-            </div>
-            <div class="accordion-meta">
-              <ion-chip class="accordion-chip" color="success">{{ overview.pendingExpenses.length }}</ion-chip>
-              <ion-icon class="accordion-chevron" name="chevron-down-outline"></ion-icon>
-            </div>
-          </div>
-          <div slot="content" class="accordion-body">
-            @if (overview.pendingExpenses.length > 0) {
-              <ion-list class="stack-list" lines="none">
-                <ion-item
-                  detail="false"
-                  class="stack-item"
-                  *ngFor="let expense of overview.pendingExpenses.slice(0, 3)"
-                  (click)="navigateToExpense(expense.id, true)">
-                  <div slot="start" class="stack-icon positive">
-                    <ion-icon [name]="getCategoryIcon(expense.category)"></ion-icon>
-                  </div>
-                  <div class="stack-body">
-                    <div class="stack-main">
-                      <strong>{{ expense.title }}</strong>
-                      <p>{{ formatDate(expense.date) }}</p>
-                    </div>
-                    <div class="stack-meta">
-                      <div class="amount">
-                        <strong>{{ formatCurrency(expense.amount) }}</strong>
-                        <ion-badge color="warning">ממתין</ion-badge>
-                      </div>
-                      @if (canApproveExpense(expense)) {
-                        <div class="stack-actions" (click)="$event.stopPropagation()">
-                          <ion-button
-                            size="small"
-                            fill="clear"
-                            color="success"
-                            (click)="handleExpenseApproval(expense.id, true, $event)">
-                            אשר
-                          </ion-button>
-                          <ion-button
-                            size="small"
-                            fill="clear"
-                            color="medium"
-                            (click)="handleExpenseApproval(expense.id, false, $event)">
-                            דחה
-                          </ion-button>
-                        </div>
-                      }
-                    </div>
-                  </div>
-                </ion-item>
-              </ion-list>
-
-              @if (overview.pendingExpenses.length > 3) {
-                <ion-button
-                  expand="block"
-                  fill="clear"
-                  (click)="executeQuickAction({ id: 'expenses', title: '', icon: '', route: '/expenses' })">
-                  הצג עוד הוצאות
-                  <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>
-                </ion-button>
-              }
-            } @else {
-              <div class="empty-card">
-                <ion-icon name="wallet-outline"></ion-icon>
-                <p>אין הוצאות ממתינות</p>
-              </div>
-            }
-          </div>
-        </ion-accordion>
       </ion-accordion-group>
     } @else {
       <div class="state-block error">
         <ion-icon name="alert-circle-outline"></ion-icon>
-        <h3>שגיאה בטעינת הנתונים</h3>
-        <ion-button (click)="loadData()">נסה שוב</ion-button>
+        <h3>{{ 'home.errorLoading' | t }}</h3>
+        <ion-button (click)="loadData()">{{ 'home.retry' | t }}</ion-button>
       </div>
     }
   </div>

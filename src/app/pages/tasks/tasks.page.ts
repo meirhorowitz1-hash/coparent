@@ -22,6 +22,7 @@ export class TasksPage implements OnInit, OnDestroy {
   showForm = false;
   newTaskForm: FormGroup;
   parentNames = { parent1: 'הורה 1', parent2: 'הורה 2' };
+  children: string[] = [];
   private destroy$ = new Subject<void>();
   private completionTimers = new Map<string, any>();
 
@@ -36,7 +37,8 @@ export class TasksPage implements OnInit, OnDestroy {
       description: [''],
       dueDate: [null],
       assignedTo: ['both'],
-      category: [TaskCategory.OTHER]
+      category: [TaskCategory.OTHER],
+      childId: [null]
     });
   }
 
@@ -62,6 +64,10 @@ export class TasksPage implements OnInit, OnDestroy {
           parent2: metadata.parent2.name || 'הורה 2'
         };
       });
+
+    this.calendarService.getFamilyChildren()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((children: string[]) => (this.children = children ?? []));
   }
 
   ngOnDestroy(): void {
@@ -92,7 +98,8 @@ export class TasksPage implements OnInit, OnDestroy {
         priority: TaskPriority.MEDIUM,
         assignedTo: assignedTo || 'both',
         category: category as TaskCategory,
-        createdBy: 'local'
+        createdBy: 'local',
+        childId: this.newTaskForm.value.childId || null
       });
 
       this.newTaskForm.reset({
@@ -100,7 +107,8 @@ export class TasksPage implements OnInit, OnDestroy {
         description: '',
         dueDate: null,
         assignedTo: 'both',
-        category: TaskCategory.OTHER
+        category: TaskCategory.OTHER,
+        childId: null
       });
       this.showForm = false;
       this.presentToast('המשימה נוספה', 'success');

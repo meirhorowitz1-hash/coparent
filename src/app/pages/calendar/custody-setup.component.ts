@@ -1,6 +1,8 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ModalController, LoadingController } from '@ionic/angular';
 import { CalendarService } from '../../core/services/calendar.service';
+import { I18nService } from '../../core/services/i18n.service';
+
 import {
   CustodySchedule,
   CustodyPattern,
@@ -55,6 +57,7 @@ export class CustodySetupComponent implements OnInit, OnDestroy {
   private isProcessing = false;
 
   constructor(
+    private i18n: I18nService,
     private modalController: ModalController,
     private calendarService: CalendarService,
     private loadingController: LoadingController
@@ -211,6 +214,20 @@ export class CustodySetupComponent implements OnInit, OnDestroy {
       this.custodySchedule.startDate = next;
     }
   }
+  t(key: string, params?: Record<string, string | number>): string {
+  return this.i18n.translate(key, params);
+}
+
+getWeekLabel(): string {
+  return this.activeBiweeklyWeek === 'a' 
+    ? this.t('custody.customize.week1') 
+    : this.t('custody.customize.week2');
+}
+
+getTemplateName(template: any): string {
+  if (!template) return '';
+  return this.i18n.currentLanguage === 'he' ? template.nameHebrew : template.nameEnglish;
+}
 
   describeTemplate(template: CustodyTemplate): string {
     return template.description
