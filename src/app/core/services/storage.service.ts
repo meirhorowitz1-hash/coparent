@@ -51,15 +51,15 @@ export class StorageService implements OnDestroy {
 
   private safeNumber(value: unknown, fallback: number): number {
     if (typeof value === 'number' && Number.isFinite(value)) {
-      return value;
+      return Math.max(0, value); // Never return negative
     }
     if (typeof value === 'string') {
       const parsed = Number(value.replace(/[^0-9.\-]/g, ''));
       if (Number.isFinite(parsed)) {
-        return parsed;
+        return Math.max(0, parsed); // Never return negative
       }
     }
-    return fallback;
+    return Math.max(0, fallback);
   }
 
   ngOnDestroy(): void {

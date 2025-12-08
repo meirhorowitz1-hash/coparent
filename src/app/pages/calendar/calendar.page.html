@@ -226,7 +226,7 @@
       <ion-button 
         fill="clear"
         class="tasks-link-button"
-        (click)="openAddTaskModal()">
+        [routerLink]="['/tabs/tasks']">
         <ion-icon slot="start" name="add-outline"></ion-icon>
         {{ 'calendar.tasks.addFirst' | t }}
       </ion-button>

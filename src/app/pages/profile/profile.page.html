@@ -25,6 +25,8 @@
         </ion-segment>
       </section>
 
+     
+
       <section class="profile-card panel">
         <div class="profile-hero">
           <div
@@ -114,10 +116,8 @@
               <button
                 type="button"
                 class="edit-toggle"
-                [class.edit-toggle-rtl]="isRtl"
                 (click)="isEditingFamilyMeta ? cancelFamilyEdit() : startFamilyEdit()"
-                 [attr.title]="isEditingProfile ? ('profile.button.cancelEdit' | t) : ('profile.button.edit' | t)"
-            aria-label="{{ isEditingProfile ? ('profile.button.cancelEdit' | t) : ('profile.button.edit' | t) }}"
+                
               >
                 <ion-icon [name]="isEditingFamilyMeta ? 'close-outline' : 'create-outline'"></ion-icon>
               </button>
@@ -181,7 +181,7 @@
                 </ul>
               </div>
             </div>
-
+     <app-storage-usage [showBreakdown]="true"></app-storage-usage>
             <div class="pending" *ngIf="family?.pendingInvites?.length">
               <h3>{{ 'profile.pendingInvites' | t }}</h3>
               <ul>
@@ -233,9 +233,6 @@
             </div>
           </div>
         </div>
-
-        <!-- Storage Usage -->
-        <app-storage-usage *ngIf="(family$ | async)"></app-storage-usage>
 
         <ng-template #noFamilyState>
           <div class="family-choice">
@@ -339,6 +336,7 @@
           <p class="signout-error" *ngIf="signOutError">{{ signOutError }}</p>
         </div>
       </section>
+  
     </div>
   </ng-container>
 

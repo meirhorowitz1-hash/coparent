@@ -41,15 +41,15 @@ const db = admin.firestore();
 const DEFAULT_STORAGE_LIMIT_BYTES = 5 * 1024 * 1024 * 1024;
 function safeNumber(value, fallback) {
     if (typeof value === 'number' && Number.isFinite(value)) {
-        return value;
+        return Math.max(0, value); // Never return negative
     }
     if (typeof value === 'string') {
         const parsed = Number(value.replace(/[^0-9.\-]/g, ''));
         if (Number.isFinite(parsed)) {
-            return parsed;
+            return Math.max(0, parsed); // Never return negative
         }
     }
-    return fallback;
+    return Math.max(0, fallback);
 }
 function ensurePositiveLimit(value) {
     const candidate = safeNumber(value, DEFAULT_STORAGE_LIMIT_BYTES);
@@ -131,21 +131,33 @@ async function recalculateFamilyStorage(familyId) {
 }
 /**
  * Update storage stats after changes (incremental update)
+ * Also fixes any negative values that may have occurred
  */
 async function updateStorageStatsAfterChange(familyId) {
     // Get current limit to recalculate percentage and remaining
     const familyDoc = await db.collection('families').doc(familyId).get();
     const data = familyDoc.data();
     const storageLimit = ensurePositiveLimit(data?.storageLimit);
-    const totalUsed = safeNumber(data?.storageStats?.totalUsed, 0);
+    // Ensure totalUsed is never negative
+    const rawTotalUsed = data?.storageStats?.totalUsed;
+    const totalUsed = safeNumber(rawTotalUsed, 0);
+    // Ensure breakdown values are never negative
+    const breakdown = data?.storageStats?.breakdown || {};
+    const sanitizedBreakdown = {
+        paymentReceipts: safeNumber(breakdown.paymentReceipts, 0),
+        documents: safeNumber(breakdown.documents, 0),
+        expenseReceipts: safeNumber(breakdown.expenseReceipts, 0)
+    };
     const rawPercentage = storageLimit > 0 ? Math.round((totalUsed / storageLimit) * 100) : 0;
     const percentage = Number.isFinite(rawPercentage) ? Math.min(100, Math.max(0, rawPercentage)) : 0;
     const remaining = Math.max(0, storageLimit - totalUsed);
     await db.collection('families').doc(familyId).set({
         storageStats: {
+            totalUsed,
             limit: storageLimit,
             percentage,
             remaining,
+            breakdown: sanitizedBreakdown,
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         }
     }, { merge: true });
