@@ -5,12 +5,15 @@ import { ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { CalendarService } from '../../core/services/calendar.service';
+import { I18nService } from '../../core/services/i18n.service';
 import {
   ExpenseRecord,
   ExpenseStoreService,
   FinanceSettings,
   FixedExpenseSetting,
 } from '../../core/services/expense-store.service';
+import { PaymentReceiptService } from '../../core/services/payment-receipt.service';
+import { PaymentReceipt, MonthlyPaymentSummary } from '../../core/models/payment-receipt.model';
 
 type FixedExpenseFormGroup = FormGroup<{
   id: FormControl<string>;
@@ -55,10 +58,10 @@ export class ExpensesPage implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   currentParentRole: 'parent1' | 'parent2' | null = null;
   currentUserId: string | null = null;
-  currentUserName: string = 'הורה';
+  currentUserName: string | null = null;
   parentNames = {
-    parent1: 'הורה 1',
-    parent2: 'הורה 2'
+    parent1: '',
+    parent2: ''
   };
   parentUids: { parent1: string | null; parent2: string | null } = {
     parent1: null,
@@ -81,12 +84,23 @@ export class ExpensesPage implements OnInit, OnDestroy {
   settingsModalOpen = false;
   addExpenseModalOpen = false;
 
+  // Payment Receipts
+  paymentReceiptModalOpen = false;
+  paymentReceiptForm: FormGroup;
+  pendingPaymentReceiptFile?: File;
+  pendingPaymentReceiptPreview?: string;
+  isUploadingReceipt = false;
+  paymentReceiptsByMonth: MonthlyPaymentSummary[] = [];
+  viewingReceipt: PaymentReceipt | null = null;
+
   constructor(
     private formBuilder: FormBuilder,
     private calendarService: CalendarService,
     private expenseStore: ExpenseStoreService,
+    private paymentReceiptService: PaymentReceiptService,
     private toastCtrl: ToastController,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    public i18n: I18nService
   ) {
     const nowIso = new Date().toISOString();
     this.expenseForm = this.formBuilder.group({
@@ -102,6 +116,14 @@ export class ExpensesPage implements OnInit, OnDestroy {
       alimonyPayer: [null],
       defaultSplitParent1: [50, [Validators.min(0), Validators.max(100)]],
       fixedExpenses: this.formBuilder.array<FixedExpenseFormGroup>([])
+    });
+
+    // Payment Receipt Form
+    this.paymentReceiptForm = this.formBuilder.group({
+      monthYear: [nowIso, Validators.required],
+      amount: [null, [Validators.min(0)]],
+      paidTo: ['parent2', Validators.required],
+      description: ['']
     });
   }
 
@@ -134,15 +156,22 @@ export class ExpensesPage implements OnInit, OnDestroy {
         const uid = this.calendarService.getCurrentUserId();
         this.currentUserId = uid;
         this.currentParentRole = this.calendarService.getParentRoleForUser(uid);
-        this.currentUserName = this.calendarService.getCurrentUserDisplayName();
+        this.currentUserName = this.calendarService.getCurrentUserDisplayName() || null;
         this.parentNames = {
-          parent1: metadata.parent1.name || 'הורה 1',
-          parent2: metadata.parent2.name || 'הורה 2'
+          parent1: metadata.parent1.name || '',
+          parent2: metadata.parent2.name || ''
         };
         this.parentUids = {
           parent1: metadata.parent1.uid || null,
           parent2: metadata.parent2.uid || null
         };
+      });
+
+    // Subscribe to payment receipts
+    this.paymentReceiptService.receipts$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.paymentReceiptsByMonth = this.paymentReceiptService.getGroupedByMonth();
       });
 
     this.route.queryParamMap.pipe(takeUntil(this.destroy$)).subscribe(() => {});
@@ -204,9 +233,9 @@ export class ExpensesPage implements OnInit, OnDestroy {
       const key = `${year}-${month}`;
       if (!buckets.has(key)) {
         const baseDate = new Date(year, month, 1);
-        const label = baseDate.toLocaleDateString('he-IL', {
+        const label = baseDate.toLocaleDateString(this.i18n.locale, {
           month: 'long',
-          year: 'numeric',
+          year: 'numeric'
         });
         buckets.set(key, { label, expenses: [], monthIndex: month, year });
       }
@@ -364,14 +393,14 @@ export class ExpensesPage implements OnInit, OnDestroy {
     if (expense.status !== 'pending') {
       return;
     }
-    const confirmed = window.confirm('למחוק את ההוצאה הזו?');
+    const confirmed = window.confirm(this.i18n.translate('expenses.confirm.delete'));
     if (!confirmed) {
       return;
     }
     try {
       await this.expenseStore.deleteExpense(expense.id);
       const toast = await this.toastCtrl.create({
-        message: 'ההוצאה נמחקה',
+        message: this.i18n.translate('expenses.toast.deleteSuccess'),
         duration: 2000,
         color: 'medium'
       });
@@ -382,7 +411,7 @@ export class ExpensesPage implements OnInit, OnDestroy {
     } catch (error) {
       console.error('Failed to delete expense', error);
       const toast = await this.toastCtrl.create({
-        message: 'לא הצלחנו למחוק, נסו שוב',
+        message: this.i18n.translate('expenses.toast.deleteFailed'),
         duration: 2500,
         color: 'danger'
       });
@@ -409,7 +438,7 @@ export class ExpensesPage implements OnInit, OnDestroy {
         date,
         notes: notes?.trim(),
         createdBy: this.currentUserId || 'anonymous',
-        createdByName: this.currentUserName || 'הורה',
+        createdByName: this.getCurrentUserLabel(),
         splitParent1: normalizedSplit,
         receiptName: this.pendingReceipt?.name,
         receiptPreview: this.pendingReceiptPreview,
@@ -428,7 +457,9 @@ export class ExpensesPage implements OnInit, OnDestroy {
       this.closeAddExpenseModal();
 
       const toast = await this.toastCtrl.create({
-        message: isEdit ? 'ההוצאה עודכנה' : 'ההוצאה נוספה בהצלחה',
+        message: isEdit
+          ? this.i18n.translate('expenses.toast.updated')
+          : this.i18n.translate('expenses.toast.added'),
         duration: 2000,
         color: 'success'
       });
@@ -437,10 +468,10 @@ export class ExpensesPage implements OnInit, OnDestroy {
       console.error('Failed to add expense:', error);
       const message =
         error?.message === 'missing-family-context'
-          ? 'אין משפחה פעילה מחוברת כרגע'
+          ? this.i18n.translate('expenses.toast.missingFamily')
           : error?.message === 'cannot-edit-non-pending'
-            ? 'ניתן לערוך רק הוצאה שממתינה לאישור'
-            : 'שגיאה בהוספת ההוצאה';
+            ? this.i18n.translate('expenses.toast.cannotEdit')
+            : this.i18n.translate('expenses.toast.addError');
       const toast = await this.toastCtrl.create({
         message,
         duration: 3000,
@@ -453,7 +484,7 @@ export class ExpensesPage implements OnInit, OnDestroy {
   }
 
   formatCurrency(amount: number): string {
-    return (amount ?? 0).toLocaleString('he-IL', { style: 'currency', currency: 'ILS' });
+    return (amount ?? 0).toLocaleString(this.i18n.locale, { style: 'currency', currency: 'ILS' });
   }
 
   openReceipt(expense: ExpenseRecord) {
@@ -473,7 +504,7 @@ export class ExpensesPage implements OnInit, OnDestroy {
     const win = window.open(objectUrl, '_blank');
     if (!win) {
       this.toastCtrl.create({
-        message: 'לא הצלחנו לפתוח את הקבלה, בדקו חוסם פופ אפים',
+        message: this.i18n.translate('expenses.toast.receiptOpenFailed'),
         duration: 2500,
         color: 'warning'
       }).then(t => t.present());
@@ -515,7 +546,7 @@ export class ExpensesPage implements OnInit, OnDestroy {
     } catch (error) {
       console.error('Failed to update expense status', error);
       const toast = await this.toastCtrl.create({
-        message: 'לא הצלחנו לעדכן את ההוצאה, נסו שוב',
+        message: this.i18n.translate('expenses.toast.updateFailed'),
         duration: 2500,
         color: 'danger'
       });
@@ -533,7 +564,7 @@ export class ExpensesPage implements OnInit, OnDestroy {
     } catch (error) {
       console.error('Failed to mark expense as paid', error);
       const toast = await this.toastCtrl.create({
-        message: 'לא הצלחנו לעדכן את התשלום, נסו שוב',
+        message: this.i18n.translate('expenses.toast.markPaidFailed'),
         duration: 2500,
         color: 'danger'
       });
@@ -557,10 +588,22 @@ export class ExpensesPage implements OnInit, OnDestroy {
   }
 
   getParentDisplayName(role: 'parent1' | 'parent2' | null | undefined): string {
+    return this.getParentLabel(role);
+  }
+
+  getParentLabel(role: 'parent1' | 'parent2' | null | undefined): string {
     if (role === 'parent1' || role === 'parent2') {
-      return this.parentNames[role];
+      const name = this.parentNames[role];
+      if (name) {
+        return name;
+      }
+      return this.i18n.translate(role === 'parent1' ? 'profile.parent1' : 'profile.parent2');
     }
-    return 'הורה';
+    return this.i18n.translate('expenses.defaultParent');
+  }
+
+  private getCurrentUserLabel(): string {
+    return this.currentUserName || this.i18n.translate('expenses.defaultParent');
   }
 
   async saveFinanceSettings() {
@@ -585,7 +628,7 @@ export class ExpensesPage implements OnInit, OnDestroy {
       });
       this.expenseForm.patchValue({ splitParent1: Number(defaultSplitParent1) || 0 });
       const toast = await this.toastCtrl.create({
-        message: 'הגדרות נשמרו',
+        message: this.i18n.translate('expenses.toast.settingsSaved'),
         duration: 2000,
         color: 'success'
       });
@@ -593,7 +636,7 @@ export class ExpensesPage implements OnInit, OnDestroy {
     } catch (error) {
       console.error('Failed to save finance settings', error);
       const toast = await this.toastCtrl.create({
-        message: 'לא הצלחנו לשמור הגדרות',
+        message: this.i18n.translate('expenses.toast.settingsFailed'),
         duration: 2500,
         color: 'danger'
       });
@@ -604,7 +647,7 @@ export class ExpensesPage implements OnInit, OnDestroy {
   }
 
   getParentShareLabel(role: 'parent1' | 'parent2'): string {
-    return this.parentNames[role] || (role === 'parent1' ? 'הורה 1' : 'הורה 2');
+    return this.getParentLabel(role);
   }
 
   getShareForRole(role: 'parent1' | 'parent2'): number {
@@ -625,8 +668,8 @@ export class ExpensesPage implements OnInit, OnDestroy {
       amount: fixed.amount,
       date: baseDate,
       createdBy: 'system',
-      createdByName: 'הוצאה קבועה',
-      notes: 'הוצאה קבועה',
+      createdByName: this.i18n.translate('expenses.fixedExpenseLabel'),
+      notes: this.i18n.translate('expenses.fixedExpenseLabel'),
       receiptName: undefined,
       receiptPreview: undefined,
       splitParent1: typeof fixed.splitParent1 === 'number' ? fixed.splitParent1 : this.financeSettings.defaultSplitParent1,
@@ -641,7 +684,7 @@ export class ExpensesPage implements OnInit, OnDestroy {
 
     if (!buckets.length && (this.financeSettings.alimonyAmount || 0) > 0) {
       const now = new Date();
-      const label = now.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+      const label = now.toLocaleDateString(this.i18n.locale, { month: 'long', year: 'numeric' });
       this.paymentBreakdowns = [
         {
           label,
@@ -684,7 +727,7 @@ export class ExpensesPage implements OnInit, OnDestroy {
       return this.currentMonthBucket.label;
     }
     const now = new Date();
-    return now.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+    return now.toLocaleDateString(this.i18n.locale, { month: 'long', year: 'numeric' });
   }
 
   get currentMonthReport(): MonthlyReport | null {
@@ -697,24 +740,35 @@ export class ExpensesPage implements OnInit, OnDestroy {
 
   getPaymentMessage(report: MonthlyReport): string {
     if (report.balance === 0) {
-      return 'אין העברת כספים החודש';
+      return this.i18n.translate('expenses.payment.none');
     }
 
     const payer = report.balance > 0 ? 'parent1' : 'parent2';
     const receiver = payer === 'parent1' ? 'parent2' : 'parent1';
     const amount = Math.abs(report.balance);
-    const payerName = this.parentNames[payer];
-    const receiverName = this.parentNames[receiver];
+    const formattedAmount = this.formatCurrency(amount);
+    const payerName = this.getParentLabel(payer);
+    const receiverName = this.getParentLabel(receiver);
 
     if (this.currentParentRole === payer) {
-      return `אתה צריך להעביר ל${receiverName} ${this.formatCurrency(amount)}`;
+      return this.i18n.translate('expenses.payment.youOwe', {
+        receiver: receiverName,
+        amount: formattedAmount
+      });
     }
 
     if (this.currentParentRole === receiver) {
-      return `${payerName} צריך להעביר לך ${this.formatCurrency(amount)}`;
+      return this.i18n.translate('expenses.payment.theyOweYou', {
+        payer: payerName,
+        amount: formattedAmount
+      });
     }
 
-    return `${payerName} צריך להעביר ל${receiverName} ${this.formatCurrency(amount)}`;
+    return this.i18n.translate('expenses.payment.transferBetweenParents', {
+      payer: payerName,
+      receiver: receiverName,
+      amount: formattedAmount
+    });
   }
 
   openSettingsModal() {
@@ -779,10 +833,11 @@ export class ExpensesPage implements OnInit, OnDestroy {
   }
 
   private async showReceiptTooLargeToast(includeError: boolean = false) {
+    const messageKey = includeError
+      ? 'expenses.toast.receiptTooLargeDetailed'
+      : 'expenses.toast.receiptTooLargeFallback';
     const toast = await this.toastCtrl.create({
-      message: includeError
-        ? 'התמונה של הקבלה גדולה מדי, נסו לצלם מחדש בגודל קטן יותר'
-        : 'הקטנו את התמונה, אך היא עדיין גדולה מדי. נסו להעלות צילום קטן יותר',
+      message: this.i18n.translate(messageKey),
       duration: 3000,
       color: 'warning'
     });
@@ -831,7 +886,7 @@ export class ExpensesPage implements OnInit, OnDestroy {
 
   getCurrentDate(): string {
     const now = new Date();
-    return now.toLocaleDateString('he-IL', { 
+    return now.toLocaleDateString(this.i18n.locale, { 
       day: '2-digit', 
       month: '2-digit', 
       year: 'numeric' 
@@ -840,7 +895,7 @@ export class ExpensesPage implements OnInit, OnDestroy {
 
   getCurrentDateTime(): string {
     const now = new Date();
-    return now.toLocaleString('he-IL', { 
+    return now.toLocaleString(this.i18n.locale, { 
       day: '2-digit', 
       month: '2-digit', 
       year: 'numeric',
@@ -883,14 +938,14 @@ export class ExpensesPage implements OnInit, OnDestroy {
     const { parent1, parent2 } = this.parentUids;
     
     if (expense.createdBy === parent1) {
-      return this.parentNames.parent1;
+      return this.getParentLabel('parent1');
     }
     
     if (expense.createdBy === parent2) {
-      return this.parentNames.parent2;
+      return this.getParentLabel('parent2');
     }
     
-    return expense.createdByName || 'לא ידוע';
+    return expense.createdByName || this.i18n.translate('expenses.unknownPayer');
   }
 
   getParentUidByRole(role: 'parent1' | 'parent2'): string | null {
@@ -946,7 +1001,7 @@ export class ExpensesPage implements OnInit, OnDestroy {
     const section = this.receiptContent?.first?.nativeElement;
     if (!section) {
       const toast = await this.toastCtrl.create({
-        message: 'אין נתונים להורדה כרגע',
+        message: this.i18n.translate('expenses.toast.noDataToDownload'),
         duration: 2000,
         color: 'warning'
       });
@@ -988,5 +1043,132 @@ export class ExpensesPage implements OnInit, OnDestroy {
     link.download = `expenses-${this.getCurrentDateTime().replace(/\\s+/g, '_')}.xls`;
     link.click();
     URL.revokeObjectURL(url);
+  }
+
+  // ==================== Payment Receipt Methods ====================
+
+  openPaymentReceiptModal() {
+    this.paymentReceiptForm.reset({
+      monthYear: new Date().toISOString(),
+      amount: null,
+      paidTo: this.currentParentRole === 'parent1' ? 'parent2' : 'parent1',
+      description: ''
+    });
+    this.pendingPaymentReceiptFile = undefined;
+    this.pendingPaymentReceiptPreview = undefined;
+    this.paymentReceiptModalOpen = true;
+  }
+
+  closePaymentReceiptModal() {
+    this.paymentReceiptModalOpen = false;
+    this.pendingPaymentReceiptFile = undefined;
+    this.pendingPaymentReceiptPreview = undefined;
+  }
+
+  async onPaymentReceiptSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) {
+      this.pendingPaymentReceiptFile = undefined;
+      this.pendingPaymentReceiptPreview = undefined;
+      return;
+    }
+
+    const file = input.files[0];
+    this.pendingPaymentReceiptFile = file;
+
+    const compressed = await this.paymentReceiptService.compressImage(file);
+    if (compressed) {
+      this.pendingPaymentReceiptPreview = compressed;
+    } else {
+      this.pendingPaymentReceiptFile = undefined;
+      this.pendingPaymentReceiptPreview = undefined;
+      const toast = await this.toastCtrl.create({
+        message: this.i18n.translate('expenses.toast.receiptTooLargeFallback'),
+        duration: 3000,
+        color: 'warning'
+      });
+      toast.present();
+    }
+
+    input.value = '';
+  }
+
+  removePendingPaymentReceipt() {
+    this.pendingPaymentReceiptFile = undefined;
+    this.pendingPaymentReceiptPreview = undefined;
+  }
+
+  async uploadPaymentReceipt() {
+    if (!this.pendingPaymentReceiptPreview || this.paymentReceiptForm.invalid) {
+      return;
+    }
+
+    this.isUploadingReceipt = true;
+    try {
+      const { monthYear, amount, paidTo, description } = this.paymentReceiptForm.value;
+      const date = new Date(monthYear);
+
+      await this.paymentReceiptService.addReceipt({
+        month: date.getMonth(),
+        year: date.getFullYear(),
+        imageUrl: this.pendingPaymentReceiptPreview,
+        imageName: this.pendingPaymentReceiptFile?.name,
+        amount: amount ? Number(amount) : undefined,
+        paidTo,
+        description: description?.trim() || undefined
+      });
+
+      const toast = await this.toastCtrl.create({
+        message: this.i18n.translate('expenses.receipts.toast.uploaded'),
+        duration: 2000,
+        color: 'success'
+      });
+      toast.present();
+
+      this.closePaymentReceiptModal();
+    } catch (error) {
+      console.error('Failed to upload payment receipt', error);
+      const toast = await this.toastCtrl.create({
+        message: this.i18n.translate('expenses.receipts.toast.uploadFailed'),
+        duration: 2500,
+        color: 'danger'
+      });
+      toast.present();
+    } finally {
+      this.isUploadingReceipt = false;
+    }
+  }
+
+  viewPaymentReceipt(receipt: PaymentReceipt) {
+    this.viewingReceipt = receipt;
+  }
+
+  closeReceiptViewer() {
+    this.viewingReceipt = null;
+  }
+
+  async deletePaymentReceipt(receipt: PaymentReceipt) {
+    const confirmed = window.confirm(this.i18n.translate('expenses.receipts.confirm.delete'));
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await this.paymentReceiptService.deleteReceipt(receipt.id);
+      const toast = await this.toastCtrl.create({
+        message: this.i18n.translate('expenses.receipts.toast.deleted'),
+        duration: 2000,
+        color: 'medium'
+      });
+      toast.present();
+    } catch (error) {
+      console.error('Failed to delete payment receipt', error);
+      const toast = await this.toastCtrl.create({
+        message: this.i18n.translate('expenses.receipts.toast.deleteFailed'),
+        duration: 2500,
+        color: 'danger'
+      });
+      toast.present();
+    }
   }
 }

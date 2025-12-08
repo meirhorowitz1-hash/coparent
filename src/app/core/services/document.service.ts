@@ -4,6 +4,7 @@ import {
   Timestamp,
   collection,
   collectionData,
+  deleteDoc,
   doc,
   orderBy,
   query,
@@ -17,8 +18,28 @@ import { AuthService } from './auth.service';
 import { UserProfileService } from './user-profile.service';
 import { UserProfile } from '../models/user-profile.model';
 import { FamilyService } from './family.service';
+import { ApiService } from './api.service';
+import { SocketService } from './socket.service';
+import { useServerBackend } from './backend-mode';
+import { compressImageFile } from '../utils/image-compression';
 
 const MAX_BYTES = 900 * 1024; // keep under Firestore 1MB limit
+
+// Server API types
+interface ServerDocument {
+  id: string;
+  familyId: string;
+  title: string;
+  fileName: string;
+  fileUrl: string;
+  fileSize?: number;
+  mimeType?: string;
+  childId?: string | null;
+  uploadedById?: string | null;
+  uploadedByName?: string | null;
+  uploadedAt: string;
+  createdAt: string;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -28,6 +49,8 @@ export class DocumentService implements OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly userProfileService = inject(UserProfileService);
   private readonly familyService = inject(FamilyService);
+  private readonly apiService = inject(ApiService);
+  private readonly socketService = inject(SocketService);
 
   private documentsSubject = new BehaviorSubject<DocumentItem[]>([]);
   readonly documents$ = this.documentsSubject.asObservable();
@@ -36,6 +59,7 @@ export class DocumentService implements OnDestroy {
 
   private profileSub?: Subscription;
   private documentsSub?: Subscription;
+  private socketSub?: Subscription;
   private currentProfile: UserProfile | null = null;
   private activeFamilyId: string | null = null;
 
@@ -56,27 +80,103 @@ export class DocumentService implements OnDestroy {
   ngOnDestroy(): void {
     this.profileSub?.unsubscribe();
     this.documentsSub?.unsubscribe();
+    this.socketSub?.unsubscribe();
   }
 
-  private subscribeToFamilyDocuments(familyId: string | null) {
-    this.documentsSub?.unsubscribe();
+  // ==================== PUBLIC API ====================
 
-    if (!familyId) {
-      this.documentsSubject.next([]);
-      this.childrenSubject.next([]);
-      return;
+  async uploadDocument(title: string, file: File, childId: string | null = null): Promise<DocumentItem> {
+    if (useServerBackend()) {
+      return this.uploadDocumentServer(title, file, childId);
     }
+    return this.uploadDocumentFirebase(title, file, childId);
+  }
 
-    const documentsRef = collection(this.firestore, 'families', familyId, 'documents');
-    const q = query(documentsRef, orderBy('uploadedAt', 'desc'));
+  async deleteDocument(id: string): Promise<void> {
+    if (useServerBackend()) {
+      return this.deleteDocumentServer(id);
+    }
+    return this.deleteDocumentFirebase(id);
+  }
 
-    this.documentsSub = collectionData(q, { idField: 'id' }).subscribe(rawDocs => {
-      const mapped = rawDocs.map(doc => this.mapDocument(doc)) as DocumentItem[];
+  async getFamilyChildren(): Promise<string[]> {
+    if (!this.activeFamilyId) {
+      return [];
+    }
+    const cached = this.childrenSubject.value;
+    if (cached.length) {
+      return cached;
+    }
+    await this.refreshChildren(this.activeFamilyId);
+    return this.childrenSubject.value;
+  }
+
+  // ==================== SERVER BACKEND METHODS ====================
+
+  private async uploadDocumentServer(title: string, file: File, childId: string | null): Promise<DocumentItem> {
+    const familyId = this.requireFamilyId();
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('title', title.trim());
+    if (childId) {
+      formData.append('childId', childId);
+    }
+    formData.append('uploadedByName', this.currentProfile?.fullName || this.currentProfile?.email || 'משתמש');
+
+    const response = await this.apiService.upload<ServerDocument>(`/documents/${familyId}`, formData).toPromise();
+    return this.mapServerDocument(response!);
+  }
+
+  private async deleteDocumentServer(id: string): Promise<void> {
+    const familyId = this.requireFamilyId();
+    await this.apiService.delete(`/documents/${familyId}/${id}`).toPromise();
+  }
+
+  private async loadDocumentsFromServer(familyId: string): Promise<void> {
+    try {
+      const docs = await this.apiService.get<ServerDocument[]>(`/documents/${familyId}`).toPromise();
+      const mapped = (docs || []).map(d => this.mapServerDocument(d));
       this.documentsSubject.next(mapped);
+    } catch (error) {
+      console.error('[Document] Failed to load from server', error);
+    }
+  }
+
+  private subscribeToServerEvents(): void {
+    this.socketSub?.unsubscribe();
+
+    this.socketSub = this.socketService.allEvents$.subscribe(({ event, data }) => {
+      if (event === 'document:created') {
+        const document = this.mapServerDocument(data as ServerDocument);
+        const current = this.documentsSubject.value;
+        if (!current.some(d => d.id === document.id)) {
+          this.documentsSubject.next([document, ...current]);
+        }
+      } else if (event === 'document:deleted') {
+        const { id } = data as { id: string };
+        const next = this.documentsSubject.value.filter(d => d.id !== id);
+        this.documentsSubject.next(next);
+      }
     });
   }
 
-  async uploadDocument(title: string, file: File, childId: string | null = null): Promise<DocumentItem> {
+  private mapServerDocument(data: ServerDocument): DocumentItem {
+    return {
+      id: data.id,
+      title: data.title,
+      fileName: data.fileName,
+      childId: data.childId || null,
+      downloadUrl: data.fileUrl,
+      uploadedAt: new Date(data.uploadedAt),
+      uploadedBy: data.uploadedById || undefined,
+      uploadedByName: data.uploadedByName || undefined
+    };
+  }
+
+  // ==================== FIREBASE BACKEND METHODS ====================
+
+  private async uploadDocumentFirebase(title: string, file: File, childId: string | null): Promise<DocumentItem> {
     const familyId = this.requireFamilyId();
     const user = this.authService.currentUser;
 
@@ -121,6 +221,43 @@ export class DocumentService implements OnDestroy {
     }
   }
 
+  private async deleteDocumentFirebase(id: string): Promise<void> {
+    const familyId = this.requireFamilyId();
+    await deleteDoc(doc(this.firestore, 'families', familyId, 'documents', id));
+  }
+
+  // ==================== SUBSCRIPTION LOGIC ====================
+
+  private subscribeToFamilyDocuments(familyId: string | null) {
+    this.documentsSub?.unsubscribe();
+    this.socketSub?.unsubscribe();
+
+    if (!familyId) {
+      this.documentsSubject.next([]);
+      this.childrenSubject.next([]);
+      return;
+    }
+
+    if (useServerBackend()) {
+      this.loadDocumentsFromServer(familyId);
+      this.subscribeToServerEvents();
+    } else {
+      this.subscribeToFirebaseDocuments(familyId);
+    }
+  }
+
+  private subscribeToFirebaseDocuments(familyId: string): void {
+    const documentsRef = collection(this.firestore, 'families', familyId, 'documents');
+    const q = query(documentsRef, orderBy('uploadedAt', 'desc'));
+
+    this.documentsSub = collectionData(q, { idField: 'id' }).subscribe(rawDocs => {
+      const mapped = rawDocs.map(doc => this.mapDocument(doc)) as DocumentItem[];
+      this.documentsSubject.next(mapped);
+    });
+  }
+
+  // ==================== UTILITIES ====================
+
   private mapDocument(doc: any): DocumentItem {
     const uploadedAt = doc.uploadedAt instanceof Timestamp ? doc.uploadedAt.toDate() : new Date();
 
@@ -155,50 +292,21 @@ export class DocumentService implements OnDestroy {
   }
 
   private async compressImage(file: File): Promise<string> {
-    const img = await this.readImage(file);
-    // scale down keeping aspect ratio; start with max dimension 1280
-    const maxDim = 1280;
-    const ratio = Math.min(1, maxDim / Math.max(img.width, img.height));
-    const width = Math.max(1, Math.round(img.width * ratio));
-    const height = Math.max(1, Math.round(img.height * ratio));
+    const compressed = await compressImageFile(file, {
+      maxDimension: 1280,
+      maxBytes: MAX_BYTES,
+      initialQuality: 0.92,
+      minQuality: 0.35,
+      qualityStep: 0.07,
+      scaleStep: 0.9,
+      minScale: 0.3
+    });
 
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      throw new Error('no-canvas-context');
-    }
-    ctx.drawImage(img, 0, 0, width, height);
-
-    let quality = 0.92;
-    let dataUrl = canvas.toDataURL('image/jpeg', quality);
-
-    const sizeOf = (data: string) => Math.ceil((data.length - data.indexOf(',') - 1) * 3 / 4);
-    while (sizeOf(dataUrl) > MAX_BYTES && quality > 0.35) {
-      quality -= 0.07;
-      dataUrl = canvas.toDataURL('image/jpeg', quality);
-    }
-
-    if (sizeOf(dataUrl) > MAX_BYTES) {
+    if (!compressed) {
       throw new Error('file-too-large');
     }
 
-    return dataUrl;
-  }
-
-  private readImage(file: File): Promise<HTMLImageElement> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = reject;
-        img.src = reader.result as string;
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
+    return compressed;
   }
 
   private readFileAsDataUrl(file: File): Promise<string> {
@@ -215,18 +323,6 @@ export class DocumentService implements OnDestroy {
       throw new Error('no-family');
     }
     return this.activeFamilyId;
-  }
-
-  async getFamilyChildren(): Promise<string[]> {
-    if (!this.activeFamilyId) {
-      return [];
-    }
-    const cached = this.childrenSubject.value;
-    if (cached.length) {
-      return cached;
-    }
-    await this.refreshChildren(this.activeFamilyId);
-    return this.childrenSubject.value;
   }
 
   private async refreshChildren(familyId: string | null) {

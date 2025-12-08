@@ -5,6 +5,8 @@ import { IonicModule } from '@ionic/angular';
 import { RouterModule, Routes } from '@angular/router';
 
 import { HistoryPage } from './history.page';
+import { SharedModule } from '../../shared/shared.module';
+import { StorageUsageComponent } from '../../components/storage-usage/storage-usage.component';
 
 const routes: Routes = [
   {
@@ -15,7 +17,14 @@ const routes: Routes = [
 
 @NgModule({
   declarations: [HistoryPage],
-  imports: [CommonModule, FormsModule, IonicModule, RouterModule.forChild(routes)],
+  imports: [
+    CommonModule,
+    FormsModule,
+    IonicModule,
+    SharedModule,
+    StorageUsageComponent,
+    RouterModule.forChild(routes)
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
 export class HistoryPageModule {}

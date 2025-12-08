@@ -2,6 +2,21 @@ import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 import { upsertReminder, deleteReminder, dispatchDueReminders } from './reminders';
 
+// Storage management exports
+export {
+  onPaymentReceiptCreated as storageOnPaymentReceiptCreated,
+  onPaymentReceiptDeleted as storageOnPaymentReceiptDeleted,
+  onDocumentCreated as storageOnDocumentCreated,
+  onDocumentDeleted as storageOnDocumentDeleted,
+  onExpenseWithReceiptCreated as storageOnExpenseWithReceiptCreated,
+  onExpenseWithReceiptDeleted as storageOnExpenseWithReceiptDeleted,
+  onStorageLimitChanged,
+  checkStorageLimit,
+  getStorageStats,
+  recalculateStorage,
+  setFamilyStorageLimit
+} from './storage';
+
 if (!admin.apps.length) {
   admin.initializeApp();
 }

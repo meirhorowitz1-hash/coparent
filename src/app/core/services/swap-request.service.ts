@@ -21,6 +21,9 @@ import { UserProfileService } from './user-profile.service';
 import { UserProfile } from '../models/user-profile.model';
 import { Family } from '../models/family.model';
 import { CalendarService } from './calendar.service';
+import { ApiService } from './api.service';
+import { SocketService } from './socket.service';
+import { useServerBackend } from './backend-mode';
 
 type FirestoreSwapRequest = Omit<
   SwapRequest,
@@ -33,6 +36,25 @@ type FirestoreSwapRequest = Omit<
   requestType?: SwapRequestType;
 };
 
+// Server API types
+interface ServerSwapRequest {
+  id: string;
+  familyId: string;
+  requestedById: string;
+  requestedByName?: string | null;
+  requestedToId?: string | null;
+  requestedToName?: string | null;
+  originalDate: string;
+  proposedDate?: string | null;
+  requestType: SwapRequestType;
+  reason?: string | null;
+  status: SwapRequestStatus;
+  responseNote?: string | null;
+  respondedAt?: string | null;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -41,6 +63,8 @@ export class SwapRequestService implements OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly userProfileService = inject(UserProfileService);
   private readonly calendarService = inject(CalendarService);
+  private readonly apiService = inject(ApiService);
+  private readonly socketService = inject(SocketService);
 
   private swapRequestsSubject = new BehaviorSubject<SwapRequest[]>([]);
   readonly swapRequests$: Observable<SwapRequest[]> = this.swapRequestsSubject.asObservable();
@@ -50,6 +74,7 @@ export class SwapRequestService implements OnDestroy {
 
   private requestsSubscription?: Subscription;
   private profileSubscription?: Subscription;
+  private socketSubscription?: Subscription;
   private currentProfile: UserProfile | null = null;
   private currentUserId: string | null = null;
 
@@ -71,12 +96,129 @@ export class SwapRequestService implements OnDestroy {
   ngOnDestroy(): void {
     this.requestsSubscription?.unsubscribe();
     this.profileSubscription?.unsubscribe();
+    this.socketSubscription?.unsubscribe();
   }
 
-  /**
-   * יוצר בקשת החלפה חדשה עבור המשפחה הפעילה
-   */
+  // ==================== PUBLIC API ====================
+
   async createSwapRequest(payload: {
+    originalDate: Date;
+    proposedDate?: Date | null;
+    reason?: string;
+    requestType?: SwapRequestType;
+  }): Promise<void> {
+    if (useServerBackend()) {
+      return this.createSwapRequestServer(payload);
+    }
+    return this.createSwapRequestFirebase(payload);
+  }
+
+  async updateSwapRequestStatus(
+    id: string,
+    status: SwapRequestStatus,
+    responseNote?: string
+  ): Promise<void> {
+    if (useServerBackend()) {
+      return this.updateSwapRequestStatusServer(id, status, responseNote);
+    }
+    return this.updateSwapRequestStatusFirebase(id, status, responseNote);
+  }
+
+  getCurrentUserId(): string | null {
+    return this.currentUserId;
+  }
+
+  // ==================== SERVER BACKEND METHODS ====================
+
+  private async createSwapRequestServer(payload: {
+    originalDate: Date;
+    proposedDate?: Date | null;
+    reason?: string;
+    requestType?: SwapRequestType;
+  }): Promise<void> {
+    const familyId = this.requireFamilyId();
+    const requestType: SwapRequestType = payload.requestType ?? (payload.proposedDate ? 'swap' : 'one-way');
+
+    // Validate dates
+    this.validateSwapDates({
+      requesterUid: this.currentUserId!,
+      requestType,
+      originalDate: this.toDate(payload.originalDate),
+      proposedDate: payload.proposedDate ? this.toDate(payload.proposedDate) : null
+    });
+
+    await this.apiService.post(`/swap-requests/${familyId}`, {
+      originalDate: payload.originalDate.toISOString(),
+      proposedDate: payload.proposedDate?.toISOString() || null,
+      requestType,
+      reason: payload.reason?.trim() || null,
+      requestedByName: this.currentProfile?.fullName || this.currentProfile?.email || 'משתמש'
+    }).toPromise();
+  }
+
+  private async updateSwapRequestStatusServer(
+    id: string,
+    status: SwapRequestStatus,
+    responseNote?: string
+  ): Promise<void> {
+    const familyId = this.requireFamilyId();
+    await this.apiService.patch(`/swap-requests/${familyId}/${id}/status`, {
+      status,
+      responseNote: responseNote?.trim() || null
+    }).toPromise();
+  }
+
+  private async loadSwapRequestsFromServer(familyId: string): Promise<void> {
+    try {
+      const requests = await this.apiService.get<ServerSwapRequest[]>(`/swap-requests/${familyId}`).toPromise();
+      const mapped = (requests || []).map(r => this.mapServerSwapRequest(r));
+      this.swapRequestsSubject.next(mapped);
+    } catch (error) {
+      console.error('[SwapRequest] Failed to load from server', error);
+    }
+  }
+
+  private subscribeToServerEvents(): void {
+    this.socketSubscription?.unsubscribe();
+
+    this.socketSubscription = this.socketService.allEvents$.subscribe(({ event, data }) => {
+      if (event === 'swap:created' || event === 'swap:updated') {
+        const request = this.mapServerSwapRequest(data as ServerSwapRequest);
+        const current = this.swapRequestsSubject.value;
+        const index = current.findIndex(r => r.id === request.id);
+
+        if (index >= 0) {
+          const next = [...current];
+          next[index] = request;
+          this.swapRequestsSubject.next(next);
+        } else {
+          this.swapRequestsSubject.next([request, ...current]);
+        }
+      }
+    });
+  }
+
+  private mapServerSwapRequest(data: ServerSwapRequest): SwapRequest {
+    return {
+      id: data.id,
+      requestedBy: data.requestedById,
+      requestedByName: data.requestedByName || 'הורה',
+      requestedTo: data.requestedToId || 'family',
+      requestedToName: data.requestedToName || 'הורה שותף',
+      originalDate: new Date(data.originalDate),
+      proposedDate: data.proposedDate ? new Date(data.proposedDate) : null,
+      requestType: data.requestType,
+      reason: data.reason || undefined,
+      status: data.status,
+      responseNote: data.responseNote || undefined,
+      respondedAt: data.respondedAt ? new Date(data.respondedAt) : undefined,
+      createdAt: new Date(data.createdAt)
+    };
+  }
+
+  // ==================== FIREBASE BACKEND METHODS ====================
+
+  private async createSwapRequestFirebase(payload: {
     originalDate: Date;
     proposedDate?: Date | null;
     reason?: string;
@@ -118,10 +260,7 @@ export class SwapRequestService implements OnDestroy {
     });
   }
 
-  /**
-   * עדכון סטטוס בקשה קיימת
-   */
-  async updateSwapRequestStatus(
+  private async updateSwapRequestStatusFirebase(
     id: string,
     status: SwapRequestStatus,
     responseNote?: string
@@ -179,14 +318,26 @@ export class SwapRequestService implements OnDestroy {
     }
   }
 
+  // ==================== SUBSCRIPTION LOGIC ====================
+
   private subscribeToSwapRequests(familyId: string | null) {
     this.requestsSubscription?.unsubscribe();
+    this.socketSubscription?.unsubscribe();
 
     if (!familyId) {
       this.swapRequestsSubject.next([]);
       return;
     }
 
+    if (useServerBackend()) {
+      this.loadSwapRequestsFromServer(familyId);
+      this.subscribeToServerEvents();
+    } else {
+      this.subscribeToFirebaseRequests(familyId);
+    }
+  }
+
+  private subscribeToFirebaseRequests(familyId: string): void {
     const swapRequestsRef = collection(this.firestore, 'families', familyId, 'swapRequests');
     const swapRequestsQuery = query(swapRequestsRef, orderBy('createdAt', 'desc'));
 
@@ -196,6 +347,8 @@ export class SwapRequestService implements OnDestroy {
       )
       .subscribe(requests => this.swapRequestsSubject.next(requests));
   }
+
+  // ==================== UTILITIES ====================
 
   private mapFromFirestore(data: FirestoreSwapRequest & { id: string }): SwapRequest {
     return {
@@ -269,10 +422,6 @@ export class SwapRequestService implements OnDestroy {
     };
   }
 
-  getCurrentUserId(): string | null {
-    return this.currentUserId;
-  }
-
   private validateSwapDates(params: {
     requesterUid: string;
     requestType: SwapRequestType;
@@ -290,7 +439,6 @@ export class SwapRequestService implements OnDestroy {
       if (!params.proposedDate) {
         throw new Error('swap-missing-proposed-day');
       }
-      // אם יש תבנית משמורת ברורה והיום אצל ההורה השני – נוודא זאת; אחרת נאפשר שליחה
       const proposedParent = this.calendarService.getParentForDate(params.proposedDate);
       if (proposedParent && proposedParent === requesterParent) {
         throw new Error('swap-proposed-same-parent');

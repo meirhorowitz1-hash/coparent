@@ -5,6 +5,7 @@ import { IonicModule } from '@ionic/angular';
 import { RouterModule, Routes } from '@angular/router';
 import { ProfilePage } from './profile.page';
 import { SharedModule } from '../../shared/shared.module';
+import { StorageUsageComponent } from '../../components/storage-usage/storage-usage.component';
 
 const routes: Routes = [
   {
@@ -15,7 +16,7 @@ const routes: Routes = [
 
 @NgModule({
   declarations: [ProfilePage],
-  imports: [CommonModule, ReactiveFormsModule, IonicModule, SharedModule, RouterModule.forChild(routes)],
+  imports: [CommonModule, ReactiveFormsModule, IonicModule, SharedModule, RouterModule.forChild(routes), StorageUsageComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
 export class ProfilePageModule {}

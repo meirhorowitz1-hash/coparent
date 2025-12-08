@@ -54,7 +54,13 @@
             <p class="email">{{ profile?.email }}</p>
             <p class="phone" *ngIf="profile?.phone">{{ 'profile.phone' | t }}: {{ profile.phone }}</p>
           </div>
-          <button class="edit-toggle" type="button" (click)="isEditingProfile ? cancelProfileEdit() : startProfileEdit()">
+          <button
+            class="edit-toggle"
+            [class.edit-toggle-rtl]="isRtl"
+            type="button"
+            (click)="isEditingProfile ? cancelProfileEdit() : startProfileEdit()"
+            [attr.title]="isEditingProfile ? ('profile.button.cancelEdit' | t) : ('profile.button.edit' | t)"
+            aria-label="{{ isEditingProfile ? ('profile.button.cancelEdit' | t) : ('profile.button.edit' | t) }}">
             <ion-icon [name]="isEditingProfile ? 'close-outline' : 'create-outline'"></ion-icon>
           </button>
         </div>
@@ -108,7 +114,10 @@
               <button
                 type="button"
                 class="edit-toggle"
+                [class.edit-toggle-rtl]="isRtl"
                 (click)="isEditingFamilyMeta ? cancelFamilyEdit() : startFamilyEdit()"
+                 [attr.title]="isEditingProfile ? ('profile.button.cancelEdit' | t) : ('profile.button.edit' | t)"
+            aria-label="{{ isEditingProfile ? ('profile.button.cancelEdit' | t) : ('profile.button.edit' | t) }}"
               >
                 <ion-icon [name]="isEditingFamilyMeta ? 'close-outline' : 'create-outline'"></ion-icon>
               </button>
@@ -224,6 +233,9 @@
             </div>
           </div>
         </div>
+
+        <!-- Storage Usage -->
+        <app-storage-usage *ngIf="(family$ | async)"></app-storage-usage>
 
         <ng-template #noFamilyState>
           <div class="family-choice">

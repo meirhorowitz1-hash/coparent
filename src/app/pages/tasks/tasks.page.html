@@ -1,7 +1,7 @@
 
   <ion-header [translucent]="true">
     <ion-toolbar>
-      <ion-title>משימות</ion-title>
+      <ion-title>{{ 'tasks.title' | t }}</ion-title>
       <ion-buttons slot="end">
         <ion-button [routerLink]="['/tabs/history']" [queryParams]="{ section: 'tasks' }" fill="clear" color="medium">
           <ion-icon slot="icon-only" name="time-outline"></ion-icon>
@@ -12,87 +12,6 @@
 
   <ion-content [fullscreen]="true">
     <div class="tasks-shell">
-  
-
-      <section class="form-card" *ngIf="showForm" [formGroup]="newTaskForm">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">משימה חדשה</p>
-            <strong>הוספת משימה משותפת</strong>
-          </div>
-          <div class="form-actions">
-            <ion-button size="small" fill="clear" color="medium" (click)="showForm = false">
-              סגור
-            </ion-button>
-            <ion-button size="small" fill="solid" color="primary" (click)="addTask()">
-              שמור
-            </ion-button>
-          </div>
-        </div>
-
-        <div class="form-grid">
-          <ion-item [class.invalid]="newTaskForm.get('title')?.invalid && newTaskForm.get('title')?.touched">
-            <ion-label position="stacked">שם המשימה *</ion-label>
-            <ion-input formControlName="title" placeholder="לדוגמה: חיסון שנתי"></ion-input>
-          </ion-item>
-
-          <ion-item>
-            <ion-label position="stacked">תיאור</ion-label>
-            <ion-textarea formControlName="description" rows="2" placeholder="פרטים, תזכורות או קבצים"></ion-textarea>
-          </ion-item>
-
-          <ion-item>
-            <ion-label position="stacked">תאריך יעד</ion-label>
-            <div class="date-row">
-              <ion-datetime-button datetime="task-date"></ion-datetime-button>
-              <ion-button size="small" fill="clear" color="medium" (click)="newTaskForm.get('dueDate')?.setValue(null)">
-                ללא תאריך
-              </ion-button>
-            </div>
-          </ion-item>
-          <ion-modal keepContentsMounted="true">
-            <ng-template>
-              <ion-datetime id="task-date" formControlName="dueDate" presentation="date" locale="he-IL"></ion-datetime>
-            </ng-template>
-          </ion-modal>
-
-          <ion-item>
-            <ion-label position="stacked">אחריות</ion-label>
-            <ion-segment formControlName="assignedTo">
-              <ion-segment-button value="parent1">
-                <ion-label>{{ parentNames.parent1 }}</ion-label>
-              </ion-segment-button>
-              <ion-segment-button value="parent2">
-                <ion-label>{{ parentNames.parent2 }}</ion-label>
-              </ion-segment-button>
-              <ion-segment-button value="both">
-                <ion-label>ביחד</ion-label>
-              </ion-segment-button>
-            </ion-segment>
-          </ion-item>
-
-          <div class="child-chip-group" *ngIf="children.length">
-            <p class="section-label">שיוך לילד (אופציונלי)</p>
-            <div class="child-chips">
-              <button
-                type="button"
-                class="child-chip"
-                [class.active]="!newTaskForm.value.childId"
-                (click)="newTaskForm.get('childId')?.setValue(null)">
-                ללא שיוך
-              </button>
-              <button
-                *ngFor="let child of children"
-                type="button"
-                class="child-chip"
-                [class.active]="newTaskForm.value.childId === child"
-                (click)="newTaskForm.get('childId')?.setValue(child)">
-                {{ child }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
 
       <ion-fab vertical="bottom" horizontal="end" slot="fixed">
         <ion-fab-button color="primary" (click)="openForm()">
@@ -103,20 +22,20 @@
       <section class="list-card">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">משימות</p>
-            <strong>רשימת משימות</strong>
+        <p class="eyebrow">{{ 'tasks.section.eyebrow' | t }}</p>
+        <strong>{{ 'tasks.section.heading' | t }}</strong>
           </div>
           <ion-badge color="medium">{{ openTasks.length }}</ion-badge>
         </div>
 
         <div *ngIf="!openTasks.length" class="empty-state">
           <ion-icon name="checkbox-outline"></ion-icon>
-          <p>אין משימות להצגה כרגע</p>
-          <small>הוסיפו משימה חדשה</small>
+          <p>{{ 'tasks.list.empty.title' | t }}</p>
+          <small>{{ 'tasks.list.empty.subtitle' | t }}</small>
         </div>
 
         <ion-list lines="none" *ngIf="openTasks.length">
-          <ion-list-header>פתוחות</ion-list-header>
+          <ion-list-header>{{ 'tasks.list.header.open' | t }}</ion-list-header>
           <ion-item class="task-item" *ngFor="let task of openTasks">
             <ion-label>
               <div class="title-row">

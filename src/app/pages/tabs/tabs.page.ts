@@ -14,10 +14,8 @@ import {
   calendar,
   cashOutline,
   cash,
-  listOutline,
-  list,
-  timeOutline,
-  time,
+  documentTextOutline,
+  documentText,
   chatbubbleEllipsesOutline,
   chatbubbleEllipses
 } from 'ionicons/icons';
@@ -25,8 +23,6 @@ import { ChatService, ChatMessage } from '../../core/services/chat.service';
 import { ExpenseStoreService } from '../../core/services/expense-store.service';
 import { SwapRequestService } from '../../core/services/swap-request.service';
 import { SwapRequestStatus } from '../../core/models/swap-request.model';
-import { TaskHistoryService } from '../../core/services/task-history.service';
-import { TaskStatus } from '../../core/models/task.model';
 import { CalendarService } from '../../core/services/calendar.service';
 import { CalendarEvent } from '../../core/models/calendar-event.model';
 import { I18nService } from '../../core/services/i18n.service';
@@ -45,11 +41,9 @@ export class TabsPage implements OnInit, AfterViewInit, OnDestroy {
   protected selectedTab = 'home';
   protected pendingExpensesCount = 0;
   protected pendingCalendarCount = 0;
-  protected pendingTasksCount = 0;
   protected chatUnreadCount = 0;
   protected pendingTemplateApproval = false;
   private currentParentRole: 'parent1' | 'parent2' | 'both' | null = null;
-  private latestRelevantTasks = 0;
   private currentUserId: string | null = null;
   private seenEventIds = new Set<string>();
   private relevantEventIds: string[] = [];
@@ -65,7 +59,6 @@ export class TabsPage implements OnInit, AfterViewInit, OnDestroy {
   constructor(
     private expenseStore: ExpenseStoreService,
     private swapRequestService: SwapRequestService,
-    private taskHistoryService: TaskHistoryService,
     private calendarService: CalendarService,
     private chatService: ChatService,
     private i18n: I18nService
@@ -78,10 +71,8 @@ export class TabsPage implements OnInit, AfterViewInit, OnDestroy {
       calendar,
       cashOutline,
       cash,
-      listOutline,
-      list,
-      timeOutline,
-      time,
+      documentTextOutline,
+      documentText,
       chatbubbleEllipsesOutline,
       chatbubbleEllipses
     });
@@ -134,24 +125,6 @@ export class TabsPage implements OnInit, AfterViewInit, OnDestroy {
         );
       });
 
-    this.taskHistoryService.tasks$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(tasks => {
-        const uid = this.calendarService.getCurrentUserId();
-        this.currentParentRole = this.calendarService.getParentRoleForUser(uid) || null;
-        const relevant = tasks.filter(task => {
-          const assigned = task.assignedTo || 'both';
-          const matches =
-            assigned === 'both' ||
-            (this.currentParentRole === 'parent1' && assigned === 'parent1') ||
-            (this.currentParentRole === 'parent2' && assigned === 'parent2');
-          const active = task.status !== TaskStatus.COMPLETED && task.status !== TaskStatus.CANCELLED;
-          return matches && active;
-        });
-        this.latestRelevantTasks = relevant.length;
-        this.pendingTasksCount = this.selectedTab === 'tasks' ? 0 : this.latestRelevantTasks;
-      });
-
     this.calendarService.events$
       .pipe(takeUntil(this.destroy$))
       .subscribe(events => {
@@ -201,22 +174,17 @@ export class TabsPage implements OnInit, AfterViewInit, OnDestroy {
   protected onTabChange(event: TabsDidChangeEventDetail) {
     if (event?.tab) {
       this.selectedTab = event.tab;
-      if (event.tab === 'tasks') {
-        this.pendingTasksCount = 0;
-      } else if (this.latestRelevantTasks >= 0) {
-        this.pendingTasksCount = this.latestRelevantTasks;
-      }
 
       if (event.tab === 'calendar') {
         this.relevantEventIds.forEach(id => this.seenEventIds.add(id));
         this.newEventsCount = 0;
       }
 
-    if (event.tab === 'chat') {
+      if (event.tab === 'chat') {
         this.markChatMessagesAsSeen(this.latestChatMessages);
         this.chatUnreadCount = 0;
+      }
     }
-  }
   }
 
   protected isSelected(tabId: string): boolean {
@@ -229,9 +197,6 @@ export class TabsPage implements OnInit, AfterViewInit, OnDestroy {
     }
     if (tabId === 'calendar') {
       return this.pendingCalendarCount + this.newEventsCount + (this.pendingTemplateApproval ? 1 : 0);
-    }
-    if (tabId === 'tasks') {
-      return this.pendingTasksCount;
     }
     if (tabId === 'chat') {
       return this.chatUnreadCount;
@@ -348,7 +313,7 @@ export class TabsPage implements OnInit, AfterViewInit, OnDestroy {
       { id: 'home', label: this.i18n.translate('tabs.home'), icon: 'home-outline', activeIcon: 'home' },
       { id: 'calendar', label: this.i18n.translate('tabs.calendar'), icon: 'calendar-outline', activeIcon: 'calendar' },
       { id: 'expenses', label: this.i18n.translate('tabs.expenses'), icon: 'cash-outline', activeIcon: 'cash' },
-      { id: 'tasks', label: this.i18n.translate('tabs.tasks'), icon: 'list-outline', activeIcon: 'list' },
+      { id: 'documents', label: this.i18n.translate('tabs.documents'), icon: 'document-text-outline', activeIcon: 'document-text' },
       { id: 'chat', label: this.i18n.translate('tabs.chat'), icon: 'chatbubble-ellipses-outline', activeIcon: 'chatbubble-ellipses' }
     ];
   }

@@ -72,6 +72,7 @@
               *ngFor="let event of day.events.slice(0, 3)"
               [style.background-color]="event.color">
             </div>
+            <div class="task-dot" *ngIf="hasTasksOnDay(day)"></div>
             <div class="more-events" *ngIf="day.events.length > 3">
               +{{ day.events.length - 3 }}
             </div>
@@ -173,6 +174,63 @@
         </ion-accordion>
       </ion-accordion-group>
     </section>
+
+    <!-- Tasks Section -->
+    <ion-accordion-group class="tasks-accordion" *ngIf="openTasks.length > 0">
+      <ion-accordion value="tasks">
+        <ion-item slot="header" class="tasks-header">
+          <ion-label>
+            <p class="eyebrow">{{ 'calendar.tasks.title' | t }}</p>
+            <h3>{{ 'calendar.tasks.subtitle' | t }}</h3>
+          </ion-label>
+          <ion-chip slot="end" color="tertiary">{{ openTasks.length }}</ion-chip>
+        </ion-item>
+
+        <div slot="content" class="tasks-content">
+          <div class="tasks-list">
+            <article 
+              class="task-row" 
+              *ngFor="let task of openTasks.slice(0, 5)"
+              [class.overdue]="isTaskOverdue(task)">
+              <ion-checkbox
+                [checked]="task.status === TaskStatus.COMPLETED"
+                (ionChange)="toggleTaskCompletion(task, $event)">
+              </ion-checkbox>
+              <div class="task-body">
+                <strong>{{ task.title }}</strong>
+                <p class="task-meta">
+                  <ion-icon [name]="getTaskCategoryIcon(task.category)"></ion-icon>
+                  <span *ngIf="task.dueDate" [class.overdue-text]="isTaskOverdue(task)">
+                    {{ formatTaskDueDate(task.dueDate) }}
+                  </span>
+                  <span *ngIf="!task.dueDate">{{ 'tasks.noDueDate' | t }}</span>
+                </p>
+              </div>
+            </article>
+          </div>
+
+          <ion-button 
+            expand="block" 
+            fill="clear" 
+            class="view-all-tasks"
+            [routerLink]="['/tabs/tasks']">
+            {{ 'calendar.tasks.viewAll' | t }}
+            <ion-icon slot="end" name="arrow-forward-outline"></ion-icon>
+          </ion-button>
+        </div>
+      </ion-accordion>
+    </ion-accordion-group>
+
+    <!-- Add Task Button (when no tasks) -->
+    <div class="tasks-quick-link" *ngIf="openTasks.length === 0">
+      <ion-button 
+        fill="clear"
+        class="tasks-link-button"
+        (click)="openAddTaskModal()">
+        <ion-icon slot="start" name="add-outline"></ion-icon>
+        {{ 'calendar.tasks.addFirst' | t }}
+      </ion-button>
+    </div>
   </div>
 
   <ion-modal

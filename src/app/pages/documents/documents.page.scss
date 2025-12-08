@@ -199,6 +199,27 @@
 }
 
 .doc-body {
+  flex: 1;
+}
+
+.doc-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.doc-actions ion-button {
+  --padding-start: 6px;
+  --padding-end: 6px;
+  --border-radius: 10px;
+  color: inherit;
+}
+
+.doc-actions ion-button.delete-action {
+  color: #ef4444;
+}
+
+.doc-body {
   display: flex;
   flex-direction: column;
   gap: 4px;

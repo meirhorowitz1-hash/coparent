@@ -4,6 +4,17 @@
 
 export const environment = {
   production: false,
+  
+  // Backend Mode: 'firebase' | 'server'
+  // 'firebase' - Use Firebase Firestore directly (current behavior)
+  // 'server' - Use Node.js backend API
+  backendMode:'firebase',
+  
+  // Node.js Backend API URL (used when backendMode is 'server')
+  apiUrl: 'http://localhost:3000/api',
+  socketUrl: 'http://localhost:3000',
+  
+  // Firebase config (always needed for Authentication)
   firebase: {
     apiKey: "AIzaSyDn0rywlgPTW3vbQAJoIF446GKG2ts-wpU",
     authDomain: "coparent-393e0.firebaseapp.com",

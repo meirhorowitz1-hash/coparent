@@ -10,6 +10,9 @@ import { SwapRequest, SwapRequestStatus } from '../../core/models/swap-request.m
 import { SwapRequestService } from '../../core/services/swap-request.service';
 import { CalendarEvent } from '../../core/models/calendar-event.model';
 import { CalendarService } from '../../core/services/calendar.service';
+import { I18nService } from '../../core/services/i18n.service';
+import { PaymentReceiptService } from '../../core/services/payment-receipt.service';
+import { PaymentReceipt, MonthlyPaymentSummary } from '../../core/models/payment-receipt.model';
 
 interface MonthOption {
   value: string;
@@ -27,13 +30,15 @@ export class HistoryPage implements OnInit, OnDestroy {
   monthOptions: MonthOption[] = [];
   selectedMonth = 'all';
   isLoading = true;
-  sectionFilter: 'all' | 'expenses' | 'tasks' | 'calendar' = 'all';
+  sectionFilter: 'all' | 'expenses' | 'tasks' | 'calendar' | 'payments' = 'all';
 
   expenses: ExpenseRecord[] = [];
   tasks: Task[] = [];
   swapRequests: SwapRequest[] = [];
   calendarEvents: CalendarEvent[] = [];
+  paymentReceipts: PaymentReceipt[] = [];
   financeSettings: FinanceSettings | null = null;
+  viewingReceipt: PaymentReceipt | null = null;
 
   private destroy$ = new Subject<void>();
 
@@ -41,14 +46,16 @@ export class HistoryPage implements OnInit, OnDestroy {
     private expenseStore: ExpenseStoreService,
     private taskHistoryService: TaskHistoryService,
     private swapRequestService: SwapRequestService,
+    private paymentReceiptService: PaymentReceiptService,
     private route: ActivatedRoute,
-    private calendarService: CalendarService
+    private calendarService: CalendarService,
+    private i18n: I18nService
   ) {}
 
   ngOnInit(): void {
     this.route.queryParamMap.pipe(takeUntil(this.destroy$)).subscribe(params => {
       const section = params.get('section');
-      if (section === 'expenses' || section === 'tasks' || section === 'calendar') {
+      if (section === 'expenses' || section === 'tasks' || section === 'calendar' || section === 'payments') {
         this.sectionFilter = section;
       } else {
         this.sectionFilter = 'all';
@@ -60,16 +67,20 @@ export class HistoryPage implements OnInit, OnDestroy {
       this.taskHistoryService.tasks$,
       this.swapRequestService.swapRequests$,
       this.expenseStore.financeSettings$,
-      this.calendarService.events$
+      this.calendarService.events$,
+      this.paymentReceiptService.receipts$
     ])
       .pipe(takeUntil(this.destroy$))
-      .subscribe(([expenses, tasks, swapRequests, financeSettings, events]) => {
+      .subscribe(([expenses, tasks, swapRequests, financeSettings, events, paymentReceipts]) => {
         this.financeSettings = financeSettings;
         const approvedExpenses = expenses.filter(expense => expense.status === 'approved');
         this.expenses = this.mergeFixedExpenses(approvedExpenses, financeSettings);
         this.tasks = tasks;
         this.swapRequests = swapRequests;
         this.calendarEvents = events.filter(event => !event.swapRequestId);
+        this.paymentReceipts = paymentReceipts;
+        console.log('[HistoryPage] Payment receipts loaded:', paymentReceipts.length, paymentReceipts);
+        console.log('[HistoryPage] showPayments():', this.showPayments());
         this.rebuildMonthOptions();
         this.isLoading = false;
       });
@@ -82,7 +93,10 @@ export class HistoryPage implements OnInit, OnDestroy {
 
   get selectedMonthLabel(): string {
     const matched = this.monthOptions.find(option => option.value === this.selectedMonth);
-    return matched?.label ?? 'כל החודשים';
+    if (matched) {
+      return matched.label;
+    }
+    return this.i18n.translate('history.filter.monthAll');
   }
 
   get filteredExpenses(): ExpenseRecord[] {
@@ -99,6 +113,57 @@ export class HistoryPage implements OnInit, OnDestroy {
 
   get filteredEvents(): CalendarEvent[] {
     return this.applyMonthFilter(this.calendarEvents, event => event.startDate);
+  }
+
+  get filteredPaymentReceipts(): PaymentReceipt[] {
+    return this.applyMonthFilter(this.paymentReceipts, receipt => receipt.createdAt);
+  }
+
+  get paymentReceiptsByMonth(): MonthlyPaymentSummary[] {
+    const receipts = this.filteredPaymentReceipts;
+    const buckets = new Map<string, MonthlyPaymentSummary>();
+
+    receipts.forEach(receipt => {
+      const key = `${receipt.year}-${receipt.month}`;
+      if (!buckets.has(key)) {
+        const baseDate = new Date(receipt.year, receipt.month, 1);
+        const label = baseDate.toLocaleDateString(this.i18n.locale, {
+          month: 'long',
+          year: 'numeric'
+        });
+        buckets.set(key, {
+          month: receipt.month,
+          year: receipt.year,
+          label,
+          receipts: [],
+          totalPaid: 0
+        });
+      }
+      const bucket = buckets.get(key)!;
+      bucket.receipts.push(receipt);
+      bucket.totalPaid += receipt.amount ?? 0;
+    });
+
+    return Array.from(buckets.values()).sort((a, b) => {
+      if (a.year === b.year) return b.month - a.month;
+      return b.year - a.year;
+    });
+  }
+
+  getExpenseStatusLabel(status: string): string {
+    const key =
+      status === 'approved'
+        ? 'history.status.approved'
+        : status === 'pending'
+          ? 'history.status.pending'
+          : status === 'rejected'
+            ? 'history.status.rejected'
+            : 'history.status.cancelled';
+    return this.i18n.translate(key);
+  }
+
+  getExpenseCreatorName(expense: ExpenseRecord): string {
+    return expense.createdByName || expense.createdBy || this.i18n.translate('expenses.unknownPayer');
   }
 
   get hasData(): boolean {
@@ -141,7 +206,7 @@ export class HistoryPage implements OnInit, OnDestroy {
     if (isNaN(date.getTime())) {
       return '';
     }
-    return date.toLocaleDateString('he-IL', {
+    return date.toLocaleDateString(this.i18n.locale, {
       day: '2-digit',
       month: 'long',
       year: 'numeric'
@@ -149,7 +214,7 @@ export class HistoryPage implements OnInit, OnDestroy {
   }
 
   formatCurrency(amount: number): string {
-    return amount.toLocaleString('he-IL', { style: 'currency', currency: 'ILS' });
+    return amount.toLocaleString(this.i18n.locale, { style: 'currency', currency: 'ILS' });
   }
 
   formatTime(date: Date | string | number | null | undefined): string {
@@ -160,17 +225,11 @@ export class HistoryPage implements OnInit, OnDestroy {
     if (isNaN(d.getTime())) {
       return '';
     }
-    return d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleTimeString(this.i18n.locale, { hour: '2-digit', minute: '2-digit' });
   }
 
   getRequestStatusLabel(status: SwapRequestStatus): string {
-    const labels: Record<SwapRequestStatus, string> = {
-      [SwapRequestStatus.PENDING]: 'ממתינה',
-      [SwapRequestStatus.APPROVED]: 'אושרה',
-      [SwapRequestStatus.REJECTED]: 'נדחתה',
-      [SwapRequestStatus.CANCELLED]: 'בוטלה'
-    };
-    return labels[status];
+    return this.i18n.translate(`history.status.${status}`);
   }
 
   getRequestStatusColor(status: SwapRequestStatus): string {
@@ -184,17 +243,21 @@ export class HistoryPage implements OnInit, OnDestroy {
   }
 
   getRequestTypeLabel(request: SwapRequest): string {
-    return request.requestType === 'one-way' ? 'בקשה ללא החזרה' : 'בקשת החלפה';
+    return this.i18n.translate(
+      request.requestType === 'one-way'
+        ? 'home.request.type.oneWay'
+        : 'home.request.type.swap'
+    );
   }
 
   getTaskStatusLabel(status: TaskStatus): string {
-    const labels: Record<TaskStatus, string> = {
-      [TaskStatus.PENDING]: 'ממתינה',
-      [TaskStatus.IN_PROGRESS]: 'בתהליך',
-      [TaskStatus.COMPLETED]: 'הושלמה',
-      [TaskStatus.CANCELLED]: 'בוטלה'
+    const map: Record<TaskStatus, string> = {
+      [TaskStatus.PENDING]: this.i18n.translate('tasks.status.pending'),
+      [TaskStatus.IN_PROGRESS]: this.i18n.translate('tasks.status.inProgress'),
+      [TaskStatus.COMPLETED]: this.i18n.translate('tasks.status.completed'),
+      [TaskStatus.CANCELLED]: this.i18n.translate('tasks.status.cancelled')
     };
-    return labels[status];
+    return map[status];
   }
 
   getTaskPriorityColor(priority: TaskPriority): string {
@@ -208,18 +271,8 @@ export class HistoryPage implements OnInit, OnDestroy {
   }
 
   getEventTypeLabel(type: CalendarEvent['type']): string {
-    const labels: Record<CalendarEvent['type'], string> = {
-      custody: 'משמרת',
-      pickup: 'איסוף',
-      dropoff: 'החזרה',
-      school: 'בית ספר',
-      activity: 'פעילות',
-      medical: 'רפואי',
-      holiday: 'חג',
-      vacation: 'חופשה',
-      other: 'אחר'
-    };
-    return labels[type] || 'אירוע';
+    const key = `calendar.eventType.${type}`;
+    return this.i18n.translate(key) || this.i18n.translate('calendar.eventType.other');
   }
 
   private dataUrlToObjectUrl(dataUrl: string): string | null {
@@ -267,6 +320,7 @@ export class HistoryPage implements OnInit, OnDestroy {
     this.tasks.forEach(task => addDate(task.dueDate));
     this.swapRequests.forEach(request => addDate(request.createdAt ?? request.originalDate));
     this.calendarEvents.forEach(event => addDate(event.startDate));
+    this.paymentReceipts.forEach(receipt => addDate(receipt.createdAt));
 
     const options: MonthOption[] = Array.from(monthMap.entries())
       .map(([value, date]) => ({
@@ -276,7 +330,10 @@ export class HistoryPage implements OnInit, OnDestroy {
       }))
       .sort((a, b) => b.date.getTime() - a.date.getTime());
 
-    this.monthOptions = [{ value: 'all', label: 'כל החודשים', date: new Date() }, ...options];
+    this.monthOptions = [
+      { value: 'all', label: this.i18n.translate('history.filter.monthAll'), date: new Date() },
+      ...options
+    ];
 
     if (!this.monthOptions.some(option => option.value === this.selectedMonth)) {
       this.selectedMonth = 'all';
@@ -311,7 +368,7 @@ export class HistoryPage implements OnInit, OnDestroy {
   }
 
   private buildMonthLabel(date: Date): string {
-    return date.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+    return date.toLocaleDateString(this.i18n.locale, { month: 'long', year: 'numeric' });
   }
 
   private mergeFixedExpenses(expenses: ExpenseRecord[], settings: FinanceSettings): ExpenseRecord[] {
@@ -348,8 +405,8 @@ export class HistoryPage implements OnInit, OnDestroy {
           amount: fixed.amount,
           date: new Date(year, month, 1),
           createdBy: 'system',
-          createdByName: 'הוצאה קבועה',
-          notes: 'הוצאה קבועה',
+          createdByName: this.i18n.translate('expenses.fixedExpenseLabel'),
+          notes: this.i18n.translate('expenses.fixedExpenseLabel'),
           receiptName: undefined,
           receiptPreview: undefined,
           splitParent1:
@@ -376,5 +433,21 @@ export class HistoryPage implements OnInit, OnDestroy {
 
   showCalendar(): boolean {
     return this.sectionFilter === 'all' || this.sectionFilter === 'calendar';
+  }
+
+  showPayments(): boolean {
+    return this.sectionFilter === 'all' || this.sectionFilter === 'payments' || this.sectionFilter === 'expenses';
+  }
+
+  viewPaymentReceipt(receipt: PaymentReceipt): void {
+    this.viewingReceipt = receipt;
+  }
+
+  closeReceiptViewer(): void {
+    this.viewingReceipt = null;
+  }
+
+  getParentLabel(role: 'parent1' | 'parent2'): string {
+    return this.i18n.translate(role === 'parent1' ? 'profile.parent1' : 'profile.parent2');
   }
 }

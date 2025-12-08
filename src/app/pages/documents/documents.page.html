@@ -69,14 +69,22 @@
                 {{ getChildLabel(doc.childId) }}
               </p>
             </div>
-            <ion-button
-              slot="end"
-              fill="clear"
-              size="small"
-              color="primary"
-              (click)="openDocument(doc)">
-              <ion-icon slot="icon-only" name="open-outline"></ion-icon>
-            </ion-button>
+            <div class="doc-actions">
+              <ion-button
+                fill="clear"
+                size="small"
+                color="primary"
+                (click)="openDocument(doc)">
+                <ion-icon slot="icon-only" name="open-outline"></ion-icon>
+              </ion-button>
+              <ion-button
+                fill="clear"
+                size="small"
+                class="delete-action"
+                (click)="confirmDelete(doc)">
+                <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+              </ion-button>
+            </div>
           </ion-item>
         </ion-list>
       </section>

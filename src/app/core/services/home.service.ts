@@ -257,14 +257,6 @@ export class HomeService implements OnDestroy {
         emptyLabel: pendingSwapRequestsCount === 0 ? 'אין בקשות להחלפה' : undefined,
         color: 'primary',
         disabled: pendingSwapRequestsCount === 0
-      },
-      {
-        id: 'documents',
-        title: 'מסמכים',
-        icon: 'document-text-outline',
-        route: '/documents',
-        color: 'tertiary',
-        disabled: false
       }
     ];
   }

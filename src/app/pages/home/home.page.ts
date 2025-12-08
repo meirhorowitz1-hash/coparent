@@ -36,6 +36,8 @@ export class HomePage implements OnInit, OnDestroy {
   notifications: InAppNotification[] = [];
   isNotificationsOpen = false;
   notificationsEvent?: Event;
+  private readonly supportEmail = 'support@coparent.app';
+  private readonly supportWhatsAppNumber = '972500000000';
 
   private destroy$ = new Subject<void>();
   private langSub?: Subscription;
@@ -88,6 +90,9 @@ export class HomePage implements OnInit, OnDestroy {
         if (overview) {
           this.syncOpenAccordions(overview);
         }
+        
+        // Refresh quick actions when overview changes
+        this.refreshQuickActions();
       });
 
     this.calendarService.parentMetadata$
@@ -147,6 +152,18 @@ export class HomePage implements OnInit, OnDestroy {
     if (this.notifications.length) {
       this.pushNotificationService.clearNotifications();
     }
+  }
+
+  openSupportMail() {
+    const subject = this.i18n.translate('home.support.emailSubject');
+    const mailto = `mailto:${this.supportEmail}?subject=${encodeURIComponent(subject)}`;
+    window.open(mailto, '_blank');
+  }
+
+  openSupportWhatsApp() {
+    const message = this.i18n.translate('home.support.whatsappMessage');
+    const waLink = `https://wa.me/${this.supportWhatsAppNumber}?text=${encodeURIComponent(message)}`;
+    window.open(waLink, '_blank');
   }
 
   /**

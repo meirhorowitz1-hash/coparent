@@ -129,6 +129,10 @@ export class ProfilePage implements OnInit, OnDestroy {
       : this.i18n.translate('profile.members.subtitle.none');
   }
 
+  get isRtl(): boolean {
+    return this.i18n.direction === 'rtl';
+  }
+
   private observeProfile() {
     this.authService.user$
       .pipe(

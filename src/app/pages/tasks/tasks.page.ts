@@ -1,12 +1,12 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { ToastController } from '@ionic/angular';
+import { ModalController, ToastController } from '@ionic/angular';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-import { Task, TaskCategory, TaskPriority, TaskStatus } from '../../core/models/task.model';
+import { Task, TaskPriority, TaskStatus } from '../../core/models/task.model';
 import { TaskHistoryService } from '../../core/services/task-history.service';
-import { CalendarService } from '../../core/services/calendar.service';
+import { I18nService } from '../../core/services/i18n.service';
+import { TaskFormModalComponent } from '../../components/task-form-modal/task-form-modal.component';
 
 @Component({
   selector: 'app-tasks',
@@ -19,28 +19,15 @@ export class TasksPage implements OnInit, OnDestroy {
   TaskStatus = TaskStatus;
 
   tasks: Task[] = [];
-  showForm = false;
-  newTaskForm: FormGroup;
-  parentNames = { parent1: 'הורה 1', parent2: 'הורה 2' };
-  children: string[] = [];
   private destroy$ = new Subject<void>();
   private completionTimers = new Map<string, any>();
 
   constructor(
     private taskHistoryService: TaskHistoryService,
-    private fb: FormBuilder,
     private toastCtrl: ToastController,
-    private calendarService: CalendarService
-  ) {
-    this.newTaskForm = this.fb.group({
-      title: ['', [Validators.required, Validators.minLength(2)]],
-      description: [''],
-      dueDate: [null],
-      assignedTo: ['both'],
-      category: [TaskCategory.OTHER],
-      childId: [null]
-    });
-  }
+    private modalCtrl: ModalController,
+    private i18n: I18nService
+  ) {}
 
   ngOnInit(): void {
     this.taskHistoryService.tasks$
@@ -55,19 +42,6 @@ export class TasksPage implements OnInit, OnDestroy {
         };
         this.tasks = [...tasks].sort((a, b) => getTime(a.dueDate) - getTime(b.dueDate));
       });
-
-    this.calendarService.parentMetadata$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(metadata => {
-        this.parentNames = {
-          parent1: metadata.parent1.name || 'הורה 1',
-          parent2: metadata.parent2.name || 'הורה 2'
-        };
-      });
-
-    this.calendarService.getFamilyChildren()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((children: string[]) => (this.children = children ?? []));
   }
 
   ngOnDestroy(): void {
@@ -83,44 +57,7 @@ export class TasksPage implements OnInit, OnDestroy {
     return this.tasks.filter(task => task.status !== TaskStatus.COMPLETED && task.status !== TaskStatus.CANCELLED);
   }
 
-  async addTask(): Promise<void> {
-    if (this.newTaskForm.invalid) {
-      this.newTaskForm.markAllAsTouched();
-      return;
-    }
-
-    const { title, description, dueDate, assignedTo, category } = this.newTaskForm.value;
-    try {
-      await this.taskHistoryService.addTask({
-        title: (title as string).trim(),
-        description: (description as string)?.trim(),
-        dueDate: dueDate ? new Date(dueDate) : null,
-        priority: TaskPriority.MEDIUM,
-        assignedTo: assignedTo || 'both',
-        category: category as TaskCategory,
-        createdBy: 'local',
-        childId: this.newTaskForm.value.childId || null
-      });
-
-      this.newTaskForm.reset({
-        title: '',
-        description: '',
-        dueDate: null,
-        assignedTo: 'both',
-        category: TaskCategory.OTHER,
-        childId: null
-      });
-      this.showForm = false;
-      this.presentToast('המשימה נוספה', 'success');
-    } catch (error: any) {
-      const message = error?.message === 'missing-family-context' ? 'אין משפחה פעילה מחוברת כרגע' : 'לא הצלחנו לשמור את המשימה';
-      this.presentToast(message, 'danger');
-      console.error('Failed to add task', error);
-    }
-  }
-
   async toggleCompletion(task: Task, completed: boolean): Promise<void> {
-    // אם המשתמש מבטל סימון בזמן ההמתנה – לא נשלח עדכון
     const existingTimer = this.completionTimers.get(task.id);
     if (existingTimer) {
       clearTimeout(existingTimer);
@@ -138,7 +75,7 @@ export class TasksPage implements OnInit, OnDestroy {
         try {
           await this.taskHistoryService.updateStatus(task.id, TaskStatus.COMPLETED);
         } catch (error) {
-          this.presentToast('לא הצלחנו לעדכן משימה', 'danger');
+          this.presentToast(this.i18n.translate('tasks.toast.updateFailed'), 'danger');
           console.error('Failed to update task status', error);
         }
       }, 3000);
@@ -147,28 +84,31 @@ export class TasksPage implements OnInit, OnDestroy {
       try {
         await this.taskHistoryService.updateStatus(task.id, TaskStatus.PENDING);
       } catch (error) {
-        this.presentToast('לא הצלחנו לעדכן משימה', 'danger');
+        this.presentToast(this.i18n.translate('tasks.toast.updateFailed'), 'danger');
         console.error('Failed to update task status', error);
       }
     }
   }
 
-  openForm(): void {
-    this.showForm = true;
+  async openForm(): Promise<void> {
+    const modal = await this.modalCtrl.create({
+      component: TaskFormModalComponent
+    });
+    await modal.present();
   }
 
   async deleteTask(task: Task, event?: Event): Promise<void> {
     event?.stopPropagation();
-    const confirmed = window.confirm('למחוק את המשימה? לא ניתן לבטל.');
+    const confirmed = window.confirm(this.i18n.translate('tasks.confirm.delete'));
     if (!confirmed) {
       return;
     }
     try {
       await this.taskHistoryService.deleteTask(task.id);
-      this.presentToast('המשימה נמחקה', 'success');
+      this.presentToast(this.i18n.translate('tasks.toast.deleteSuccess'), 'success');
     } catch (error) {
       console.error('Failed to delete task', error);
-      this.presentToast('לא הצלחנו למחוק משימה', 'danger');
+      this.presentToast(this.i18n.translate('tasks.toast.deleteFailed'), 'danger');
     }
   }
 
@@ -183,22 +123,22 @@ export class TasksPage implements OnInit, OnDestroy {
 
   getStatusLabel(status: TaskStatus): string {
     const labels: Record<TaskStatus, string> = {
-      [TaskStatus.PENDING]: 'ממתינה',
-      [TaskStatus.IN_PROGRESS]: 'בתהליך',
-      [TaskStatus.COMPLETED]: 'הושלמה',
-      [TaskStatus.CANCELLED]: 'בוטלה'
+      [TaskStatus.PENDING]: this.i18n.translate('tasks.status.pending'),
+      [TaskStatus.IN_PROGRESS]: this.i18n.translate('tasks.status.inProgress'),
+      [TaskStatus.COMPLETED]: this.i18n.translate('tasks.status.completed'),
+      [TaskStatus.CANCELLED]: this.i18n.translate('tasks.status.cancelled')
     };
     return labels[status];
   }
 
   formatDate(date: Date | string | null | undefined): string {
     if (!date) {
-      return 'ללא תאריך יעד';
+      return this.i18n.translate('tasks.noDueDate');
     }
     const value = new Date(date);
     if (isNaN(value.getTime())) {
-      return 'ללא תאריך יעד';
+      return this.i18n.translate('tasks.noDueDate');
     }
-    return value.toLocaleDateString('he-IL', { day: '2-digit', month: 'long' });
+    return new Intl.DateTimeFormat(this.i18n.locale, { day: '2-digit', month: 'long' }).format(value);
   }
 }

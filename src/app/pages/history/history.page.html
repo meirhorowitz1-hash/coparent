@@ -1,6 +1,6 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
-    <ion-title>היסטוריה</ion-title>
+    <ion-title>{{ 'history.title' | t }}</ion-title>
     <ion-buttons slot="end">
       <ion-button [routerLink]="['/tabs/home']" fill="clear">
         <ion-icon slot="icon-only" name="close"></ion-icon>
@@ -13,17 +13,17 @@
   <div class="history-shell">
     <section class="filters-card">
       <div>
-        <p class="eyebrow">סינון לפי חודש</p>
+        <p class="eyebrow">{{ 'history.filter.eyebrow' | t }}</p>
         <h2>{{ selectedMonthLabel }}</h2>
-        <p class="hint">היסטוריה של הוצאות, משימות ובקשות החלפה</p>
+        <p class="hint">{{ 'history.filter.hint' | t }}</p>
       </div>
       <div class="filter-actions">
-        <ion-select
-          interface="alert"
-          [(ngModel)]="selectedMonth"
-          name="selectedMonth"
-          placeholder="בחרו חודש"
-          (ionChange)="onMonthChange($event.detail.value)">
+          <ion-select
+            interface="alert"
+            [(ngModel)]="selectedMonth"
+            name="selectedMonth"
+            [placeholder]="'history.filter.placeholder' | t"
+            (ionChange)="onMonthChange($event.detail.value)">
           <ion-select-option
             *ngFor="let month of monthOptions"
             [value]="month.value">
@@ -37,10 +37,11 @@
           color="medium"
           (click)="clearMonthFilter()">
           <ion-icon slot="start" name="close-circle-outline"></ion-icon>
-          נקה
+          {{ 'history.filter.clear' | t }}
         </ion-button>
       </div>
     </section>
+
 
     @if (!isLoading) {
       <ion-accordion-group multiple="true" class="history-accordion">
@@ -49,8 +50,8 @@
           <ion-accordion value="expenses" class="history-accordion-card">
             <div slot="header" class="accordion-header">
               <div>
-                <p class="eyebrow">כספים</p>
-                <h3>הוצאות</h3>
+                <p class="eyebrow">{{ 'history.section.expenses.subtitle' | t }}</p>
+                <h3>{{ 'history.section.expenses' | t }}</h3>
               </div>
               <ion-chip color="primary">
                 <ion-icon name="wallet-outline"></ion-icon>
@@ -61,21 +62,18 @@
               @if (filteredExpenses.length) {
                 <ion-list class="history-list" lines="none">
                   <ion-item *ngFor="let expense of filteredExpenses" class="history-item" detail="false">
-                    <ion-icon slot="start" name="receipt-outline"></ion-icon>
                     <ion-label>
                       <div class="item-row">
                         <strong>{{ expense.title }}</strong>
-                        <span class="date">{{ formatDate(expense.date) }}</span>
                       </div>
                       @if (expense.notes) {
                         <p class="note">{{ expense.notes }}</p>
                       }
                       @if (expense.id.startsWith('fixed-')) {
-                        <p class="meta">הוצאה קבועה</p>
+                        <p class="meta">{{ 'expenses.fixedExpenseLabel' | t }}</p>
                       }
                       <p class="meta">
-                        נוצרה ב־{{ formatDate(expense.createdAt) }}
-                        • על ידי {{ expense.createdByName || expense.createdBy || 'לא ידוע' }}
+                        {{ 'history.expense.createdMeta' | t:{ date: formatDate(expense.createdAt), name: getExpenseCreatorName(expense) } }}
                       </p>
                     </ion-label>
                     <ion-button
@@ -88,17 +86,12 @@
                       <ion-icon slot="icon-only" name="image-outline"></ion-icon>
                     </ion-button>
                     <div class="amount-pill">{{ formatCurrency(expense.amount) }}</div>
-                    <ion-badge
-                      slot="end"
-                      [color]="expense.status === 'approved' ? 'success' : expense.status === 'pending' ? 'warning' : 'medium'">
-                      {{ expense.status === 'approved' ? 'אושרה' : expense.status === 'pending' ? 'ממתינה' : 'נדחתה' }}
-                    </ion-badge>
                   </ion-item>
                 </ion-list>
               } @else {
                 <div class="empty-row">
                   <ion-icon name="trending-down-outline"></ion-icon>
-                  <p>אין הוצאות עבור החודש שנבחר</p>
+                  <p>{{ 'history.expense.empty' | t }}</p>
                 </div>
               }
             </div>
@@ -111,8 +104,8 @@
           <ion-accordion value="tasks" class="history-accordion-card">
             <div slot="header" class="accordion-header">
               <div>
-                <p class="eyebrow">משימות</p>
-                <h3>פעילות משותפת</h3>
+                <p class="eyebrow">{{ 'history.section.tasks.subtitle' | t }}</p>
+                <h3>{{ 'history.section.tasks' | t }}</h3>
               </div>
               <ion-chip color="tertiary">
                 <ion-icon name="checkbox-outline"></ion-icon>
@@ -127,24 +120,26 @@
                     <ion-label>
                       <div class="item-row">
                         <strong>{{ task.title }}</strong>
-                        <span class="date">{{ formatDate(task.dueDate) }}</span>
                       </div>
                       @if (task.description) {
                         <p class="note">{{ task.description }}</p>
                       }
-                      <p class="meta">סטטוס: {{ getTaskStatusLabel(task.status) }}</p>
+                      <p class="meta subtle">{{ formatDate(task.dueDate) }}</p>
+                      <p class="meta">
+                        {{ 'history.task.statusLabel' | t:{ status: getTaskStatusLabel(task.status) } }}
+                      </p>
                     </ion-label>
                     <ion-badge
                       slot="end"
                       [color]="getTaskPriorityColor(task.priority)">
-                      {{ task.priority === 'urgent' ? 'דחוף' : task.priority === 'high' ? 'גבוהה' : task.priority === 'medium' ? 'בינונית' : 'נמוכה' }}
+                      {{ ('history.priority.' + task.priority) | t }}
                     </ion-badge>
                   </ion-item>
                 </ion-list>
               } @else {
                 <div class="empty-row">
                   <ion-icon name="calendar-outline"></ion-icon>
-                  <p>אין משימות לחודש זה</p>
+                  <p>{{ 'history.task.empty' | t }}</p>
                 </div>
               }
             </div>
@@ -157,8 +152,8 @@
           <ion-accordion value="events" class="history-accordion-card">
             <div slot="header" class="accordion-header">
               <div>
-                <p class="eyebrow">לוח שנה</p>
-                <h3>אירועים</h3>
+                <p class="eyebrow">{{ 'history.section.calendar.subtitle' | t }}</p>
+                <h3>{{ 'history.section.calendar' | t }}</h3>
               </div>
               <ion-chip color="tertiary">
                 <ion-icon name="calendar-outline"></ion-icon>
@@ -173,20 +168,21 @@
                     <ion-label>
                       <div class="item-row">
                         <strong>{{ event.title }}</strong>
-                        <span class="date">{{ formatDate(event.startDate) }}</span>
                       </div>
                       <p class="meta">
                         {{ formatDate(event.startDate) }}
                         <span *ngIf="!event.isAllDay">• {{ formatTime(event.startDate) }} - {{ formatTime(event.endDate) }}</span>
                       </p>
-                      <p class="meta">סוג: {{ getEventTypeLabel(event.type) }}</p>
+                      <p class="meta">
+                        {{ 'history.event.typeLabel' | t:{ type: getEventTypeLabel(event.type) } }}
+                      </p>
                     </ion-label>
                   </ion-item>
                 </ion-list>
               } @else {
                 <div class="empty-row">
                   <ion-icon name="calendar-outline"></ion-icon>
-                  <p>אין אירועים עבור החודש</p>
+                  <p>{{ 'history.calendar.empty' | t }}</p>
                 </div>
               }
             </div>
@@ -197,8 +193,8 @@
           <ion-accordion value="swap" class="history-accordion-card">
             <div slot="header" class="accordion-header">
               <div>
-                <p class="eyebrow">לוח שנה</p>
-                <h3>בקשות החלפה</h3>
+                <p class="eyebrow">{{ 'history.section.swap.subtitle' | t }}</p>
+                <h3>{{ 'history.section.swap' | t }}</h3>
               </div>
               <ion-chip color="success">
                 <ion-icon name="swap-horizontal"></ion-icon>
@@ -220,25 +216,27 @@
                       <ion-chip size="small" color="tertiary">
                         {{ getRequestTypeLabel(request) }}
                       </ion-chip>
-                      <p class="meta">הוגשה ב־{{ formatDate(request.createdAt) }}</p>
+                      <p class="meta">
+                        {{ 'history.swap.submittedOn' | t:{ date: formatDate(request.createdAt) } }}
+                      </p>
                       @if (request.reason) {
                         <p class="note">{{ request.reason }}</p>
                       }
                       <div class="dates-row">
                         <div>
-                          <span class="label">תאריך מקורי</span>
+                          <span class="label">{{ 'history.swap.originalLabel' | t }}</span>
                           <strong>{{ formatDate(request.originalDate) }}</strong>
                         </div>
                         @if (request.proposedDate) {
                           <ion-icon name="swap-horizontal-outline"></ion-icon>
                           <div>
-                            <span class="label">תאריך מוצע</span>
-                            <strong>{{ formatDate(request.proposedDate) }}</strong>
+                          <span class="label">{{ 'history.swap.proposedLabel' | t }}</span>
+                          <strong>{{ formatDate(request.proposedDate) }}</strong>
                           </div>
                         } @else {
                           <div class="no-return">
                             <ion-icon name="arrow-forward-circle"></ion-icon>
-                            <span>ללא תאריך חלופי</span>
+                          <span>{{ 'history.swap.noReturn' | t }}</span>
                           </div>
                         }
                       </div>
@@ -253,7 +251,58 @@
               } @else {
                 <div class="empty-row">
                   <ion-icon name="time-outline"></ion-icon>
-                  <p>אין בקשות החלפה עבור החודש</p>
+                  <p>{{ 'history.swap.empty' | t }}</p>
+                </div>
+              }
+            </div>
+          </ion-accordion>
+        </div>
+        }
+
+        @if (showPayments()) {
+        <div class="accordion-shell">
+          <ion-accordion value="payments" class="history-accordion-card">
+            <div slot="header" class="accordion-header">
+              <div>
+                <p class="eyebrow">{{ 'history.section.payments.subtitle' | t }}</p>
+                <h3>{{ 'history.section.payments' | t }}</h3>
+              </div>
+              <ion-chip color="tertiary">
+                <ion-icon name="camera-outline"></ion-icon>
+                <ion-label>{{ filteredPaymentReceipts.length }}</ion-label>
+              </ion-chip>
+            </div>
+            <div slot="content" class="accordion-body">
+              @if (paymentReceiptsByMonth.length) {
+                @for (monthGroup of paymentReceiptsByMonth; track monthGroup.label) {
+                  <div class="month-group">
+                    <div class="month-group-header">
+                      <span class="month-label">{{ monthGroup.label }}</span>
+                      <span class="month-total">{{ formatCurrency(monthGroup.totalPaid) }}</span>
+                    </div>
+                    <ion-list class="history-list receipts-grid" lines="none">
+                      @for (receipt of monthGroup.receipts; track receipt.id) {
+                        <ion-item class="receipt-item" detail="false" (click)="viewPaymentReceipt(receipt)">
+                          <div class="receipt-thumbnail">
+                            <img [src]="receipt.imageUrl" [alt]="receipt.description || 'receipt'" />
+                          </div>
+                          <ion-label>
+                            <strong>{{ formatCurrency(receipt.amount || 0) }}</strong>
+                            <p class="meta">{{ formatDate(receipt.createdAt) }}</p>
+                            <p class="meta" *ngIf="receipt.description">{{ receipt.description }}</p>
+                          </ion-label>
+                          <ion-badge slot="end" color="success">
+                            {{ getParentLabel(receipt.paidTo) }}
+                          </ion-badge>
+                        </ion-item>
+                      }
+                    </ion-list>
+                  </div>
+                }
+              } @else {
+                <div class="empty-row">
+                  <ion-icon name="camera-outline"></ion-icon>
+                  <p>{{ 'history.payments.empty' | t }}</p>
                 </div>
               }
             </div>
@@ -264,8 +313,51 @@
     } @else {
       <div class="empty-row">
         <ion-spinner name="crescent"></ion-spinner>
-        <p>טוען היסטוריה...</p>
+        <p>{{ 'history.loading' | t }}</p>
       </div>
     }
   </div>
+
+  <!-- Payment Receipt View Modal -->
+  <ion-modal [isOpen]="viewingReceipt !== null" (didDismiss)="closeReceiptViewer()">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>{{ 'expenses.receipts.viewTitle' | t }}</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="closeReceiptViewer()">
+              <ion-icon slot="icon-only" name="close"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding receipt-viewer-content" *ngIf="viewingReceipt">
+        <div class="receipt-viewer">
+          <img [src]="viewingReceipt.imageUrl" [alt]="viewingReceipt.description || 'receipt'" />
+        </div>
+        <div class="receipt-details">
+          <div class="detail-row">
+            <span class="label">{{ 'expenses.receipts.field.amount' | t }}</span>
+            <span class="value">{{ formatCurrency(viewingReceipt.amount || 0) }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="label">{{ 'expenses.receipts.field.paidTo' | t }}</span>
+            <span class="value">{{ getParentLabel(viewingReceipt.paidTo) }}</span>
+          </div>
+          <div class="detail-row" *ngIf="viewingReceipt.description">
+            <span class="label">{{ 'expenses.receipts.field.description' | t }}</span>
+            <span class="value">{{ viewingReceipt.description }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="label">{{ 'expenses.receipts.field.uploadedBy' | t }}</span>
+            <span class="value">{{ viewingReceipt.paidByName }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="label">{{ 'expenses.receipts.field.date' | t }}</span>
+            <span class="value">{{ formatDate(viewingReceipt.createdAt) }}</span>
+          </div>
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
 </ion-content>

@@ -6,7 +6,6 @@ import { Capacitor } from '@capacitor/core';
 import { PushNotifications, PushNotificationSchema, Token } from '@capacitor/push-notifications';
 import {
   FirebaseMessaging,
-  NotificationReceivedEvent,
   TokenReceivedEvent
 } from '@capacitor-firebase/messaging';
 
@@ -214,14 +213,6 @@ export class PushNotificationService {
 
     PushNotifications.addListener('registrationError', err => {
       console.error('[PushNotificationService] Native registration error', err);
-    });
-
-    FirebaseMessaging.addListener('notificationReceived', async (event: NotificationReceivedEvent) => {
-      const title = event.notification?.title || 'CoNest';
-      const dataPayload = event.notification?.data as Record<string, unknown> | undefined;
-      const fallbackBody = typeof dataPayload?.['body'] === 'string' ? (dataPayload['body'] as string) : '';
-      const body = event.notification?.body || fallbackBody || '';
-      await this.presentForegroundToast(title, body);
     });
 
     FirebaseMessaging.addListener('tokenReceived', async (event: TokenReceivedEvent) => {

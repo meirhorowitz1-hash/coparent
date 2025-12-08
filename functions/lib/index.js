@@ -33,10 +33,23 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onChatMessageCreated = exports.onExpenseStatusChanged = exports.onExpenseCreated = exports.dispatchEventReminders = exports.onCalendarEventDeleted = exports.onCalendarEventUpdated = exports.onCalendarEventCreated = exports.onSwapRequestStatusChanged = exports.onCustodyScheduleChanged = exports.onSwapRequestCreated = void 0;
+exports.onChatMessageCreated = exports.onExpenseStatusChanged = exports.onExpenseCreated = exports.dispatchEventReminders = exports.onCalendarEventDeleted = exports.onCalendarEventUpdated = exports.onCalendarEventCreated = exports.onSwapRequestStatusChanged = exports.onCustodyScheduleChanged = exports.onSwapRequestCreated = exports.setFamilyStorageLimit = exports.recalculateStorage = exports.getStorageStats = exports.checkStorageLimit = exports.onStorageLimitChanged = exports.storageOnExpenseWithReceiptDeleted = exports.storageOnExpenseWithReceiptCreated = exports.storageOnDocumentDeleted = exports.storageOnDocumentCreated = exports.storageOnPaymentReceiptDeleted = exports.storageOnPaymentReceiptCreated = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 const reminders_1 = require("./reminders");
+// Storage management exports
+var storage_1 = require("./storage");
+Object.defineProperty(exports, "storageOnPaymentReceiptCreated", { enumerable: true, get: function () { return storage_1.onPaymentReceiptCreated; } });
+Object.defineProperty(exports, "storageOnPaymentReceiptDeleted", { enumerable: true, get: function () { return storage_1.onPaymentReceiptDeleted; } });
+Object.defineProperty(exports, "storageOnDocumentCreated", { enumerable: true, get: function () { return storage_1.onDocumentCreated; } });
+Object.defineProperty(exports, "storageOnDocumentDeleted", { enumerable: true, get: function () { return storage_1.onDocumentDeleted; } });
+Object.defineProperty(exports, "storageOnExpenseWithReceiptCreated", { enumerable: true, get: function () { return storage_1.onExpenseWithReceiptCreated; } });
+Object.defineProperty(exports, "storageOnExpenseWithReceiptDeleted", { enumerable: true, get: function () { return storage_1.onExpenseWithReceiptDeleted; } });
+Object.defineProperty(exports, "onStorageLimitChanged", { enumerable: true, get: function () { return storage_1.onStorageLimitChanged; } });
+Object.defineProperty(exports, "checkStorageLimit", { enumerable: true, get: function () { return storage_1.checkStorageLimit; } });
+Object.defineProperty(exports, "getStorageStats", { enumerable: true, get: function () { return storage_1.getStorageStats; } });
+Object.defineProperty(exports, "recalculateStorage", { enumerable: true, get: function () { return storage_1.recalculateStorage; } });
+Object.defineProperty(exports, "setFamilyStorageLimit", { enumerable: true, get: function () { return storage_1.setFamilyStorageLimit; } });
 if (!admin.apps.length) {
     admin.initializeApp();
 }

@@ -2,14 +2,29 @@ import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } fr
 import { ActivatedRoute } from '@angular/router';
 import { IonContent, ModalController, ToastController } from '@ionic/angular';
 import { Subject, Subscription, takeUntil } from 'rxjs';
+import { addIcons } from 'ionicons';
+import {
+  medkitOutline,
+  schoolOutline,
+  footballOutline,
+  cartOutline,
+  homeOutline,
+  documentTextOutline,
+  ellipsisHorizontalOutline,
+  checkboxOutline,
+  arrowForwardOutline,
+  addOutline
+} from 'ionicons/icons';
 import { CalendarService } from '../../core/services/calendar.service';
 import { CalendarDay, CalendarEvent, EventType } from '../../core/models/calendar-event.model';
 import { CustodySetupComponent } from './custody-setup.component';
 import { EventFormComponent } from './event-form.component';
 import { SwapRequestModalComponent } from '../../components/swap-request-modal/swap-request-modal.component';
+import { TaskFormModalComponent } from '../../components/task-form-modal/task-form-modal.component';
 import { SwapRequestService } from '../../core/services/swap-request.service';
 import { SwapRequest, SwapRequestStatus } from '../../core/models/swap-request.model';
 import { TaskHistoryService } from '../../core/services/task-history.service';
+import { Task, TaskStatus, TaskCategory } from '../../core/models/task.model';
 import { I18nService } from '../../core/services/i18n.service';
 
 @Component({
@@ -37,6 +52,14 @@ export class CalendarPage implements OnInit, OnDestroy, AfterViewInit {
   swapRequests: SwapRequest[] = [];
   requestNotes: Record<string, string> = {};
   children: string[] = [];
+  
+  // Tasks
+  tasks: Task[] = [];
+  openTasks: Task[] = [];
+  tasksWithDueDate: Task[] = [];
+  readonly TaskStatus = TaskStatus;
+  private taskCompletionTimers = new Map<string, any>();
+  
   protected readonly SwapRequestStatus = SwapRequestStatus;
   private viewReady = false;
   private hasScrolledToSwap = false;
@@ -54,7 +77,20 @@ export class CalendarPage implements OnInit, OnDestroy, AfterViewInit {
     private taskHistoryService: TaskHistoryService,
     private route: ActivatedRoute,
     private i18n: I18nService
-  ) {}
+  ) {
+    addIcons({
+      medkitOutline,
+      schoolOutline,
+      footballOutline,
+      cartOutline,
+      homeOutline,
+      documentTextOutline,
+      ellipsisHorizontalOutline,
+      checkboxOutline,
+      arrowForwardOutline,
+      addOutline
+    });
+  }
 
   ngOnInit() {
     this.loadSeenEvents();
@@ -127,6 +163,23 @@ export class CalendarPage implements OnInit, OnDestroy, AfterViewInit {
         } else {
           this.scheduleSwapScroll();
         }
+      });
+
+    // Subscribe to tasks
+    this.taskHistoryService.tasks$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(tasks => {
+        this.tasks = tasks;
+        this.openTasks = tasks
+          .filter(t => t.status !== TaskStatus.COMPLETED && t.status !== TaskStatus.CANCELLED)
+          .sort((a, b) => {
+            // Sort by due date (no date = last)
+            const aTime = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+            const bTime = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+            return aTime - bTime;
+          });
+        this.tasksWithDueDate = this.openTasks.filter(t => t.dueDate);
+        this.updateCalendar();
       });
 
     this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(params => {
@@ -589,5 +642,103 @@ export class CalendarPage implements OnInit, OnDestroy, AfterViewInit {
       this.i18n.translate('calendar.weekdays.fri'),
       this.i18n.translate('calendar.weekdays.sat')
     ];
+  }
+
+  // ===== Tasks =====
+
+  getTasksForDay(day: CalendarDay): Task[] {
+    return this.tasksWithDueDate.filter(task => {
+      if (!task.dueDate) return false;
+      const dueDate = new Date(task.dueDate);
+      return this.isSameDay(dueDate, day.date);
+    });
+  }
+
+  hasTasksOnDay(day: CalendarDay): boolean {
+    return this.getTasksForDay(day).length > 0;
+  }
+
+  formatTaskDueDate(date: Date | string | null | undefined): string {
+    if (!date) return this.i18n.translate('tasks.noDueDate');
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return this.i18n.translate('tasks.noDueDate');
+    
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    if (this.isSameDay(d, today)) {
+      return this.i18n.translate('calendar.tasks.today');
+    }
+    if (this.isSameDay(d, tomorrow)) {
+      return this.i18n.translate('calendar.tasks.tomorrow');
+    }
+    
+    return this.i18n.formatDate(d, { day: '2-digit', month: 'short' });
+  }
+
+  isTaskOverdue(task: Task): boolean {
+    if (!task.dueDate) return false;
+    const dueDate = new Date(task.dueDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return dueDate < today;
+  }
+
+  async toggleTaskCompletion(task: Task, event: Event): Promise<void> {
+    event.stopPropagation();
+    
+    // אם יש טיימר קיים - בטל אותו
+    const existingTimer = this.taskCompletionTimers.get(task.id);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      this.taskCompletionTimers.delete(task.id);
+    }
+
+    const checkbox = (event.target as any);
+    const isChecked = checkbox?.checked ?? false;
+
+    if (isChecked) {
+      // סימון כהושלם - המתן 3 שניות לפני עדכון
+      const timer = setTimeout(async () => {
+        this.taskCompletionTimers.delete(task.id);
+        try {
+          await this.taskHistoryService.updateStatus(task.id, TaskStatus.COMPLETED);
+        } catch (error) {
+          console.error('Failed to update task status', error);
+          await this.presentToast(this.i18n.translate('tasks.toast.updateFailed'), 'danger');
+        }
+      }, 3000);
+      this.taskCompletionTimers.set(task.id, timer);
+    } else {
+      // ביטול סימון - עדכן מיד
+      try {
+        await this.taskHistoryService.updateStatus(task.id, TaskStatus.PENDING);
+      } catch (error) {
+        console.error('Failed to update task status', error);
+        await this.presentToast(this.i18n.translate('tasks.toast.updateFailed'), 'danger');
+      }
+    }
+  }
+
+  getTaskCategoryIcon(category?: TaskCategory): string {
+    const icons: Record<TaskCategory, string> = {
+      [TaskCategory.MEDICAL]: 'medkit-outline',
+      [TaskCategory.EDUCATION]: 'school-outline',
+      [TaskCategory.ACTIVITY]: 'football-outline',
+      [TaskCategory.SHOPPING]: 'cart-outline',
+      [TaskCategory.HOUSEHOLD]: 'home-outline',
+      [TaskCategory.PAPERWORK]: 'document-text-outline',
+      [TaskCategory.OTHER]: 'ellipsis-horizontal-outline'
+    };
+    return icons[category || TaskCategory.OTHER] || 'checkbox-outline';
+  }
+
+  async openAddTaskModal(): Promise<void> {
+    const modal = await this.modalController.create({
+      component: TaskFormModalComponent
+    });
+
+    await modal.present();
   }
 }

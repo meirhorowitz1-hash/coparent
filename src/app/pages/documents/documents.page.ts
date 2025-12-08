@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { ToastController } from '@ionic/angular';
+import { AlertController, ToastController } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 
 import { DocumentItem } from '../../core/models/document.model';
@@ -28,6 +28,7 @@ export class DocumentsPage implements OnInit, OnDestroy {
 
   constructor(
     private toastCtrl: ToastController,
+    private alertCtrl: AlertController,
     private documentService: DocumentService,
     private i18n: I18nService
   ) {}
@@ -81,6 +82,34 @@ export class DocumentsPage implements OnInit, OnDestroy {
     }
     const url = this.dataUrlToObjectUrl(raw) || raw;
     window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  async confirmDelete(doc: DocumentItem) {
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.translate('documents.delete.title'),
+      message: this.i18n.translate('documents.delete.message', { title: doc.title }),
+      buttons: [
+        {
+          text: this.i18n.translate('documents.delete.cancel'),
+          role: 'cancel'
+        },
+        {
+          text: this.i18n.translate('documents.delete.confirm'),
+          handler: () => this.deleteDocument(doc)
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  private async deleteDocument(doc: DocumentItem) {
+    try {
+      await this.documentService.deleteDocument(doc.id);
+      await this.presentToast(this.i18n.translate('documents.toast.deleted'), 'success');
+    } catch (error) {
+      console.error('Failed to delete document', error);
+      await this.presentToast(this.i18n.translate('documents.toast.deleteFailed'), 'danger');
+    }
   }
 
   get filteredDocuments(): DocumentItem[] {

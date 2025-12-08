@@ -1,0 +1,96 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button fill="clear" (click)="cancel()">
+        <ion-icon slot="icon-only" name="close"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>{{ 'tasks.form.eyebrow' | t }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <form [formGroup]="taskForm" class="task-form">
+    
+    <ion-item [class.invalid]="taskForm.get('title')?.invalid && taskForm.get('title')?.touched">
+      <ion-label position="stacked">{{ 'tasks.form.field.title' | t }}</ion-label>
+      <ion-input 
+        formControlName="title" 
+        [placeholder]="'tasks.form.field.titlePlaceholder' | t">
+      </ion-input>
+    </ion-item>
+
+    <ion-item>
+      <ion-label position="stacked">{{ 'tasks.form.field.description' | t }}</ion-label>
+      <ion-textarea
+        formControlName="description"
+        rows="3"
+        [placeholder]="'tasks.form.field.descriptionPlaceholder' | t">
+      </ion-textarea>
+    </ion-item>
+
+    <ion-item>
+      <ion-label position="stacked">{{ 'tasks.form.field.dueDate' | t }}</ion-label>
+      <div class="date-row">
+        <ion-datetime-button datetime="task-modal-date"></ion-datetime-button>
+        <ion-button size="small" fill="clear" color="medium" (click)="clearDate()">
+          {{ 'tasks.form.field.noDate' | t }}
+        </ion-button>
+      </div>
+    </ion-item>
+
+    <ion-modal keepContentsMounted="true">
+      <ng-template>
+        <ion-datetime 
+          id="task-modal-date" 
+          formControlName="dueDate" 
+          presentation="date" 
+          locale="he-IL">
+        </ion-datetime>
+      </ng-template>
+    </ion-modal>
+
+    <ion-item>
+      <ion-label position="stacked">{{ 'tasks.form.field.assignedTo' | t }}</ion-label>
+      <ion-segment formControlName="assignedTo">
+        <ion-segment-button value="parent1">
+          <ion-label>{{ getParentLabel('parent1') }}</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="parent2">
+          <ion-label>{{ getParentLabel('parent2') }}</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="both">
+          <ion-label>{{ 'tasks.form.field.assignedBoth' | t }}</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+    </ion-item>
+
+    <div class="child-chip-group" *ngIf="children.length">
+      <p class="section-label">{{ 'tasks.form.field.childLabel' | t }}</p>
+      <div class="child-chips">
+        <button
+          type="button"
+          class="child-chip"
+          [class.active]="!taskForm.value.childId"
+          (click)="selectChild(null)">
+          {{ 'tasks.form.field.childNone' | t }}
+        </button>
+        <button
+          *ngFor="let child of children"
+          type="button"
+          class="child-chip"
+          [class.active]="taskForm.value.childId === child"
+          (click)="selectChild(child)">
+          {{ child }}
+        </button>
+      </div>
+    </div>
+
+  </form>
+</ion-content>
+
+<ion-footer class="ion-padding">
+  <ion-button expand="block" color="primary" (click)="save()">
+    {{ 'tasks.form.save' | t }}
+  </ion-button>
+</ion-footer>
